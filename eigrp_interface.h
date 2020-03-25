@@ -38,30 +38,30 @@ extern int eigrp_if_new_hook(struct interface *);
 extern int eigrp_if_delete_hook(struct interface *);
 
 extern bool eigrp_if_is_passive(eigrp_interface_t *ei);
-extern void eigrp_del_if_params(struct eigrp_if_params *);
+extern void eigrp_del_if_params(eigrp_if_params_t *);
 extern eigrp_interface_t *eigrp_if_new(eigrp_t *, struct interface *,
 				       struct prefix *);
-extern int  eigrp_if_up(eigrp_interface_t *);
-extern void eigrp_if_update(struct interface *);
+extern int eigrp_if_up(eigrp_interface_t *);
 extern void eigrp_if_stream_set(eigrp_interface_t *);
 extern void eigrp_if_set_multicast(eigrp_interface_t *);
 extern uint8_t eigrp_default_iftype(struct interface *);
-extern void eigrp_if_free(eigrp_t *, eigrp_interface_t *, int);
+extern void eigrp_if_free(eigrp_interface_t *, int);
 extern int eigrp_if_down(eigrp_interface_t *);
 extern void eigrp_if_stream_unset(eigrp_interface_t *);
 
 extern eigrp_interface_t *eigrp_if_lookup_by_local_addr(eigrp_t *,
-							struct interface *,
+							     struct interface *,
 							struct in_addr);
-extern eigrp_interface_t *eigrp_if_lookup_by_name(eigrp_t *, const char *);
+extern eigrp_interface_t *eigrp_if_lookup_by_name(eigrp_t *,
+						  const char *);
 
 /* Simulate down/up on the interface. */
 extern void eigrp_if_reset(struct interface *);
 
-extern int eigrp_if_add_allspfrouters(eigrp_t *, struct prefix *,
-				      unsigned int);
-extern int eigrp_if_drop_allspfrouters(eigrp_t *top, struct prefix *p,
-				       unsigned int ifindex);
-
+/* Static inline functions */
+static inline const char *eigrp_if_ip_string(eigrp_interface_t *ei)
+{
+    return ei ? inet_ntoa(ei->address.u.prefix4) : "inactive";
+}
 
 #endif /* ZEBRA_EIGRP_INTERFACE_H_ */

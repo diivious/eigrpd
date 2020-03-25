@@ -1,21 +1,17 @@
 /*
- * EIGRP Finite State Machine (DUAL).
- * Copyright (C) 2013-2014
+ * EIGRP YANG Functions.
+ * Copyright (C) 2019
  * Authors:
  *   Donnie Savage
- *   Jan Janovic
- *   Matej Perina
- *   Peter Orsag
- *   Peter Paluch
  *
- * This file is part of GNU Zebra.
+ * This file is part of FRR.
  *
- * GNU Zebra is free software; you can redistribute it and/or modify it
+ * FRR is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2, or (at your option) any
  * later version.
  *
- * GNU Zebra is distributed in the hope that it will be useful, but
+ * FRR is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
@@ -25,10 +21,12 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifndef _ZEBRA_EIGRP_FSM_H
-#define _ZEBRA_EIGRP_FSM_H
+#ifndef _EIGRP_YANG_H_
+#define _EIGRP_YANG_H_
 
-extern int eigrp_fsm_event(eigrp_fsm_action_message_t *msg);
+/*Prototypes*/
 
+/* eigrp_northbound.c */
+extern const struct frr_yang_module_info frr_eigrpd_info;
 
-#endif /* _ZEBRA_EIGRP_DUAL_H */
+#endif /*EIGRP_YANG_H_ */

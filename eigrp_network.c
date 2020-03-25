@@ -37,6 +37,7 @@
 #include "privs.h"
 #include "table.h"
 #include "vty.h"
+#include "lib_errors.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
@@ -46,74 +47,62 @@
 #include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
+#include "eigrpd/eigrp_metric.h"
 
-static int eigrp_network_match_iface(const struct connected *,
-				     const struct prefix *);
+static int eigrp_network_match_iface(const struct prefix *connected_prefix,
+				     const struct prefix *prefix);
 static void eigrp_network_run_interface(eigrp_t *, struct prefix *,
 					struct interface *);
 
-int eigrp_sock_init(void)
+int eigrp_sock_init(struct vrf *vrf)
 {
-	int eigrp_sock;
+	int eigrp_sock = -1;
 	int ret;
 #ifdef IP_HDRINCL
 	int hincl = 1;
 #endif
 
-	if (eigrpd_privs.change(ZPRIVS_RAISE))
-		zlog_err("eigrp_sock_init: could not raise privs, %s",
-			 safe_strerror(errno));
+	if (!vrf)
+		return eigrp_sock;
 
-	eigrp_sock = socket(AF_INET, SOCK_RAW, IPPROTO_EIGRPIGP);
-	if (eigrp_sock < 0) {
-		int save_errno = errno;
-		if (eigrpd_privs.change(ZPRIVS_LOWER))
-			zlog_err("eigrp_sock_init: could not lower privs, %s",
+	frr_with_privs(&eigrpd_privs) {
+		eigrp_sock = vrf_socket(
+			AF_INET, SOCK_RAW, IPPROTO_EIGRPIGP, vrf->vrf_id,
+			vrf->vrf_id != VRF_DEFAULT ? vrf->name : NULL);
+		if (eigrp_sock < 0) {
+			zlog_err("eigrp_read_sock_init: socket: %s",
 				 safe_strerror(errno));
-		zlog_err("eigrp_read_sock_init: socket: %s",
-			 safe_strerror(save_errno));
-		exit(1);
-	}
+			exit(1);
+		}
 
 #ifdef IP_HDRINCL
-	/* we will include IP header with packet */
-	ret = setsockopt(eigrp_sock, IPPROTO_IP, IP_HDRINCL, &hincl,
-			 sizeof(hincl));
-	if (ret < 0) {
-		int save_errno = errno;
-		if (eigrpd_privs.change(ZPRIVS_LOWER))
-			zlog_err("eigrp_sock_init: could not lower privs, %s",
-				 safe_strerror(errno));
-		zlog_warn("Can't set IP_HDRINCL option for fd %d: %s",
-			  eigrp_sock, safe_strerror(save_errno));
-	}
+		/* we will include IP header with packet */
+		ret = setsockopt(eigrp_sock, IPPROTO_IP, IP_HDRINCL, &hincl,
+				 sizeof(hincl));
+		if (ret < 0) {
+			zlog_warn("Can't set IP_HDRINCL option for fd %d: %s",
+				  eigrp_sock, safe_strerror(errno));
+		}
 #elif defined(IPTOS_PREC_INTERNETCONTROL)
 #warning "IP_HDRINCL not available on this system"
 #warning "using IPTOS_PREC_INTERNETCONTROL"
-	ret = setsockopt_ipv4_tos(eigrp_sock, IPTOS_PREC_INTERNETCONTROL);
-	if (ret < 0) {
-		int save_errno = errno;
-		if (eigrpd_privs.change(ZPRIVS_LOWER))
-			zlog_err("eigrpd_sock_init: could not lower privs, %s",
-				 safe_strerror(errno));
-		zlog_warn("can't set sockopt IP_TOS %d to socket %d: %s", tos,
-			  eigrp_sock, safe_strerror(save_errno));
-		close(eigrp_sock); /* Prevent sd leak. */
-		return ret;
-	}
+		ret = setsockopt_ipv4_tos(eigrp_sock,
+					  IPTOS_PREC_INTERNETCONTROL);
+		if (ret < 0) {
+			zlog_warn("can't set sockopt IP_TOS %d to socket %d: %s",
+				  tos, eigrp_sock, safe_strerror(errno));
+			close(eigrp_sock); /* Prevent sd leak. */
+			return ret;
+		}
 #else /* !IPTOS_PREC_INTERNETCONTROL */
 #warning "IP_HDRINCL not available, nor is IPTOS_PREC_INTERNETCONTROL"
-	zlog_warn("IP_HDRINCL option not available");
+		zlog_warn("IP_HDRINCL option not available");
 #endif /* IP_HDRINCL */
 
-	ret = setsockopt_ifindex(AF_INET, eigrp_sock, 1);
-
-	if (ret < 0)
-		zlog_warn("Can't set pktinfo option for fd %d", eigrp_sock);
-
-	if (eigrpd_privs.change(ZPRIVS_LOWER)) {
-		zlog_err("eigrp_sock_init: could not lower privs, %s",
-			 safe_strerror(errno));
+		ret = setsockopt_ifindex(AF_INET, eigrp_sock, 1);
+		if (ret < 0)
+			zlog_warn("Can't set pktinfo option for fd %d",
+				  eigrp_sock);
 	}
 
 	return eigrp_sock;
@@ -125,9 +114,6 @@ void eigrp_adjust_sndbuflen(eigrp_t *eigrp, unsigned int buflen)
 	/* Check if any work has to be done at all. */
 	if (eigrp->maxsndbuflen >= buflen)
 		return;
-	if (eigrpd_privs.change(ZPRIVS_RAISE))
-		zlog_err("%s: could not raise privs, %s", __func__,
-			 safe_strerror(errno));
 
 	/* Now we try to set SO_SNDBUF to what our caller has requested
 	 * (the MTU of a newly added interface). However, if the OS has
@@ -145,9 +131,6 @@ void eigrp_adjust_sndbuflen(eigrp_t *eigrp, unsigned int buflen)
 		eigrp->maxsndbuflen = (unsigned int)newbuflen;
 	else
 		zlog_warn("%s: failed to get SO_SNDBUF", __func__);
-	if (eigrpd_privs.change(ZPRIVS_LOWER))
-		zlog_err("%s: could not lower privs, %s", __func__,
-			 safe_strerror(errno));
 }
 
 int eigrp_if_ipmulticast(eigrp_t *top, struct prefix *p,
@@ -232,7 +215,7 @@ int eigrp_if_drop_allspfrouters(eigrp_t *top, struct prefix *p,
 
 int eigrp_network_set(eigrp_t *eigrp, struct prefix *p)
 {
-	struct vrf *vrf = vrf_lookup_by_id(VRF_DEFAULT);
+	struct vrf *vrf = vrf_lookup_by_id(eigrp->vrf_id);
 	struct route_node *rn;
 	struct interface *ifp;
 
@@ -248,7 +231,7 @@ int eigrp_network_set(eigrp_t *eigrp, struct prefix *p)
 	rn->info = (void *)pref;
 
 	/* Schedule Router ID Update. */
-	if (eigrp->router_id == 0)
+	if (eigrp->router_id.s_addr == INADDR_ANY)
 		eigrp_router_id_update(eigrp);
 	/* Run network config now. */
 	/* Get target interface. */
@@ -262,11 +245,11 @@ int eigrp_network_set(eigrp_t *eigrp, struct prefix *p)
 /* Check whether interface matches given network
  * returns: 1, true. 0, false
  */
-static int eigrp_network_match_iface(const struct connected *co,
+static int eigrp_network_match_iface(const struct prefix *co_prefix,
 				     const struct prefix *net)
 {
 	/* new approach: more elegant and conceptually clean */
-	return prefix_match_network_statement(net, CONNECTED_PREFIX(co));
+	return prefix_match_network_statement(net, co_prefix);
 }
 
 static void eigrp_network_run_interface(eigrp_t *eigrp, struct prefix *p,
@@ -284,10 +267,9 @@ static void eigrp_network_run_interface(eigrp_t *eigrp, struct prefix *p,
 			continue;
 
 		if (p->family == co->address->family && !ifp->info
-		    && eigrp_network_match_iface(co, p)) {
+		    && eigrp_network_match_iface(co->address, p)) {
 
 			ei = eigrp_if_new(eigrp, ifp, co->address);
-			ei->connected = co;
 
 			/* Relate eigrp interface to eigrp instance. */
 			ei->eigrp = eigrp;
@@ -314,8 +296,11 @@ void eigrp_if_update(struct interface *ifp)
 	 * we need to check eac one and add the interface as approperate
 	 */
 	for (ALL_LIST_ELEMENTS(eigrp_om->eigrp, node, nnode, eigrp)) {
+		if (ifp->vrf_id != eigrp->vrf_id)
+			continue;
+
 		/* EIGRP must be on and Router-ID must be configured. */
-		if (!eigrp || eigrp->router_id == 0)
+		if (eigrp->router_id.s_addr == 0)
 			continue;
 
 		/* Run each network for this interface. */
@@ -328,47 +313,45 @@ void eigrp_if_update(struct interface *ifp)
 
 int eigrp_network_unset(eigrp_t *eigrp, struct prefix *p)
 {
-    struct route_node *rn;
-    struct listnode *node, *nnode;
-    eigrp_interface_t *ei;
-    struct prefix *pref;
+	struct route_node *rn;
+	struct listnode *node, *nnode;
+	eigrp_interface_t *ei;
+	struct prefix *pref;
 
-    rn = route_node_lookup(eigrp->networks, p);
-    if (rn == NULL)
-	return 0;
+	rn = route_node_lookup(eigrp->networks, p);
+	if (rn == NULL)
+		return 0;
 
-    pref = rn->info;
-    route_unlock_node(rn);
+	pref = rn->info;
+	route_unlock_node(rn);
 
-    if (!IPV4_ADDR_SAME(&pref->u.prefix4, &p->u.prefix4))
-	return 0;
+	if (!IPV4_ADDR_SAME(&pref->u.prefix4, &p->u.prefix4))
+		return 0;
 
-    prefix_ipv4_free(rn->info);
-    rn->info = NULL;
-    route_unlock_node(rn); /* initial reference */
+	prefix_ipv4_free((struct prefix_ipv4 **)&rn->info);
+	route_unlock_node(rn); /* initial reference */
 
-    /* Find interfaces that not configured already.  */
-    for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode, ei)) {
-	int found = 0;
-	struct connected *co = ei->connected;
+	/* Find interfaces that not configured already.  */
+	for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode, ei)) {
+		bool found = false;
 
-	for (rn = route_top(eigrp->networks); rn; rn = route_next(rn)) {
-	    if (rn->info == NULL)
-		continue;
+		for (rn = route_top(eigrp->networks); rn; rn = route_next(rn)) {
+			if (rn->info == NULL)
+				continue;
 
-	    if (eigrp_network_match_iface(co, &rn->p)) {
-		found = 1;
-		route_unlock_node(rn);
-		break;
-	    }
+			if (eigrp_network_match_iface(&ei->address, &rn->p)) {
+				found = true;
+				route_unlock_node(rn);
+				break;
+			}
+		}
+
+		if (!found) {
+			eigrp_if_free(ei, INTERFACE_DOWN_BY_VTY);
+		}
 	}
 
-	if (found == 0) {
-	    eigrp_if_free(eigrp, ei, INTERFACE_DOWN_BY_VTY);
-	}
-    }
-
-    return 1;
+	return 1;
 }
 
 void eigrp_external_routes_refresh(eigrp_t *eigrp, int type)

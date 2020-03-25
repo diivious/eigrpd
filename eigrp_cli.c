@@ -702,7 +702,7 @@ DEFPY(
 void eigrp_cli_show_summarize_address(struct vty *vty, struct lyd_node *dnode,
 				      bool show_defaults)
 {
-	const struct eigrp_interface *eif = nb_running_get_entry(dnode, NULL,
+	const eigrp_interface_t *eif = nb_running_get_entry(dnode, NULL,
 								 true);
 	const char *summarize_address = yang_dnode_get_string(dnode, NULL);
 
@@ -766,7 +766,7 @@ DEFPY(
 void eigrp_cli_show_authentication(struct vty *vty, struct lyd_node *dnode,
 				   bool show_defaults)
 {
-	const struct eigrp_interface *eif = nb_running_get_entry(dnode, NULL,
+	const eigrp_interface_t *eif = nb_running_get_entry(dnode, NULL,
 								 true);
 	const char *crypt = yang_dnode_get_string(dnode, NULL);
 
@@ -826,7 +826,7 @@ DEFPY(
 void eigrp_cli_show_keychain(struct vty *vty, struct lyd_node *dnode,
 			     bool show_defaults)
 {
-	const struct eigrp_interface *eif = nb_running_get_entry(dnode, NULL,
+	const eigrp_interface_t *eif = nb_running_get_entry(dnode, NULL,
 								 true);
 	const char *keychain = yang_dnode_get_string(dnode, NULL);
 

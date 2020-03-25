@@ -45,7 +45,7 @@
  */
 
 // Vector Metrics
-#define EIGRP_TLV1_VMETRIC	\
+#define EIGRP_TLV1_METRIC	\
     uint32_t delay;		\
     uint32_t bandwidth;		\
     uint8_t mtu[3];		\
@@ -54,7 +54,7 @@
     uint8_t load;		\
     uint8_t tag;		\
     uint8_t flags;
-#define EIGRP_TLV1_VMETRIC_SIZE	16
+#define EIGRP_TLV1_METRIC_SIZE	16
 
 // Nexthop (0 if this router)
 #define EIGRP_TLV1_IPV4_NEXTHOP	\
@@ -83,7 +83,7 @@ typedef struct eigrp_tlv1_header {
 typedef struct eigrp_tlv1_internal_ipv4 {
     EIGRP_TLV_HDR
     EIGRP_TLV1_IPV4_NEXTHOP
-    EIGRP_TLV1_VMETRIC
+    EIGRP_TLV1_METRIC
 
     // destination address
     uint8_t prefix_length;
@@ -93,7 +93,7 @@ typedef struct eigrp_tlv1_internal_ipv4 {
 typedef struct eigrp_tlv1_external_ipv4 {
     EIGRP_TLV_HDR
     EIGRP_TLV1_IPV4_NEXTHOP
-    EIGRP_TLV1_VMETRIC
+    EIGRP_TLV1_METRIC
 
     // destination address
     uint8_t prefix_length;
@@ -106,7 +106,7 @@ typedef struct eigrp_tlv1_extdata {
 
 #define EIGRP_IPV4_MIN_TLV	(EIGRP_TLV_HDR_SIZE + \
 				 EIGRP_TLV1_IPV4_NEXTHOP_SIZE + \
-				 EIGRP_TLV1_VMETRIC_SIZE)
+				 EIGRP_TLV1_METRIC_SIZE)
 
 /**
  * extract the external route information provide by the
@@ -141,42 +141,42 @@ static uint16_t eigrp_tlv1_external_encode(eigrp_stream_t *pkt, eigrp_extdata_t 
 /**
  * extract the vector metric from the TLV and put it into a usable form
  */
-static uint16_t eigrp_tlv1_metric_decode(eigrp_stream_t *pkt, eigrp_vmetrics_t *vmetric)
+static uint16_t eigrp_tlv1_metric_decode(eigrp_stream_t *pkt, eigrp_metrics_t *metric)
 {
 
     /* TLV1.2 provides metric in 32bit form, need to scale  */
-    vmetric->delay = eigrp_scaled_to_delay(stream_getl(pkt));
-    vmetric->bandwidth = stream_getl(pkt);
-    vmetric->mtu[0] = stream_getc(pkt);
-    vmetric->mtu[1] = stream_getc(pkt);
-    vmetric->mtu[2] = stream_getc(pkt);
-    vmetric->hop_count = stream_getc(pkt);
-    vmetric->reliability = stream_getc(pkt);
-    vmetric->load = stream_getc(pkt);
-    vmetric->tag = stream_getc(pkt);
-    vmetric->flags = stream_getc(pkt);
+    metric->delay = eigrp_scaled_to_delay(stream_getl(pkt));
+    metric->bandwidth = stream_getl(pkt);
+    metric->mtu[0] = stream_getc(pkt);
+    metric->mtu[1] = stream_getc(pkt);
+    metric->mtu[2] = stream_getc(pkt);
+    metric->hop_count = stream_getc(pkt);
+    metric->reliability = stream_getc(pkt);
+    metric->load = stream_getc(pkt);
+    metric->tag = stream_getc(pkt);
+    metric->flags = stream_getc(pkt);
 
-    return(EIGRP_TLV1_VMETRIC_SIZE);
+    return(EIGRP_TLV1_METRIC_SIZE);
 }
 
-static uint16_t eigrp_tlv1_metric_encode(eigrp_stream_t *pkt, eigrp_vmetrics_t *vmetric)
+static uint16_t eigrp_tlv1_metric_encode(eigrp_stream_t *pkt, eigrp_metrics_t *metric)
 {
     /*
      * TLV1.2 supports classic metrics, need to scale it down to 32 bits
     */
-    stream_putl(pkt, eigrp_delay_to_scaled(vmetric->delay));
+    stream_putl(pkt, eigrp_delay_to_scaled(metric->delay));
 
-    stream_putl(pkt, vmetric->bandwidth);
-    stream_putc(pkt, vmetric->mtu[2]);
-    stream_putc(pkt, vmetric->mtu[1]);
-    stream_putc(pkt, vmetric->mtu[0]);
-    stream_putc(pkt, vmetric->hop_count);
-    stream_putc(pkt, vmetric->reliability);
-    stream_putc(pkt, vmetric->load);
-    stream_putc(pkt, vmetric->tag);
-    stream_putc(pkt, vmetric->flags);
+    stream_putl(pkt, metric->bandwidth);
+    stream_putc(pkt, metric->mtu[2]);
+    stream_putc(pkt, metric->mtu[1]);
+    stream_putc(pkt, metric->mtu[0]);
+    stream_putc(pkt, metric->hop_count);
+    stream_putc(pkt, metric->reliability);
+    stream_putc(pkt, metric->load);
+    stream_putc(pkt, metric->tag);
+    stream_putc(pkt, metric->flags);
 
-    return(EIGRP_TLV1_VMETRIC_SIZE);
+    return(EIGRP_TLV1_METRIC_SIZE);
 }
 
 static uint16_t eigrp_tlv1_addr_decode(eigrp_stream_t *pkt, eigrp_route_descriptor_t *route)
@@ -239,16 +239,26 @@ static uint16_t eigrp_tlv1_addr_encode(eigrp_stream_t *pkt, eigrp_route_descript
     prefixlen = (dest->prefixlen + 7) / 8;
 
     stream_putc(pkt, dest->u.prefix4.s_addr & 0xFF);
+
+    /* OK, i could add "((fallthrough)) to each of these, but thats less readable than replicating the lines.
+     * Plus the optimize will blow all this out anywat
+     */
     switch (prefixlen) {
     case 4:
 	stream_putc(pkt, (dest->u.prefix4.s_addr >> 24) & 0xFF);
-
+	stream_putc(pkt, (dest->u.prefix4.s_addr >> 16) & 0xFF);
+	stream_putc(pkt, (dest->u.prefix4.s_addr >> 8) & 0xFF);
+	stream_putc(pkt, (dest->u.prefix4.s_addr) & 0xFF);
+	break;
     case 3:
 	stream_putc(pkt, (dest->u.prefix4.s_addr >> 16) & 0xFF);
-
+	stream_putc(pkt, (dest->u.prefix4.s_addr >> 8) & 0xFF);
+	stream_putc(pkt, (dest->u.prefix4.s_addr) & 0xFF);
+	break;
     case 2:
 	stream_putc(pkt, (dest->u.prefix4.s_addr >> 8) & 0xFF);
-
+	stream_putc(pkt, (dest->u.prefix4.s_addr) & 0xFF);
+	break;
     case 1:
 	stream_putc(pkt, (dest->u.prefix4.s_addr) & 0xFF);
 	break;
@@ -283,8 +293,8 @@ static uint16_t eigrp_tlv1_nexthop_encode(eigrp_stream_t *pkt, eigrp_route_descr
  * decode an incoming TLV into a topology route and return it for processing
  */
 static eigrp_route_descriptor_t *eigrp_tlv1_decoder(eigrp_t *eigrp,
-						    eigrp_neighbor_t *nbr,
-						    eigrp_stream_t *pkt, uint16_t pktlen)
+					       eigrp_neighbor_t *nbr,
+					       eigrp_stream_t *pkt, uint16_t pktlen)
 {
     eigrp_route_descriptor_t *route = NULL;
     uint16_t type, length;
@@ -319,9 +329,11 @@ static eigrp_route_descriptor_t *eigrp_tlv1_decoder(eigrp_t *eigrp,
 	case EIGRP_TLV_IPv4_EXT:
 	    bytes += eigrp_tlv1_external_decode(pkt, &route->extdata);
 
-	// fall though to internal processing to get metric and route
+	    // fall though to internal processing to get metric and route
+	    __attribute__ ((fallthrough));
+
 	case EIGRP_TLV_IPv4_INT:
-	    bytes += eigrp_tlv1_metric_decode(pkt, &route->vmetric);
+	    bytes += eigrp_tlv1_metric_decode(pkt, &route->metric);
 
 	    /* metric and (optional) external info has been processed,
 	     * now lets collect all the destination(s).
@@ -375,12 +387,12 @@ static uint16_t eigrp_tlv1_encoder(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
     switch(type) {
     case EIGRP_TLV_IPv4_EXT:
 	length += eigrp_tlv1_external_encode(pkt, &route->extdata);
-	length += eigrp_tlv1_metric_encode(pkt, &route->vmetric);
+	length += eigrp_tlv1_metric_encode(pkt, &route->metric);
 	length += eigrp_tlv1_addr_encode(pkt, route);
 	break;
 	
     case EIGRP_TLV_IPv4_INT:
-	length += eigrp_tlv1_metric_encode(pkt, &route->vmetric);
+	length += eigrp_tlv1_metric_encode(pkt, &route->metric);
 	length += eigrp_tlv1_addr_encode(pkt, route);
 	break;
 
@@ -398,7 +410,7 @@ static uint16_t eigrp_tlv1_encoder(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
     if (ei) {
 	if (eigrp_update_prefix_apply(eigrp, ei, EIGRP_FILTER_OUT, prefix->destination)) {
 	    zlog_info("Prefix Filtered:  Setting Metric to EIGRP_MAX_METRIC");
-	    route->vmetric.delay = EIGRP_MAX_METRIC;
+	    route->metric.delay = EIGRP_MAX_METRIC;
 	}
     }
 

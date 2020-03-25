@@ -44,14 +44,15 @@
 #define EIGRP_CLASSIC_MAX		0xffffffff		// 4294967295
 #define EIGRP_CLASSIC_SCALER		256			// IGRP to EIGRP conversion
 
+
 /* Prototypes */
 extern eigrp_scaled_t eigrp_bandwidth_to_scaled(eigrp_bandwidth_t);
 extern eigrp_bandwidth_t eigrp_scaled_to_bandwidth(eigrp_scaled_t);
 extern eigrp_scaled_t eigrp_delay_to_scaled(eigrp_delay_t);
 extern eigrp_delay_t eigrp_scaled_to_delay(eigrp_scaled_t);
 
-extern eigrp_metric_t eigrp_calculate_metrics(eigrp_t *, eigrp_vmetrics_t);
+extern eigrp_metric_t eigrp_calculate_metrics(eigrp_t *, eigrp_metrics_t);
 extern eigrp_metric_t eigrp_calculate_total_metrics(eigrp_t *, eigrp_route_descriptor_t *);
-extern bool eigrp_metrics_is_same(eigrp_vmetrics_t, eigrp_vmetrics_t);
+extern bool eigrp_metrics_is_same(eigrp_metrics_t, eigrp_metrics_t);
 
 #endif /* _ZEBRA_EIGRP_METRIC_H_ */

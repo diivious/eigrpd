@@ -30,11 +30,17 @@
 
 /* Prototypes */
 
-extern int eigrp_sock_init(void);
+extern int eigrp_sock_init(struct vrf *vrf);
 extern int eigrp_if_ipmulticast(eigrp_t *, struct prefix *, unsigned int);
 extern int eigrp_network_set(eigrp_t *eigrp, struct prefix *p);
 extern int eigrp_network_unset(eigrp_t *eigrp, struct prefix *p);
 
+extern int eigrp_hello_timer(struct thread *);
+extern void eigrp_if_update(struct interface *);
+extern int eigrp_if_add_allspfrouters(eigrp_t *, struct prefix *,
+				      unsigned int);
+extern int eigrp_if_drop_allspfrouters(eigrp_t *top, struct prefix *p,
+				       unsigned int ifindex);
 extern void eigrp_adjust_sndbuflen(eigrp_t *, unsigned int);
 
 extern void eigrp_external_routes_refresh(eigrp_t *, int);

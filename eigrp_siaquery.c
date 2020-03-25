@@ -55,16 +55,24 @@
 #include "eigrpd/eigrp_memory.h"
 
 /*EIGRP SIA-QUERY read function*/
-void eigrp_siaquery_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+void eigrp_siaquery_receive(eigrp_t *eigrp, struct ip *iph,
 			    struct eigrp_header *eigrph, struct stream *s,
 			    eigrp_interface_t *ei, int size)
 {
+	eigrp_neighbor_t *nbr;
 	struct TLV_IPv4_Internal_type *tlv;
 
 	uint16_t type;
 
 	/* increment statistics. */
-	ei->stats.rcvd.siaQuery++;
+	ei->siaQuery_in++;
+
+	/* get neighbor struct */
+	nbr = eigrp_nbr_get(ei, eigrph, iph);
+
+	/* neighbor must be valid, eigrp_nbr_get creates if none existed */
+	assert(nbr);
+
 	nbr->recv_sequence_number = ntohl(eigrph->sequence);
 
 	while (s->endp > s->getp) {
@@ -86,7 +94,7 @@ void eigrp_siaquery_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 			/* If the destination exists (it should, but one never
 			 * know)*/
 			if (dest != NULL) {
-				struct eigrp_fsm_action_message msg;
+				eigrp_fsm_action_message_t msg;
 				eigrp_route_descriptor_t *route =
 					eigrp_prefix_descriptor_lookup(dest->entries,
 								  nbr);
@@ -102,13 +110,13 @@ void eigrp_siaquery_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 			eigrp_IPv4_InternalTLV_free(tlv);
 		}
 	}
-	eigrp_hello_send_ack(eigrp, nbr);
+	eigrp_hello_send_ack(nbr);
 }
 
 void eigrp_send_siaquery(eigrp_neighbor_t *nbr,
 			 eigrp_prefix_descriptor_t *pe)
 {
-	struct eigrp_packet *ep;
+	eigrp_packet_t *ep;
 	uint16_t length = EIGRP_HEADER_LEN;
 
 	ep = eigrp_packet_new(EIGRP_PACKET_MTU(nbr->ei->ifp->mtu), nbr);
@@ -120,10 +128,10 @@ void eigrp_send_siaquery(eigrp_neighbor_t *nbr,
 	// encode Authentication TLV, if needed
 	if ((nbr->ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 	    && (nbr->ei->params.auth_keychain != NULL)) {
-		length += eigrp_add_authTLV_MD5_encode(ep->s, nbr->ei);
+		length += eigrp_add_authTLV_MD5_to_stream(ep->s, nbr->ei);
 	}
 
-	length += eigrp_add_internalTLV_encode(ep->s, pe);
+	length += eigrp_add_internalTLV_to_stream(ep->s, pe);
 
 	if ((nbr->ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 	    && (nbr->ei->params.auth_keychain != NULL)) {

@@ -42,6 +42,7 @@
 #include "checksum.h"
 #include "md5.h"
 #include "sha256.h"
+#include "lib_errors.h"
 
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
@@ -56,6 +57,7 @@
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
 #include "eigrpd/eigrp_memory.h"
+#include "eigrpd/eigrp_errors.h"
 
 /* Packet Type String. */
 const struct message eigrp_packet_type_str[] = {
@@ -71,16 +73,19 @@ const struct message eigrp_packet_type_str[] = {
 	{EIGRP_OPC_SIAREPLY, "SIAReply"},
 	{0}};
 
+
 static unsigned char zeropad[16] = {0};
 
 /* Forward function reference*/
-static struct stream *eigrp_recv_packet(int, struct interface **,
-					struct stream *);
-static int eigrp_verify_header(struct stream *, eigrp_interface_t *,
-			       struct ip *, struct eigrp_header *);
-static int eigrp_check_network_mask(eigrp_interface_t *, struct in_addr);
+static struct stream *eigrp_recv_packet(eigrp_t *eigrp, int fd,
+					struct interface **ifp,
+					struct stream *s);
+static int eigrp_verify_header(struct stream *s, eigrp_interface_t *ei,
+			       struct ip *addr, struct eigrp_header *header);
+static int eigrp_check_network_mask(eigrp_interface_t *ei,
+				    struct in_addr mask);
 
-static int eigrp_retrans_count_exceeded(struct eigrp_packet *ep,
+static int eigrp_retrans_count_exceeded(eigrp_packet_t *ep,
 					eigrp_neighbor_t *nbr)
 {
 	return 1;
@@ -278,7 +283,7 @@ int eigrp_make_sha256_digest(eigrp_interface_t *ei, struct stream *s,
 		return 0;
 	}
 
-	inet_ntop(AF_INET, &ei->address->u.prefix4, source_ip, PREFIX_STRLEN);
+	inet_ntop(AF_INET, &ei->address.u.prefix4, source_ip, PREFIX_STRLEN);
 
 	memset(&ctx, 0, sizeof(ctx));
 	buffer[0] = '\n';
@@ -345,19 +350,21 @@ int eigrp_write(struct thread *thread)
 	/* Get one packet from queue. */
 	ep = eigrp_fifo_next(ei->obuf);
 	if (!ep) {
-		zlog_err("%s: Interface %s no packet on queue?",
-			 __PRETTY_FUNCTION__, ei->ifp->name);
+		flog_err(EC_LIB_DEVELOPMENT,
+			 "%s: Interface %s no packet on queue?", __func__,
+			 ei->ifp->name);
 		goto out;
 	}
 	if (ep->length < EIGRP_HEADER_LEN) {
-		zlog_err("%s: Packet just has a header?", __PRETTY_FUNCTION__);
+		flog_err(EC_EIGRP_PACKET, "%s: Packet just has a header?",
+			 __func__);
 		eigrp_header_dump((struct eigrp_header *)ep->s->data);
 		eigrp_packet_delete(ei);
 		goto out;
 	}
 
 	if (ep->dst.s_addr == htonl(EIGRP_MULTICAST_ADDRESS))
-		eigrp_if_ipmulticast(eigrp, ei->address, ei->ifp->ifindex);
+		eigrp_if_ipmulticast(eigrp, &ei->address, ei->ifp->ifindex);
 
 	memset(&iph, 0, sizeof(struct ip));
 	memset(&sa_dst, 0, sizeof(sa_dst));
@@ -413,7 +420,7 @@ int eigrp_write(struct thread *thread)
 	iph.ip_ttl = EIGRP_IP_TTL;
 	iph.ip_p = IPPROTO_EIGRPIGP;
 	iph.ip_sum = 0;
-	iph.ip_src.s_addr = ei->address->u.prefix4.s_addr;
+	iph.ip_src.s_addr = ei->address.u.prefix4.s_addr;
 	iph.ip_dst.s_addr = ep->dst.s_addr;
 
 	memset(&msg, 0, sizeof(msg));
@@ -478,7 +485,7 @@ int eigrp_read(struct thread *thread)
 	struct eigrp_header *eigrph;
 	struct interface *ifp;
 	eigrp_neighbor_t *nbr;
-
+	struct in_addr srcaddr;
 	uint16_t opcode = 0;
 	uint16_t length = 0;
 
@@ -490,7 +497,7 @@ int eigrp_read(struct thread *thread)
 	thread_add_read(master, eigrp_read, eigrp, eigrp->fd, &eigrp->t_read);
 
 	stream_reset(eigrp->ibuf);
-	if (!(ibuf = eigrp_recv_packet(eigrp->fd, &ifp, eigrp->ibuf))) {
+	if (!(ibuf = eigrp_recv_packet(eigrp, eigrp->fd, &ifp, eigrp->ibuf))) {
 		/* This raw packet is known to be at least as big as its IP
 		 * header. */
 		return -1;
@@ -504,6 +511,7 @@ int eigrp_read(struct thread *thread)
 	if (iph->ip_v == 4)
 		length = (iph->ip_len) - 20U;
 
+	srcaddr = iph->ip_src;
 
 	/* IP Header dump. */
 	if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV)
@@ -519,8 +527,8 @@ int eigrp_read(struct thread *thread)
 		   and also platforms (such as Solaris 8) that claim to support
 		   ifindex
 		   retrieval but do not. */
-		c = if_lookup_address((void *)&iph->ip_src, AF_INET,
-				      VRF_DEFAULT);
+		c = if_lookup_address((void *)&srcaddr, AF_INET,
+				      eigrp->vrf_id);
 
 		if (c == NULL)
 			return 0;
@@ -542,11 +550,11 @@ int eigrp_read(struct thread *thread)
 
 	/* Self-originated packet should be discarded silently. */
 	if (eigrp_if_lookup_by_local_addr(eigrp, NULL, iph->ip_src)
-	    || (IPV4_ADDR_SAME(&iph->ip_src, &ei->address->u.prefix4))) {
+	    || (IPV4_ADDR_SAME(&srcaddr, &ei->address.u.prefix4))) {
 		if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV))
 			zlog_debug(
 				"eigrp_read[%s]: Dropping self-originated packet",
-				inet_ntoa(iph->ip_src));
+				inet_ntoa(srcaddr));
 		return 0;
 	}
 
@@ -576,7 +584,7 @@ int eigrp_read(struct thread *thread)
 					  sizeof(buf[0])),
 				inet_ntop(AF_INET, &iph->ip_dst, buf[1],
 					  sizeof(buf[1])),
-				inet_ntop(AF_INET, &ei->address->u.prefix4,
+				inet_ntop(AF_INET, &ei->address.u.prefix4,
 					  buf[2], sizeof(buf[2])));
 
 		if (iph->ip_dst.s_addr == htonl(EIGRP_MULTICAST_ADDRESS)) {
@@ -624,13 +632,14 @@ int eigrp_read(struct thread *thread)
 	/* Read rest of the packet and call each sort of packet routine. */
 	stream_forward_getp(ibuf, EIGRP_HEADER_LEN);
 
-	// neighbor must be valid, eigrp_nbr_get creates if none existed
-	nbr = eigrp_nbr_get(ei, eigrph, iph);
-	assert(nbr);
-
 	/* New testing block of code for handling Acks */
 	if (ntohl(eigrph->ack) != 0) {
-		struct eigrp_packet *ep = NULL;
+		eigrp_packet_t *ep = NULL;
+
+		nbr = eigrp_nbr_get(ei, eigrph, iph);
+
+		// neighbor must be valid, eigrp_nbr_get creates if none existed
+		assert(nbr);
 
 		ep = eigrp_fifo_next(nbr->retrans_queue);
 		if ((ep) && (ntohl(eigrph->ack) == ep->sequence_number)) {
@@ -662,42 +671,46 @@ int eigrp_read(struct thread *thread)
 		}
 	}
 
-	/* process all known opcodes */
+
 	switch (opcode) {
 	case EIGRP_OPC_HELLO:
-	    eigrp_hello_receive(eigrp, nbr, eigrph, ibuf, ei, length);
-	    break;
+		eigrp_hello_receive(eigrp, iph, eigrph, ibuf, ei, length);
+		break;
 	case EIGRP_OPC_PROBE:
-	    //eigrp_probe_receive(eigrp, nbr, eigrph, ibuf, ei, length);
-	    break;
+		//      eigrp_probe_receive(eigrp, iph, eigrph, ibuf, ei,
+		//      length);
+		break;
 	case EIGRP_OPC_QUERY:
-	    eigrp_query_receive(eigrp, nbr, eigrph, ibuf, ei, length);
-	    break;
+		eigrp_query_receive(eigrp, iph, eigrph, ibuf, ei, length);
+		break;
 	case EIGRP_OPC_REPLY:
-	    eigrp_reply_receive(eigrp, nbr, eigrph, ibuf, ei, length);
-	    break;
+		eigrp_reply_receive(eigrp, iph, eigrph, ibuf, ei, length);
+		break;
 	case EIGRP_OPC_REQUEST:
-	    //eigrp_request_receive(eigrp, nbr, eigrph, ibuf, ei, length);
-	    break;
+		//      eigrp_request_receive(eigrp, iph, eigrph, ibuf, ei,
+		//      length);
+		break;
 	case EIGRP_OPC_SIAQUERY:
-	    eigrp_query_receive(eigrp, nbr, eigrph, ibuf, ei, length);
-	    break;
+		eigrp_query_receive(eigrp, iph, eigrph, ibuf, ei, length);
+		break;
 	case EIGRP_OPC_SIAREPLY:
-	    eigrp_reply_receive(eigrp, nbr, eigrph, ibuf, ei, length);
-	    break;
+		eigrp_reply_receive(eigrp, iph, eigrph, ibuf, ei, length);
+		break;
 	case EIGRP_OPC_UPDATE:
-	    eigrp_update_receive(eigrp, nbr, eigrph, ibuf, ei, length);
-	    break;
+		eigrp_update_receive(eigrp, iph, eigrph, ibuf, ei, length);
+		break;
 	default:
-	    zlog_warn("interface %s: EIGRP packet header type %d unsupported",
-		      IF_NAME(ei), opcode);
-	    break;
+		zlog_warn(
+			"interface %s: EIGRP packet header type %d unsupported",
+			IF_NAME(ei), opcode);
+		break;
 	}
 
 	return 0;
 }
 
-static struct stream *eigrp_recv_packet(int fd, struct interface **ifp,
+static struct stream *eigrp_recv_packet(eigrp_t *eigrp,
+					int fd, struct interface **ifp,
 					struct stream *ibuf)
 {
 	int ret;
@@ -736,7 +749,7 @@ static struct stream *eigrp_recv_packet(int fd, struct interface **ifp,
 
 	ip_len = iph->ip_len;
 
-#if !defined(GNU_LINUX) && (OpenBSD < 200311) && (__FreeBSD_version < 1000000)
+#if defined(__FreeBSD__) && (__FreeBSD_version < 1000000)
 	/*
 	 * Kernel network code touches incoming IP header parameters,
 	 * before protocol specific processing.
@@ -765,7 +778,7 @@ static struct stream *eigrp_recv_packet(int fd, struct interface **ifp,
 
 	ifindex = getsockopt_ifindex(AF_INET, &msgh);
 
-	*ifp = if_lookup_by_index(ifindex, VRF_DEFAULT);
+	*ifp = if_lookup_by_index(ifindex, eigrp->vrf_id);
 
 	if (ret != ip_len) {
 		zlog_warn(
@@ -778,19 +791,19 @@ static struct stream *eigrp_recv_packet(int fd, struct interface **ifp,
 	return ibuf;
 }
 
-struct eigrp_fifo *eigrp_fifo_new(void)
+eigrp_fifo_t *eigrp_fifo_new(void)
 {
-	struct eigrp_fifo *new;
+	eigrp_fifo_t *new;
 
-	new = XCALLOC(MTYPE_EIGRP_FIFO, sizeof(struct eigrp_fifo));
+	new = XCALLOC(MTYPE_EIGRP_FIFO, sizeof(eigrp_fifo_t));
 	return new;
 }
 
 /* Free eigrp packet fifo. */
-void eigrp_fifo_free(struct eigrp_fifo *fifo)
+void eigrp_fifo_free(eigrp_fifo_t *fifo)
 {
 	eigrp_packet_t *ep;
-	struct eigrp_packet *next;
+	eigrp_packet_t *next;
 
 	for (ep = fifo->head; ep; ep = next) {
 		next = ep->next;
@@ -803,10 +816,10 @@ void eigrp_fifo_free(struct eigrp_fifo *fifo)
 }
 
 /* Free eigrp fifo entries without destroying fifo itself*/
-void eigrp_fifo_reset(struct eigrp_fifo *fifo)
+void eigrp_fifo_reset(eigrp_fifo_t *fifo)
 {
 	eigrp_packet_t *ep;
-	struct eigrp_packet *next;
+	eigrp_packet_t *next;
 
 	for (ep = fifo->head; ep; ep = next) {
 		next = ep->next;
@@ -816,11 +829,11 @@ void eigrp_fifo_reset(struct eigrp_fifo *fifo)
 	fifo->count = 0;
 }
 
-struct eigrp_packet *eigrp_packet_new(size_t size, eigrp_neighbor_t *nbr)
+eigrp_packet_t *eigrp_packet_new(size_t size, eigrp_neighbor_t *nbr)
 {
-	struct eigrp_packet *new;
+	eigrp_packet_t *new;
 
-	new = XCALLOC(MTYPE_EIGRP_PACKET, sizeof(struct eigrp_packet));
+	new = XCALLOC(MTYPE_EIGRP_PACKET, sizeof(eigrp_packet_t));
 	new->s = stream_new(size);
 	new->retrans_counter = 0;
 	new->nbr = nbr;
@@ -835,7 +848,7 @@ void eigrp_send_packet_reliably(eigrp_neighbor_t *nbr)
 	ep = eigrp_fifo_next(nbr->retrans_queue);
 
 	if (ep) {
-		struct eigrp_packet *duplicate;
+		eigrp_packet_t *duplicate;
 		duplicate = eigrp_packet_duplicate(ep, nbr);
 		/* Add packet to the top of the interface output queue*/
 		eigrp_fifo_push(nbr->ei->obuf, duplicate);
@@ -899,7 +912,7 @@ void eigrp_packet_header_init(int type, eigrp_t *eigrp, struct stream *s,
 }
 
 /* Add new packet to head of fifo. */
-void eigrp_fifo_push(struct eigrp_fifo *fifo, struct eigrp_packet *ep)
+void eigrp_fifo_push(eigrp_fifo_t *fifo, eigrp_packet_t *ep)
 {
 	ep->next = fifo->head;
 	ep->previous = NULL;
@@ -916,7 +929,7 @@ void eigrp_fifo_push(struct eigrp_fifo *fifo, struct eigrp_packet *ep)
 }
 
 /* Return last fifo entry. */
-struct eigrp_packet *eigrp_fifo_next(struct eigrp_fifo *fifo)
+eigrp_packet_t *eigrp_fifo_next(eigrp_fifo_t *fifo)
 {
 	return fifo->tail;
 }
@@ -931,7 +944,7 @@ void eigrp_packet_delete(eigrp_interface_t *ei)
 		eigrp_packet_free(ep);
 }
 
-void eigrp_packet_free(struct eigrp_packet *ep)
+void eigrp_packet_free(eigrp_packet_t *ep)
 {
 	if (ep->s)
 		stream_free(ep->s);
@@ -972,9 +985,9 @@ static int eigrp_check_network_mask(eigrp_interface_t *ei,
 	if (ei->type == EIGRP_IFTYPE_POINTOPOINT)
 		return 1;
 
-	masklen2ip(ei->address->prefixlen, &mask);
+	masklen2ip(ei->address.prefixlen, &mask);
 
-	me.s_addr = ei->address->u.prefix4.s_addr & mask.s_addr;
+	me.s_addr = ei->address.u.prefix4.s_addr & mask.s_addr;
 	him.s_addr = ip_src.s_addr & mask.s_addr;
 
 	if (IPV4_ADDR_SAME(&me, &him))
@@ -992,7 +1005,7 @@ int eigrp_unack_packet_retrans(struct thread *thread)
 	ep = eigrp_fifo_next(nbr->retrans_queue);
 
 	if (ep) {
-		struct eigrp_packet *duplicate;
+		eigrp_packet_t *duplicate;
 		duplicate = eigrp_packet_duplicate(ep, nbr);
 
 		/* Add packet to the top of the interface output queue*/
@@ -1023,13 +1036,13 @@ int eigrp_unack_packet_retrans(struct thread *thread)
 int eigrp_unack_multicast_packet_retrans(struct thread *thread)
 {
 	eigrp_neighbor_t *nbr;
-	eigrp_packet_t *ep;
-
 	nbr = (eigrp_neighbor_t *)THREAD_ARG(thread);
+
+	eigrp_packet_t *ep;
 	ep = eigrp_fifo_next(nbr->multicast_queue);
 
 	if (ep) {
-		struct eigrp_packet *duplicate;
+		eigrp_packet_t *duplicate;
 		duplicate = eigrp_packet_duplicate(ep, nbr);
 		/* Add packet to the top of the interface output queue*/
 		eigrp_fifo_push(nbr->ei->obuf, duplicate);
@@ -1057,9 +1070,9 @@ int eigrp_unack_multicast_packet_retrans(struct thread *thread)
 }
 
 /* Get packet from tail of fifo. */
-struct eigrp_packet *eigrp_fifo_pop(struct eigrp_fifo *fifo)
+eigrp_packet_t *eigrp_fifo_pop(eigrp_fifo_t *fifo)
 {
-	struct eigrp_packet *ep = NULL;
+	eigrp_packet_t *ep = NULL;
 
 	ep = fifo->tail;
 
@@ -1077,10 +1090,10 @@ struct eigrp_packet *eigrp_fifo_pop(struct eigrp_fifo *fifo)
 	return ep;
 }
 
-struct eigrp_packet *eigrp_packet_duplicate(struct eigrp_packet *old,
+eigrp_packet_t *eigrp_packet_duplicate(eigrp_packet_t *old,
 					    eigrp_neighbor_t *nbr)
 {
-	struct eigrp_packet *new;
+	eigrp_packet_t *new;
 
 	new = eigrp_packet_new(EIGRP_PACKET_MTU(nbr->ei->ifp->mtu), nbr);
 	new->length = old->length;
@@ -1092,8 +1105,138 @@ struct eigrp_packet *eigrp_packet_duplicate(struct eigrp_packet *old,
 	return new;
 }
 
-uint16_t eigrp_add_authTLV_MD5_encode(struct stream *s,
-				      eigrp_interface_t *ei)
+static struct TLV_IPv4_Internal_type *eigrp_IPv4_InternalTLV_new(void)
+{
+	struct TLV_IPv4_Internal_type *new;
+
+	new = XCALLOC(MTYPE_EIGRP_IPV4_INT_TLV,
+		      sizeof(struct TLV_IPv4_Internal_type));
+
+	return new;
+}
+
+struct TLV_IPv4_Internal_type *eigrp_read_ipv4_tlv(struct stream *s)
+{
+	struct TLV_IPv4_Internal_type *tlv;
+	uint32_t destination_tmp;
+
+	tlv = eigrp_IPv4_InternalTLV_new();
+
+	tlv->type = stream_getw(s);
+	tlv->length = stream_getw(s);
+	tlv->forward.s_addr = stream_getl(s);
+	tlv->metric.delay = stream_getl(s);
+	tlv->metric.bandwidth = stream_getl(s);
+	tlv->metric.mtu[0] = stream_getc(s);
+	tlv->metric.mtu[1] = stream_getc(s);
+	tlv->metric.mtu[2] = stream_getc(s);
+	tlv->metric.hop_count = stream_getc(s);
+	tlv->metric.reliability = stream_getc(s);
+	tlv->metric.load = stream_getc(s);
+	tlv->metric.tag = stream_getc(s);
+	tlv->metric.flags = stream_getc(s);
+
+	tlv->prefix_length = stream_getc(s);
+
+	destination_tmp = stream_getc(s) << 24;
+	if (tlv->prefix_length > 8)
+		destination_tmp |= stream_getc(s) << 16;
+	if (tlv->prefix_length > 16)
+		destination_tmp |= stream_getc(s) << 8;
+	if (tlv->prefix_length > 24)
+		destination_tmp |= stream_getc(s);
+
+	tlv->destination.s_addr = htonl(destination_tmp);
+
+	return tlv;
+}
+
+uint16_t eigrp_add_internalTLV_to_stream(struct stream *s,
+					 eigrp_prefix_descriptor_t *pe)
+{
+	uint16_t length;
+
+	stream_putw(s, EIGRP_TLV_IPv4_INT);
+	switch (pe->destination->prefixlen) {
+	case 0:
+	case 1:
+	case 2:
+	case 3:
+	case 4:
+	case 5:
+	case 6:
+	case 7:
+	case 8:
+		length = EIGRP_TLV_IPV4_SIZE_GRT_0_BIT;
+		stream_putw(s, length);
+		break;
+	case 9:
+	case 10:
+	case 11:
+	case 12:
+	case 13:
+	case 14:
+	case 15:
+	case 16:
+		length = EIGRP_TLV_IPV4_SIZE_GRT_8_BIT;
+		stream_putw(s, length);
+		break;
+	case 17:
+	case 18:
+	case 19:
+	case 20:
+	case 21:
+	case 22:
+	case 23:
+	case 24:
+		length = EIGRP_TLV_IPV4_SIZE_GRT_16_BIT;
+		stream_putw(s, length);
+		break;
+	case 25:
+	case 26:
+	case 27:
+	case 28:
+	case 29:
+	case 30:
+	case 31:
+	case 32:
+		length = EIGRP_TLV_IPV4_SIZE_GRT_24_BIT;
+		stream_putw(s, length);
+		break;
+	default:
+		flog_err(EC_LIB_DEVELOPMENT, "%s: Unexpected prefix length: %d",
+			 __func__, pe->destination->prefixlen);
+		return 0;
+	}
+	stream_putl(s, 0x00000000);
+
+	/*Metric*/
+	stream_putl(s, pe->reported_metric.delay);
+	stream_putl(s, pe->reported_metric.bandwidth);
+	stream_putc(s, pe->reported_metric.mtu[2]);
+	stream_putc(s, pe->reported_metric.mtu[1]);
+	stream_putc(s, pe->reported_metric.mtu[0]);
+	stream_putc(s, pe->reported_metric.hop_count);
+	stream_putc(s, pe->reported_metric.reliability);
+	stream_putc(s, pe->reported_metric.load);
+	stream_putc(s, pe->reported_metric.tag);
+	stream_putc(s, pe->reported_metric.flags);
+
+	stream_putc(s, pe->destination->prefixlen);
+
+	stream_putc(s, (ntohl(pe->destination->u.prefix4.s_addr) >> 24) & 0xFF);
+	if (pe->destination->prefixlen > 8)
+		stream_putc(s, (ntohl(pe->destination->u.prefix4.s_addr) >> 16) & 0xFF);
+	if (pe->destination->prefixlen > 16)
+		stream_putc(s, (ntohl(pe->destination->u.prefix4.s_addr) >> 8) & 0xFF);
+	if (pe->destination->prefixlen > 24)
+		stream_putc(s, ntohl(pe->destination->u.prefix4.s_addr) & 0xFF);
+
+	return length;
+}
+
+uint16_t eigrp_add_authTLV_MD5_to_stream(struct stream *s,
+					 eigrp_interface_t *ei)
 {
 	struct key *key;
 	struct keychain *keychain;
@@ -1132,8 +1275,8 @@ uint16_t eigrp_add_authTLV_MD5_encode(struct stream *s,
 	return 0;
 }
 
-uint16_t eigrp_add_authTLV_SHA256_encode(struct stream *s,
-					 eigrp_interface_t *ei)
+uint16_t eigrp_add_authTLV_SHA256_to_stream(struct stream *s,
+					    eigrp_interface_t *ei)
 {
 	struct key *key;
 	struct keychain *keychain;
@@ -1172,7 +1315,7 @@ uint16_t eigrp_add_authTLV_SHA256_encode(struct stream *s,
 	return 0;
 }
 
-struct TLV_MD5_Authentication_Type *eigrp_authTLV_MD5_new()
+struct TLV_MD5_Authentication_Type *eigrp_authTLV_MD5_new(void)
 {
 	struct TLV_MD5_Authentication_Type *new;
 
@@ -1187,7 +1330,7 @@ void eigrp_authTLV_MD5_free(struct TLV_MD5_Authentication_Type *authTLV)
 	XFREE(MTYPE_EIGRP_AUTH_TLV, authTLV);
 }
 
-struct TLV_SHA256_Authentication_Type *eigrp_authTLV_SHA256_new()
+struct TLV_SHA256_Authentication_Type *eigrp_authTLV_SHA256_new(void)
 {
 	struct TLV_SHA256_Authentication_Type *new;
 
@@ -1202,7 +1345,13 @@ void eigrp_authTLV_SHA256_free(struct TLV_SHA256_Authentication_Type *authTLV)
 	XFREE(MTYPE_EIGRP_AUTH_SHA256_TLV, authTLV);
 }
 
-struct TLV_Sequence_Type *eigrp_SequenceTLV_new()
+void eigrp_IPv4_InternalTLV_free(
+	struct TLV_IPv4_Internal_type *IPv4_InternalTLV)
+{
+	XFREE(MTYPE_EIGRP_IPV4_INT_TLV, IPv4_InternalTLV);
+}
+
+struct TLV_Sequence_Type *eigrp_SequenceTLV_new(void)
 {
 	struct TLV_Sequence_Type *new;
 

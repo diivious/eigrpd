@@ -527,7 +527,8 @@ eigrp_snmp_nbr_lookup_next(struct in_addr *nbr_addr, unsigned int *ifindex,
 				else if (ntohl(nbr->src.s_addr)
 					 < ntohl(min->src.s_addr))
 					min = nbr;
-			} else if (ntohl(nbr->src.s_addr) > ntohl(nbr_addr->s_addr)) {
+			} else if (ntohl(nbr->src.s_addr)
+				   > ntohl(nbr_addr->s_addr)) {
 				if (!min)
 					min = nbr;
 				else if (ntohl(nbr->src.s_addr)
@@ -618,14 +619,12 @@ static uint8_t *eigrpVpnEntry(struct variable *v, oid *name, size_t *length,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPVPNNAME: /* 2 */
 		/* The name given to the VPN */
 		if (eigrp) {
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	default:
 		return NULL;
 	}
@@ -679,172 +678,156 @@ static uint8_t *eigrpTraffStatsEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(eigrp->AS);
 		else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPNBRCOUNT: /* 2 */
 		/* Neighbor count of this EIGRP instance */
 		if (eigrp)
 			return SNMP_INTEGER(eigrp_neighbor_count(eigrp));
 		else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPHELLOSSENT: /* 3 */
 		/* Hello packets output count */
 		if (eigrp) {
 			counter = 0;
 			for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode,
 					       ei)) {
-				counter += ei->stats.sent.hello;
+				counter += ei->hello_out;
 			}
 			return SNMP_INTEGER(counter);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPHELLOSRCVD: /* 4 */
 		/* Hello packets input count */
 		if (eigrp) {
 			counter = 0;
 			for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode,
 					       ei)) {
-				counter += ei->status.rcvd.hello;
+				counter += ei->hello_in;
 			}
 			return SNMP_INTEGER(counter);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPUPDATESSENT: /* 5 */
 		/* Update packets output count */
 		if (eigrp) {
 			counter = 0;
 			for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode,
 					       ei)) {
-				counter += ei->status.sent.update;
+				counter += ei->update_out;
 			}
 			return SNMP_INTEGER(counter);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPUPDATESRCVD: /* 6 */
 		/* Update packets input count */
 		if (eigrp) {
 			counter = 0;
 			for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode,
 					       ei)) {
-				counter += ei->status.rvcd.update;
+				counter += ei->update_in;
 			}
 			return SNMP_INTEGER(counter);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPQUERIESSENT: /* 7 */
 		/* Querry packets output count */
 		if (eigrp) {
 			counter = 0;
 			for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode,
 					       ei)) {
-				counter += ei->stats.sent.query;
+				counter += ei->query_out;
 			}
 			return SNMP_INTEGER(counter);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPQUERIESRCVD: /* 8 */
 		/* Querry packets input count */
 		if (eigrp) {
 			counter = 0;
 			for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode,
 					       ei)) {
-				counter += ei->stats.rcvd.query;
+				counter += ei->query_in;
 			}
 			return SNMP_INTEGER(counter);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPREPLIESSENT: /* 9 */
 		/* Reply packets output count */
 		if (eigrp) {
 			counter = 0;
 			for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode,
 					       ei)) {
-				counter += ei->stats.sent.reply;
+				counter += ei->reply_out;
 			}
 			return SNMP_INTEGER(counter);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPREPLIESRCVD: /* 10 */
 		/* Reply packets input count */
 		if (eigrp) {
 			counter = 0;
 			for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode,
 					       ei)) {
-				counter += ei->ststs.rcvd.reply;
+				counter += ei->reply_in;
 			}
 			return SNMP_INTEGER(counter);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPACKSSENT: /* 11 */
 		/* Acknowledgement packets output count */
 		if (eigrp) {
 			counter = 0;
 			for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode,
 					       ei)) {
-				counter += ei->stats.sent.ack;
+				counter += ei->ack_out;
 			}
 			return SNMP_INTEGER(counter);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPACKSRCVD: /* 12 */
 		/* Acknowledgement packets input count */
 		if (eigrp) {
 			counter = 0;
 			for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode,
 					       ei)) {
-				counter += ei->stats.rcvd.ack;
+				counter += ei->ack_in;
 			}
 			return SNMP_INTEGER(counter);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPINPUTQHIGHMARK: /* 13 */
 		/* The highest number of EIGRP packets in the input queue */
 		if (eigrp) {
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPINPUTQDROPS: /* 14 */
 		/* The number of EIGRP packets dropped from the input queue */
 		if (eigrp) {
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPSIAQUERIESSENT: /* 15 */
 		/* SIA querry packets output count */
 		if (eigrp) {
 			counter = 0;
 			for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode,
 					       ei)) {
-				counter += ei->stats.sent.siaQuery;
+				counter += ei->siaQuery_out;
 			}
 			return SNMP_INTEGER(counter);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPSIAQUERIESRCVD: /* 16 */
 		/* SIA querry packets input count */
 		if (eigrp) {
 			counter = 0;
 			for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode,
 					       ei)) {
-				counter += ei->stats.rcvd.siaQuery;
+				counter += ei->siaQuery_in;
 			}
 			return SNMP_INTEGER(counter);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPASROUTERIDTYPE: /* 17 */
 		/* Whether the router ID is set manually or automatically */
 		if (eigrp)
@@ -854,7 +837,6 @@ static uint8_t *eigrpTraffStatsEntry(struct variable *v, oid *name,
 				return SNMP_INTEGER(1);
 		else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPASROUTERID: /* 18 */
 		/* Router ID for this EIGRP AS */
 		if (eigrp)
@@ -864,7 +846,6 @@ static uint8_t *eigrpTraffStatsEntry(struct variable *v, oid *name,
 				return SNMP_INTEGER(eigrp->router_id);
 		else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPTOPOROUTES: /* 19 */
 		/* The total number of EIGRP derived routes currently existing
 		   in the topology table for the AS */
@@ -872,7 +853,6 @@ static uint8_t *eigrpTraffStatsEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPHEADSERIAL: /* 20 */
 		/* The serial number of the first route in the internal
 		   sequence for an AS*/
@@ -880,7 +860,6 @@ static uint8_t *eigrpTraffStatsEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPNEXTSERIAL: /* 21 */
 		/* The serial number that would be assigned to the next new
 		 or changed route in the topology table for the AS*/
@@ -888,7 +867,6 @@ static uint8_t *eigrpTraffStatsEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPXMITPENDREPLIES: /* 22 */
 		/* Total number of outstanding replies expected to queries
 		   that have been sent to peers in the current AS*/
@@ -896,7 +874,6 @@ static uint8_t *eigrpTraffStatsEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPXMITDUMMIES: /* 23 */
 		/* Total number of currently existing dummies associated with
 		 * the AS*/
@@ -904,7 +881,6 @@ static uint8_t *eigrpTraffStatsEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	default:
 		return NULL;
 	}
@@ -933,7 +909,6 @@ static uint8_t *eigrpTopologyEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPDESTNET: /* 2 */
 		/* The destination IP network number for a single route in the
 		 * topology table*/
@@ -941,7 +916,6 @@ static uint8_t *eigrpTopologyEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPDESTNETPREFIXLEN: /* 4 */
 		/* The prefix length associated with the destination IP network
 		   address
@@ -950,7 +924,6 @@ static uint8_t *eigrpTopologyEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPACTIVE: /* 5 */
 		/* A value of true(1) indicates the route to the destination
 		   network has failed
@@ -960,7 +933,6 @@ static uint8_t *eigrpTopologyEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPSTUCKINACTIVE: /* 6 */
 		/* A value of true(1) indicates that that this route which is in
 		   active state
@@ -970,14 +942,12 @@ static uint8_t *eigrpTopologyEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPDESTSUCCESSORS: /* 7 */
 		/* Next routing hop for a path to the destination IP network */
 		if (eigrp) {
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPFDISTANCE: /* 8 */
 		/* Minimum distance from this router to the destination IP
 		 * network */
@@ -985,7 +955,6 @@ static uint8_t *eigrpTopologyEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPROUTEORIGINTYPE: /* 9 */
 		/* Text string describing the internal origin of the EIGRP route
 		 */
@@ -993,7 +962,6 @@ static uint8_t *eigrpTopologyEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPROUTEORIGINADDRTYPE: /* 10 */
 		/* The format of the IP address defined as the origin of this
 		   topology route entry */
@@ -1001,7 +969,6 @@ static uint8_t *eigrpTopologyEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPROUTEORIGINADDR: /* 11 */
 		/* If the origin of the topology route entry is external to this
 		   router,
@@ -1011,21 +978,18 @@ static uint8_t *eigrpTopologyEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPNEXTHOPADDRESSTYPE: /* 12 */
 		/* The format of the next hop IP address */
 		if (eigrp) {
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPNEXTHOPADDRESS: /* 13 */
 		/* Next hop IP address for the route */
 		if (eigrp) {
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPNEXTHOPINTERFACE: /* 14 */
 		/* The interface through which the next hop IP address is
 		 * reached */
@@ -1033,7 +997,6 @@ static uint8_t *eigrpTopologyEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPDISTANCE: /* 15 */
 		/* The computed distance to the destination network entry from
 		 * this router */
@@ -1041,7 +1004,6 @@ static uint8_t *eigrpTopologyEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPREPORTDISTANCE: /* 16 */
 		/* The computed distance to the destination network in the
 		   topology entry
@@ -1050,7 +1012,6 @@ static uint8_t *eigrpTopologyEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	default:
 		return NULL;
 	}
@@ -1092,7 +1053,6 @@ static uint8_t *eigrpPeerEntry(struct variable *v, oid *name, size_t *length,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPPEERADDRTYPE: /* 2 */
 		/* The format of the remote source IP address used by the peer
 		 */
@@ -1100,21 +1060,18 @@ static uint8_t *eigrpPeerEntry(struct variable *v, oid *name, size_t *length,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPPEERADDR: /* 3 */
 		/* The source IP address used by the peer */
 		if (eigrp) {
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPPEERIFINDEX: /* 4 */
 		/* The ifIndex of the interface on this router */
 		if (eigrp) {
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPHOLDTIME: /* 5 */
 		/* How much time must pass without receiving a hello packet from
 		   this
@@ -1123,7 +1080,6 @@ static uint8_t *eigrpPeerEntry(struct variable *v, oid *name, size_t *length,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPUPTIME: /* 6 */
 		/* The elapsed time since the EIGRP adjacency was first
 		 * established */
@@ -1131,7 +1087,6 @@ static uint8_t *eigrpPeerEntry(struct variable *v, oid *name, size_t *length,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPSRTT: /* 7 */
 		/* The computed smooth round trip time for packets to and from
 		 * the peer */
@@ -1139,42 +1094,36 @@ static uint8_t *eigrpPeerEntry(struct variable *v, oid *name, size_t *length,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPRTO: /* 8 */
 		/* The computed retransmission timeout for the peer */
 		if (eigrp) {
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPPKTSENQUEUED: /* 9 */
 		/* The number of any EIGRP packets currently enqueued */
 		if (eigrp) {
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPLASTSEQ: /* 10 */
 		/* sequence number of the last EIGRP packet sent to this peer */
 		if (eigrp) {
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPVERSION: /* 11 */
 		/* The EIGRP version information reported by the remote peer */
 		if (eigrp) {
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPRETRANS: /* 12 */
 		/* The cumulative number of retransmissions to this peer */
 		if (eigrp) {
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPRETRIES: /* 13 */
 		/* The number of times the current unacknowledged packet has
 		 * been retried */
@@ -1182,7 +1131,6 @@ static uint8_t *eigrpPeerEntry(struct variable *v, oid *name, size_t *length,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	default:
 		return NULL;
 	}
@@ -1214,7 +1162,6 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(eigrp_neighbor_count(eigrp));
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPXMITRELIABLEQ: /* 4 */
 		/* The number of EIGRP packets currently waiting in the reliable
 		   transport transmission queue */
@@ -1222,7 +1169,6 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPXMITUNRELIABLEQ: /* 5 */
 		/* The number of EIGRP packets currently waiting in the
 		   unreliable
@@ -1231,7 +1177,6 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPMEANSRTT: /* 6 */
 		/* The average of all the computed smooth round trip time values
 		   for a packet to and from all peers established on this
@@ -1240,7 +1185,6 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPPACINGRELIABLE: /* 7 */
 		/* The configured time interval between EIGRP packet
 		 * transmissions */
@@ -1248,7 +1192,6 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPPACINGUNRELIABLE: /* 8 */
 		/* The configured time interval between EIGRP packet
 		   transmissions
@@ -1258,14 +1201,12 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPMFLOWTIMER: /* 9 */
 		/* The configured multicast flow control timer value */
 		if (eigrp) {
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPPENDINGROUTES: /* 10 */
 		/* The number of queued EIGRP routing updates awaiting
 		 * transmission */
@@ -1273,7 +1214,6 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPHELLOINTERVAL: /* 11 */
 		/* The configured time interval between Hello packet
 		 * transmissions */
@@ -1281,7 +1221,6 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPXMITNEXTSERIAL: /* 12 */
 		/* The serial number of the next EIGRP packet that is to be
 		   queued
@@ -1290,7 +1229,6 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPUMCASTS: /* 13 */
 		/* The total number of unreliable EIGRP multicast packets sent
 		   on this interface */
@@ -1298,7 +1236,6 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPRMCASTS: /* 14 */
 		/* The total number of reliable EIGRP multicast packets sent
 		   on this interface */
@@ -1306,7 +1243,6 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPUUCASTS: /* 15 */
 		/* The total number of unreliable EIGRP unicast packets sent
 		   on this interface */
@@ -1314,7 +1250,6 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPRUCASTS: /* 16 */
 		/* The total number of reliable EIGRP unicast packets sent
 		   on this interface */
@@ -1322,7 +1257,6 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPMCASTEXCEPTS: /* 17 */
 		/* The total number of EIGRP multicast exception transmissions
 		 */
@@ -1330,7 +1264,6 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPCRPKTS: /* 18 */
 		/* The total number EIGRP Conditional-Receive packets sent on
 		 * this interface */
@@ -1338,7 +1271,6 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPACKSSUPPRESSED: /* 19 */
 		/* The total number of individual EIGRP acknowledgement packets
 		   that have been
@@ -1348,7 +1280,6 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPRETRANSSENT: /* 20 */
 		/* The total number EIGRP packet retransmissions sent on the
 		 * interface */
@@ -1356,21 +1287,18 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPOOSRCVD: /* 21 */
 		/* The total number of out-of-sequence EIGRP packets received */
 		if (eigrp) {
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPAUTHMODE: /* 22 */
 		/* The EIGRP authentication mode of the interface */
 		if (eigrp) {
 			return SNMP_INTEGER(1);
 		} else
 			return SNMP_INTEGER(0);
-		break;
 	case EIGRPAUTHKEYCHAIN: /* 23 */
 		/* The name of the authentication key-chain configured
 		   on this interface. */

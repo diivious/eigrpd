@@ -30,9 +30,6 @@
 #include "lib/zclient.h"
 
 #include "eigrp_structs.h"
-#include "eigrpd/eigrp_metric.h"
-#include "eigrp_cli.h"
-#include "eigrp_northbound.h"
 #include "eigrpd.h"
 #include "eigrp_interface.h"
 #include "eigrp_network.h"
@@ -40,7 +37,7 @@
 
 /* Helper functions. */
 static void redistribute_get_metrics(const struct lyd_node *dnode,
-				     struct eigrp_vmetrics *em)
+				     struct eigrp_metrics *em)
 {
 	memset(em, 0, sizeof(*em));
 
@@ -58,10 +55,10 @@ static void redistribute_get_metrics(const struct lyd_node *dnode,
 		em->reliability = yang_dnode_get_uint32(dnode, "./reliability");
 }
 
-static struct eigrp_interface *eigrp_interface_lookup(const struct eigrp *eigrp,
+static eigrp_interface_t *eigrp_interface_lookup(const eigrp_t *eigrp,
 						      const char *ifname)
 {
-	struct eigrp_interface *eif;
+	eigrp_interface_t *eif;
 	struct listnode *ln;
 
 	for (ALL_LIST_ELEMENTS_RO(eigrp->eiflist, ln, eif)) {
@@ -81,7 +78,7 @@ static int eigrpd_instance_create(enum nb_event event,
 				  const struct lyd_node *dnode,
 				  union nb_resource *resource)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 	const char *vrf;
 	vrf_id_t vrfid;
 
@@ -110,7 +107,7 @@ static int eigrpd_instance_create(enum nb_event event,
 static int eigrpd_instance_destroy(enum nb_event event,
 				   const struct lyd_node *dnode)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -134,7 +131,7 @@ static int eigrpd_instance_router_id_modify(enum nb_event event,
 					    const struct lyd_node *dnode,
 					    union nb_resource *resource)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -154,7 +151,7 @@ static int eigrpd_instance_router_id_modify(enum nb_event event,
 static int eigrpd_instance_router_id_destroy(enum nb_event event,
 					     const struct lyd_node *dnode)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -164,7 +161,7 @@ static int eigrpd_instance_router_id_destroy(enum nb_event event,
 		break;
 	case NB_EV_APPLY:
 		eigrp = nb_running_get_entry(dnode, NULL, true);
-		eigrp->router_id_static.s_addr = 0;
+		eigrp->router_id_static.s_addr = INADDR_ANY;
 		break;
 	}
 
@@ -179,8 +176,8 @@ eigrpd_instance_passive_interface_create(enum nb_event event,
 					 const struct lyd_node *dnode,
 					 union nb_resource *resource)
 {
-	struct eigrp_interface *eif;
-	struct eigrp *eigrp;
+	eigrp_interface_t *eif;
+	eigrp_t *eigrp;
 	const char *ifname;
 
 	switch (event) {
@@ -221,8 +218,8 @@ static int
 eigrpd_instance_passive_interface_destroy(enum nb_event event,
 					  const struct lyd_node *dnode)
 {
-	struct eigrp_interface *eif;
-	struct eigrp *eigrp;
+	eigrp_interface_t *eif;
+	eigrp_t *eigrp;
 	const char *ifname;
 
 	switch (event) {
@@ -273,7 +270,7 @@ static int eigrpd_instance_variance_modify(enum nb_event event,
 					   const struct lyd_node *dnode,
 					   union nb_resource *resource)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -293,7 +290,7 @@ static int eigrpd_instance_variance_modify(enum nb_event event,
 static int eigrpd_instance_variance_destroy(enum nb_event event,
 					    const struct lyd_node *dnode)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -317,7 +314,7 @@ static int eigrpd_instance_maximum_paths_modify(enum nb_event event,
 						const struct lyd_node *dnode,
 						union nb_resource *resource)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -337,7 +334,7 @@ static int eigrpd_instance_maximum_paths_modify(enum nb_event event,
 static int eigrpd_instance_maximum_paths_destroy(enum nb_event event,
 						 const struct lyd_node *dnode)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -362,7 +359,7 @@ eigrpd_instance_metric_weights_K1_modify(enum nb_event event,
 					 const struct lyd_node *dnode,
 					 union nb_resource *resource)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -383,7 +380,7 @@ static int
 eigrpd_instance_metric_weights_K1_destroy(enum nb_event event,
 					  const struct lyd_node *dnode)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -408,7 +405,7 @@ eigrpd_instance_metric_weights_K2_modify(enum nb_event event,
 					 const struct lyd_node *dnode,
 					 union nb_resource *resource)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -429,7 +426,7 @@ static int
 eigrpd_instance_metric_weights_K2_destroy(enum nb_event event,
 					  const struct lyd_node *dnode)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -454,7 +451,7 @@ eigrpd_instance_metric_weights_K3_modify(enum nb_event event,
 					 const struct lyd_node *dnode,
 					 union nb_resource *resource)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -475,7 +472,7 @@ static int
 eigrpd_instance_metric_weights_K3_destroy(enum nb_event event,
 					  const struct lyd_node *dnode)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -500,7 +497,7 @@ eigrpd_instance_metric_weights_K4_modify(enum nb_event event,
 					 const struct lyd_node *dnode,
 					 union nb_resource *resource)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -521,7 +518,7 @@ static int
 eigrpd_instance_metric_weights_K4_destroy(enum nb_event event,
 					  const struct lyd_node *dnode)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -546,7 +543,7 @@ eigrpd_instance_metric_weights_K5_modify(enum nb_event event,
 					 const struct lyd_node *dnode,
 					 union nb_resource *resource)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -567,7 +564,7 @@ static int
 eigrpd_instance_metric_weights_K5_destroy(enum nb_event event,
 					  const struct lyd_node *dnode)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -592,7 +589,7 @@ eigrpd_instance_metric_weights_K6_modify(enum nb_event event,
 					 const struct lyd_node *dnode,
 					 union nb_resource *resource)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -613,7 +610,7 @@ static int
 eigrpd_instance_metric_weights_K6_destroy(enum nb_event event,
 					  const struct lyd_node *dnode)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -639,7 +636,7 @@ static int eigrpd_instance_network_create(enum nb_event event,
 {
 	struct route_node *rnode;
 	struct prefix prefix;
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 	int exists;
 
 	yang_dnode_get_ipv4p(&prefix, dnode, NULL);
@@ -676,7 +673,7 @@ static int eigrpd_instance_network_destroy(enum nb_event event,
 {
 	struct route_node *rnode;
 	struct prefix prefix;
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 	int exists = 0;
 
 	yang_dnode_get_ipv4p(&prefix, dnode, NULL);
@@ -752,9 +749,9 @@ static int eigrpd_instance_redistribute_create(enum nb_event event,
 					       const struct lyd_node *dnode,
 					       union nb_resource *resource)
 {
-	struct eigrp_vmetrics metrics;
+	struct eigrp_metrics metrics;
 	const char *vrfname;
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 	uint32_t proto;
 	vrf_id_t vrfid;
 
@@ -784,7 +781,7 @@ static int eigrpd_instance_redistribute_create(enum nb_event event,
 static int eigrpd_instance_redistribute_destroy(enum nb_event event,
 						const struct lyd_node *dnode)
 {
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 	uint32_t proto;
 
 	switch (event) {
@@ -850,8 +847,8 @@ static int eigrpd_instance_redistribute_metrics_bandwidth_modify(
 	enum nb_event event, const struct lyd_node *dnode,
 	union nb_resource *resource)
 {
-	struct eigrp_vmetrics metrics;
-	struct eigrp *eigrp;
+	struct eigrp_metrics metrics;
+	eigrp_t *eigrp;
 	uint32_t proto;
 
 	switch (event) {
@@ -874,8 +871,8 @@ static int eigrpd_instance_redistribute_metrics_bandwidth_modify(
 static int eigrpd_instance_redistribute_metrics_bandwidth_destroy(
 	enum nb_event event, const struct lyd_node *dnode)
 {
-	struct eigrp_vmetrics metrics;
-	struct eigrp *eigrp;
+	struct eigrp_metrics metrics;
+	eigrp_t *eigrp;
 	uint32_t proto;
 
 	switch (event) {
@@ -984,7 +981,7 @@ static int lib_interface_eigrp_delay_modify(enum nb_event event,
 					    const struct lyd_node *dnode,
 					    union nb_resource *resource)
 {
-	struct eigrp_interface *ei;
+	eigrp_interface_t *ei;
 	struct interface *ifp;
 
 	switch (event) {
@@ -1028,7 +1025,7 @@ static int lib_interface_eigrp_bandwidth_modify(enum nb_event event,
 						union nb_resource *resource)
 {
 	struct interface *ifp;
-	struct eigrp_interface *ei;
+	eigrp_interface_t *ei;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -1072,7 +1069,7 @@ lib_interface_eigrp_hello_interval_modify(enum nb_event event,
 					  union nb_resource *resource)
 {
 	struct interface *ifp;
-	struct eigrp_interface *ei;
+	eigrp_interface_t *ei;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -1114,7 +1111,7 @@ static int lib_interface_eigrp_hold_time_modify(enum nb_event event,
 						union nb_resource *resource)
 {
 	struct interface *ifp;
-	struct eigrp_interface *ei;
+	eigrp_interface_t *ei;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -1177,9 +1174,9 @@ static int lib_interface_eigrp_instance_create(enum nb_event event,
 					       const struct lyd_node *dnode,
 					       union nb_resource *resource)
 {
-	struct eigrp_interface *eif;
+	eigrp_interface_t *eif;
 	struct interface *ifp;
-	struct eigrp *eigrp;
+	eigrp_t *eigrp;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -1281,7 +1278,7 @@ lib_interface_eigrp_instance_authentication_modify(enum nb_event event,
 						   const struct lyd_node *dnode,
 						   union nb_resource *resource)
 {
-	struct eigrp_interface *eif;
+	eigrp_interface_t *eif;
 
 	switch (event) {
 	case NB_EV_VALIDATE:
@@ -1306,7 +1303,7 @@ lib_interface_eigrp_instance_keychain_modify(enum nb_event event,
 					     const struct lyd_node *dnode,
 					     union nb_resource *resource)
 {
-	struct eigrp_interface *eif;
+	eigrp_interface_t *eif;
 	struct keychain *keychain;
 
 	switch (event) {
@@ -1340,7 +1337,7 @@ static int
 lib_interface_eigrp_instance_keychain_destroy(enum nb_event event,
 					      const struct lyd_node *dnode)
 {
-	struct eigrp_interface *eif;
+	eigrp_interface_t *eif;
 
 	switch (event) {
 	case NB_EV_VALIDATE:

@@ -74,8 +74,8 @@ typedef struct eigrp_neighbor {
     struct thread *t_nbr_send_gr; /* thread for sending multiple GR packet
 				     chunks */
 
-    struct eigrp_fifo *retrans_queue;
-    struct eigrp_fifo *multicast_queue;
+    eigrp_fifo_t *retrans_queue;
+    eigrp_fifo_t *multicast_queue;
 
     uint32_t crypt_seqnum; /* Cryptographic Sequence Number. */
 
@@ -90,26 +90,34 @@ typedef struct eigrp_neighbor {
 
 
 /* Prototypes */
-extern eigrp_neighbor_t *eigrp_nbr_get(eigrp_interface_t *,
-				       struct eigrp_header *, struct ip *);
-extern eigrp_neighbor_t *eigrp_nbr_new(eigrp_interface_t *);
-extern void eigrp_nbr_delete(eigrp_neighbor_t *);
+extern eigrp_neighbor_t *eigrp_nbr_get(eigrp_interface_t *ei,
+					    struct eigrp_header *,
+					    struct ip *addr);
+extern eigrp_neighbor_t *eigrp_nbr_new(eigrp_interface_t *ei);
+extern void eigrp_nbr_delete(eigrp_neighbor_t *neigh);
 
-extern int holddown_timer_expired(struct thread *);
+extern int holddown_timer_expired(struct thread *thread);
 
-extern int eigrp_neighborship_check(eigrp_neighbor_t *,
-				    struct TLV_Parameter_Type *);
-extern void eigrp_nbr_state_update(eigrp_neighbor_t *);
-extern void eigrp_nbr_state_set(eigrp_neighbor_t *, uint8_t state);
-extern uint8_t eigrp_nbr_state_get(eigrp_neighbor_t *);
-extern int eigrp_nbr_count_get(eigrp_t *);
-extern const char *eigrp_nbr_state_str(eigrp_neighbor_t *);
-extern eigrp_neighbor_t *eigrp_nbr_lookup_by_addr(eigrp_interface_t *,
-						       struct in_addr *);
-extern eigrp_neighbor_t *eigrp_nbr_lookup_by_addr_process(eigrp_t *, struct in_addr);
-extern void eigrp_nbr_hard_restart(eigrp_t *, eigrp_neighbor_t *nbr, struct vty *);
+extern int eigrp_neighborship_check(eigrp_neighbor_t *neigh,
+				    struct TLV_Parameter_Type *tlv);
+extern void eigrp_nbr_state_update(eigrp_neighbor_t *neigh);
+extern void eigrp_nbr_state_set(eigrp_neighbor_t *neigh, uint8_t state);
+extern uint8_t eigrp_nbr_state_get(eigrp_neighbor_t *neigh);
+extern int eigrp_nbr_count_get(eigrp_t *eigrp);
+extern const char *eigrp_nbr_state_str(eigrp_neighbor_t *neigh);
+extern eigrp_neighbor_t *
+eigrp_nbr_lookup_by_addr(eigrp_interface_t *ei, struct in_addr *addr);
+extern eigrp_neighbor_t *
+eigrp_nbr_lookup_by_addr_process(eigrp_t *eigrp, struct in_addr addr);
+extern void eigrp_nbr_hard_restart(eigrp_neighbor_t *nbr, struct vty *vty);
 
-extern int eigrp_nbr_split_horizon_check(eigrp_route_descriptor_t *,
-					 eigrp_interface_t *);
+extern int eigrp_nbr_split_horizon_check(eigrp_route_descriptor_t *ne,
+					 eigrp_interface_t *ei);
+
+/* Static inline functions */
+static inline const char *eigrp_neigh_ip_string(eigrp_neighbor_t *nbr)
+{
+	return inet_ntoa(nbr->src);
+}
 
 #endif /* _ZEBRA_EIGRP_NEIGHBOR_H */

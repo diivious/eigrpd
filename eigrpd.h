@@ -29,39 +29,32 @@
 #define _ZEBRA_EIGRPD_H
 
 #include <zebra.h>
-#include <stdbool.h>
-#include "linklist.h"
-#include "prefix.h"
-#include "memory.h"
-#include "command.h"
+
 #include "thread.h"
-#include "stream.h"
-#include "table.h"
-#include "log.h"
-#include "keychain.h"
+#include "memory.h"
+#include "linklist.h"
 #include "vty.h"
+#include "keychain.h"
+#include "prefix.h"
+#include "if.h"
+#include "table.h"
+#include "sockunion.h"
+#include "stream.h"
+#include "log.h"
+#include "sockopt.h"
+//#include "checksum.h"
+#include "md5.h"
+#include "sha256.h"
+#include "lib_errors.h"
 #include "filter.h"
 #include "log.h"
 
-/**
- * pickup the basic structs neeed for EIGRP
- */
-#include "eigrpd/eigrp_structs.h"
+// everyone needs these - include then here once and for all
+#include "eigrpd/eigrp_const.h"
+#include "eigrpd/eigrp_types.h"
+#include "eigrpd/eigrp_macros.h"
 
-/**
- * Set the EIGRP Version we 'claim' to be.  This is basic the set of
- * capabilityes we have for provessing TLVs. 
- * Version 1 was the original 32bit scaled metrics which was used until link
- * aggragation took speeds over 10Gig and EIGRP lost the ability differenate.
- *
- * Verison 2 is the new (and current) 64bit Wide metrcis which supports links
- * with faster (over 10G) link speeds.
- *
- * Version 3 was acrually developed before version 2, but has been sence
- * abondon for Version 2.  
- *
- * Verison 4 is for Service Rouring which is not currently supported.
- */
+/* Set EIGRP version is "classic" - wide metrics comes next */
 #define EIGRP_MAJOR_VERSION     1
 #define EIGRP_MINOR_VERSION	2
 
@@ -71,7 +64,7 @@
 #define EIGRP_TLV_SAF_VERSION	4	// SAF TLVs with 64bit metric *Not Supported
 
 /* EIGRP master for system wide configuration and variables. */
-struct eigrp_master {
+typedef struct eigrp_master {
 	/* EIGRP instance. */
 	struct list *eigrp;
 
@@ -88,7 +81,7 @@ struct eigrp_master {
 	uint8_t options;
 
 #define EIGRP_MASTER_SHUTDOWN (1 << 0) /* deferred-shutdown */
-};
+} eigrp_master_t;
 
 /* Extern variables. */
 extern struct zclient *zclient;
@@ -102,9 +95,13 @@ extern void eigrp_terminate(void);
 extern void eigrp_finish(eigrp_t *);
 extern void eigrp_finish_final(eigrp_t *);
 
-extern eigrp_t *eigrp_get(uint16_t, vrf_id_t);
-extern eigrp_t *eigrp_lookup(void);
+extern eigrp_t *eigrp_get(uint16_t as, vrf_id_t vrf_id);
+extern eigrp_t *eigrp_lookup(vrf_id_t vrf_id);
 
 extern void eigrp_router_id_update(eigrp_t *);
+
+// DVS: fix this
+#include "eigrp_cli.h"
+#include "eigrp_yang.h"
 
 #endif /* _ZEBRA_EIGRPD_H */

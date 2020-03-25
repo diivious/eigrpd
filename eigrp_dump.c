@@ -1,5 +1,5 @@
 /*
- * EIGRP Dump Functions and Debugging.r
+ * EIGRP Dump Functions and Debugging.
  * Copyright (C) 2013-2014
  * Authors:
  *   Donnie Savage
@@ -47,6 +47,10 @@
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_topology.h"
+#include "eigrpd/eigrp_topology.h"
+#include "eigrpd/eigrp_topology.h"
+
+
 
 /* Enable debug option variables -- valid only session. */
 unsigned long term_debug_eigrp = 0;
@@ -144,55 +148,10 @@ void eigrp_header_dump(struct eigrp_header *eigrph)
 
 const char *eigrp_if_name_string(eigrp_interface_t *ei)
 {
-	static char buf[EIGRP_IF_STRING_MAXLEN] = "";
-
 	if (!ei)
 		return "inactive";
 
-	snprintf(buf, EIGRP_IF_STRING_MAXLEN, "%s", ei->ifp->name);
-	return buf;
-}
-
-const char *eigrp_topology_ip_string(eigrp_prefix_descriptor_t *tn)
-{
-	static char buf[EIGRP_IF_STRING_MAXLEN] = "";
-	uint32_t ifaddr;
-
-	ifaddr = ntohl(tn->destination->u.prefix4.s_addr);
-	snprintf(buf, EIGRP_IF_STRING_MAXLEN, "%u.%u.%u.%u",
-		 (ifaddr >> 24) & 0xff, (ifaddr >> 16) & 0xff,
-		 (ifaddr >> 8) & 0xff, ifaddr & 0xff);
-	return buf;
-}
-
-
-const char *eigrp_if_ip_string(eigrp_interface_t *ei)
-{
-	static char buf[EIGRP_IF_STRING_MAXLEN] = "";
-	uint32_t ifaddr;
-
-	if (!ei)
-		return "inactive";
-
-	ifaddr = ntohl(ei->address->u.prefix4.s_addr);
-	snprintf(buf, EIGRP_IF_STRING_MAXLEN, "%u.%u.%u.%u",
-		 (ifaddr >> 24) & 0xff, (ifaddr >> 16) & 0xff,
-		 (ifaddr >> 8) & 0xff, ifaddr & 0xff);
-
-	return buf;
-}
-
-const char *eigrp_neigh_ip_string(eigrp_neighbor_t *nbr)
-{
-	static char buf[EIGRP_IF_STRING_MAXLEN] = "";
-	uint32_t ifaddr;
-
-	ifaddr = ntohl(nbr->src.s_addr);
-	snprintf(buf, EIGRP_IF_STRING_MAXLEN, "%u.%u.%u.%u",
-		 (ifaddr >> 24) & 0xff, (ifaddr >> 16) & 0xff,
-		 (ifaddr >> 8) & 0xff, ifaddr & 0xff);
-
-	return buf;
+	return ei->ifp->name;
 }
 
 void show_ip_eigrp_interface_header(struct vty *vty, eigrp_t *eigrp)
@@ -209,12 +168,9 @@ void show_ip_eigrp_interface_header(struct vty *vty, eigrp_t *eigrp)
 void show_ip_eigrp_interface_sub(struct vty *vty, eigrp_t *eigrp,
 				 eigrp_interface_t *ei)
 {
-    uint32_t bandwidth = ei->params.bandwidth;
-    uint32_t delay = ei->params.delay;
-
-	vty_out(vty, "%-11s ", eigrp_if_name_string(ei));
-	vty_out(vty, "%-11u", bandwidth);
-	vty_out(vty, "%-11u", delay);
+	vty_out(vty, "%-11s ", IF_NAME(ei));
+	vty_out(vty, "%-11u", ei->params.bandwidth);
+	vty_out(vty, "%-11u", ei->params.delay);
 	vty_out(vty, "%-7u", ei->nbrs->count);
 	vty_out(vty, "%u %c %-10u", 0, '/',
 		eigrp_neighbor_packet_queue_sum(ei));
@@ -222,8 +178,7 @@ void show_ip_eigrp_interface_sub(struct vty *vty, eigrp_t *eigrp,
 	vty_out(vty, "%-8u %-8u \n", ei->params.v_hello, ei->params.v_wait);
 }
 
-void show_ip_eigrp_interface_detail(struct vty *vty,
-				    eigrp_t *eigrp,
+void show_ip_eigrp_interface_detail(struct vty *vty, eigrp_t *eigrp,
 				    eigrp_interface_t *ei)
 {
 	vty_out(vty, "%-2s %s %d %-3s \n", "", "Hello interval is ", 0, " sec");
@@ -232,7 +187,7 @@ void show_ip_eigrp_interface_detail(struct vty *vty,
 		"Un/reliable mcasts: ", 0, "/", 0, "Un/reliable ucasts: ", 0,
 		"/", 0);
 	vty_out(vty, "%-2s %s %d %s %d %s %d \n", "", "Mcast exceptions: ", 0,
-		"  CR packets: ", 0, "  ACKs supressed: ", 0);
+		"  CR packets: ", 0, "  ACKs suppressed: ", 0);
 	vty_out(vty, "%-2s %s %d %s %d \n", "", "Retransmissions sent: ", 0,
 		"Out-of-sequence rcvd: ", 0);
 	vty_out(vty, "%-2s %s %s %s \n", "", "Authentication mode is ", "not",
@@ -254,7 +209,7 @@ void show_ip_eigrp_neighbor_sub(struct vty *vty, eigrp_neighbor_t *nbr,
 {
 
 	vty_out(vty, "%-3u %-17s %-21s", 0, eigrp_neigh_ip_string(nbr),
-		eigrp_if_name_string(nbr->ei));
+		IF_NAME(nbr->ei));
 	if (nbr->t_holddown)
 		vty_out(vty, "%-7lu",
 			thread_timer_remain_second(nbr->t_holddown));
@@ -263,6 +218,7 @@ void show_ip_eigrp_neighbor_sub(struct vty *vty, eigrp_neighbor_t *nbr,
 	vty_out(vty, "%-8u %-6u %-5u", 0, 0, EIGRP_PACKET_RETRANS_TIME);
 	vty_out(vty, "%-7lu", nbr->retrans_queue->count);
 	vty_out(vty, "%u\n", nbr->recv_sequence_number);
+
 
 	if (detail) {
 		vty_out(vty, "    Version %u.%u/%u.%u", nbr->os_rel_major,
@@ -279,11 +235,8 @@ void show_ip_eigrp_neighbor_sub(struct vty *vty, eigrp_neighbor_t *nbr,
  */
 void show_ip_eigrp_topology_header(struct vty *vty, eigrp_t *eigrp)
 {
-	struct in_addr router_id;
-	router_id.s_addr = eigrp->router_id;
-
 	vty_out(vty, "\nEIGRP Topology Table for AS(%d)/ID(%s)\n\n", eigrp->AS,
-		inet_ntoa(router_id));
+		inet_ntoa(eigrp->router_id));
 	vty_out(vty,
 		"Codes: P - Passive, A - Active, U - Update, Q - Query, "
 		"R - Reply\n       r - reply Status, s - sia Status\n\n");
@@ -307,7 +260,7 @@ void show_ip_eigrp_prefix_descriptor(struct vty *vty, eigrp_prefix_descriptor_t 
 }
 
 void show_ip_eigrp_route_descriptor(struct vty *vty, eigrp_t *eigrp,
-				 eigrp_route_descriptor_t *te, int *first)
+				    eigrp_route_descriptor_t *te, bool *first)
 {
 	if (te->reported_distance == EIGRP_MAX_METRIC)
 		return;
@@ -319,11 +272,11 @@ void show_ip_eigrp_route_descriptor(struct vty *vty, eigrp_t *eigrp,
 
 	if (te->adv_router == eigrp->neighbor_self)
 		vty_out(vty, "%-7s%s, %s\n", " ", "via Connected",
-			eigrp_if_name_string(te->ei));
+			IF_NAME(te->ei));
 	else {
 		vty_out(vty, "%-7s%s%s (%u/%u), %s\n", " ", "via ",
 			inet_ntoa(te->adv_router->src), te->distance,
-			te->reported_distance, eigrp_if_name_string(te->ei));
+			te->reported_distance, IF_NAME(te->ei));
 	}
 }
 
@@ -611,7 +564,7 @@ static struct cmd_node eigrp_debug_node = {
 };
 
 /* Initialize debug commands. */
-void eigrp_debug_init()
+void eigrp_debug_init(void)
 {
 	install_node(&eigrp_debug_node, config_write_debug);
 

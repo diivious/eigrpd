@@ -22,6 +22,7 @@
  */
 
 #include "eigrpd/eigrpd.h"
+#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_metric.h"
 
 eigrp_scaled_t eigrp_bandwidth_to_scaled(eigrp_bandwidth_t bandwidth)
@@ -67,7 +68,7 @@ eigrp_delay_t eigrp_scaled_to_delay(eigrp_scaled_t scaled)
 }
 
 eigrp_metric_t eigrp_calculate_metrics(eigrp_t *eigrp,
-				       eigrp_vmetrics_t metric)
+				       eigrp_metrics_t metric)
 {
     eigrp_metric_t composite;
     composite = 0;
@@ -116,8 +117,8 @@ eigrp_metric_t eigrp_calculate_total_metrics(eigrp_t *eigrp,
     return eigrp_calculate_metrics(eigrp, entry->total_metric);
 }
 
-bool eigrp_metrics_is_same(eigrp_vmetrics_t metric1,
-			   eigrp_vmetrics_t metric2)
+bool eigrp_metrics_is_same(eigrp_metrics_t metric1,
+			   eigrp_metrics_t metric2)
 {
     if ((metric1.bandwidth == metric2.bandwidth)
 	&& (metric1.delay == metric2.delay)
