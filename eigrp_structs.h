@@ -59,28 +59,6 @@ typedef struct eigrp_extdata {
     uint8_t  flags;
 } eigrp_extdata_t;
 
-typedef struct eigrp_intf_stats {
-    struct {
-	int	ack;
-	int	hello;   /* Hello message input count. */
-	int	query;   /* Query message input count. */
-	int	reply;   /* Reply message input count. */
-	int	update;  /* Update message input count. */
-	int	siaQuery;
-	int	siaReply;
-    } rcvd;
-
-    struct {
-	int	ack;
-	int	hello;  /* Hello message output count. */
-	int	query;  /* Query message output count. */
-	int	reply;  /* Reply message output count. */
-	int	update; /* Update message output count. */
-	int	siaQuery;
-	int	siaReply;
-    } sent;
-} eigrp_intf_stats_t;
-
 typedef struct eigrp {
 	vrf_id_t vrf_id;
 
@@ -178,6 +156,28 @@ enum { MEMBER_ALLROUTERS = 0,
        MEMBER_MAX,
 };
 
+typedef struct eigrp_intf_stats {
+    struct {
+	int	ack;
+	int	hello;   /* Hello message input count. */
+	int	query;   /* Query message input count. */
+	int	reply;   /* Reply message input count. */
+	int	update;  /* Update message input count. */
+	int	siaQuery;
+	int	siaReply;
+    } rcvd;
+
+    struct {
+	int	ack;
+	int	hello;  /* Hello message output count. */
+	int	query;  /* Query message output count. */
+	int	reply;  /* Reply message output count. */
+	int	update; /* Update message output count. */
+	int	siaQuery;
+	int	siaReply;
+    } sent;
+} eigrp_intf_stats_t;
+
 /*EIGRP interface structure*/
 typedef struct eigrp_interface {
 	eigrp_if_params_t params;
@@ -216,7 +216,9 @@ typedef struct eigrp_interface {
 	int on_write_q;
 
 	/* Statistics fields. */
-	uint32_t hello_in;   /* Hello message input count. */
+    eigrp_intf_stats_t	stats;		// Statistics fields
+    
+    uint32_t hello_in;   /* Hello message input count. */
 	uint32_t update_in;  /* Update message input count. */
 	uint32_t query_in;   /* Querry message input count. */
 	uint32_t reply_in;   /* Reply message input count. */

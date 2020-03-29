@@ -55,24 +55,16 @@
 #include "eigrpd/eigrp_memory.h"
 
 /*EIGRP SIA-QUERY read function*/
-void eigrp_siaquery_receive(eigrp_t *eigrp, struct ip *iph,
+void eigrp_siaquery_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 			    struct eigrp_header *eigrph, struct stream *s,
 			    eigrp_interface_t *ei, int size)
 {
-	eigrp_neighbor_t *nbr;
 	struct TLV_IPv4_Internal_type *tlv;
 
 	uint16_t type;
 
 	/* increment statistics. */
-	ei->siaQuery_in++;
-
-	/* get neighbor struct */
-	nbr = eigrp_nbr_get(ei, eigrph, iph);
-
-	/* neighbor must be valid, eigrp_nbr_get creates if none existed */
-	assert(nbr);
-
+	ei->stats.rcvd.siaQuery++;
 	nbr->recv_sequence_number = ntohl(eigrph->sequence);
 
 	while (s->endp > s->getp) {
@@ -94,7 +86,7 @@ void eigrp_siaquery_receive(eigrp_t *eigrp, struct ip *iph,
 			/* If the destination exists (it should, but one never
 			 * know)*/
 			if (dest != NULL) {
-				eigrp_fsm_action_message_t msg;
+				struct eigrp_fsm_action_message msg;
 				eigrp_route_descriptor_t *route =
 					eigrp_prefix_descriptor_lookup(dest->entries,
 								  nbr);
