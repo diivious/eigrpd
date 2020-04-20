@@ -151,8 +151,7 @@ void eigrp_send_query(eigrp_interface_t *ei)
 	    // encode Authentication TLV, if needed
 	    if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 		&& (ei->params.auth_keychain != NULL)) {
-		length += eigrp_add_authTLV_MD5_to_stream(ep->s,
-							  ei);
+		length += eigrp_add_authTLV_MD5_encode(ep->s, ei);
 	    }
 	    new_packet = false;
 	}

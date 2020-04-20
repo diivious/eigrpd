@@ -65,7 +65,7 @@
 void eigrp_distribute_update(struct distribute_ctx *ctx,
 			     struct distribute *dist)
 {
-	eigrp_t *e = eigrp_lookup(ctx->vrf->vrf_id);
+	eigrp_t *eigrp = eigrp_lookup(ctx->vrf->vrf_id);
 	struct interface *ifp;
 	eigrp_interface_t *ei = NULL;
 	struct access_list *alist;
@@ -82,11 +82,11 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 			alist = access_list_lookup(
 				AFI_IP, dist->list[DISTRIBUTE_V4_IN]);
 			if (alist)
-				e->list[EIGRP_FILTER_IN] = alist;
+				eigrp->list[EIGRP_FILTER_IN] = alist;
 			else
-				e->list[EIGRP_FILTER_IN] = NULL;
+				eigrp->list[EIGRP_FILTER_IN] = NULL;
 		} else {
-			e->list[EIGRP_FILTER_IN] = NULL;
+			eigrp->list[EIGRP_FILTER_IN] = NULL;
 		}
 
 		/* access list OUT for whole process */
@@ -94,11 +94,11 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 			alist = access_list_lookup(
 				AFI_IP, dist->list[DISTRIBUTE_V4_OUT]);
 			if (alist)
-				e->list[EIGRP_FILTER_OUT] = alist;
+				eigrp->list[EIGRP_FILTER_OUT] = alist;
 			else
-				e->list[EIGRP_FILTER_OUT] = NULL;
+				eigrp->list[EIGRP_FILTER_OUT] = NULL;
 		} else {
-			e->list[EIGRP_FILTER_OUT] = NULL;
+			eigrp->list[EIGRP_FILTER_OUT] = NULL;
 		}
 
 		/* PREFIX_LIST IN for process */
@@ -106,23 +106,23 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 			plist = prefix_list_lookup(
 				AFI_IP, dist->prefix[DISTRIBUTE_V4_IN]);
 			if (plist) {
-				e->prefix[EIGRP_FILTER_IN] = plist;
+				eigrp->prefix[EIGRP_FILTER_IN] = plist;
 			} else
-				e->prefix[EIGRP_FILTER_IN] = NULL;
+				eigrp->prefix[EIGRP_FILTER_IN] = NULL;
 		} else
-			e->prefix[EIGRP_FILTER_IN] = NULL;
+			eigrp->prefix[EIGRP_FILTER_IN] = NULL;
 
 		/* PREFIX_LIST OUT for process */
 		if (dist->prefix[DISTRIBUTE_V4_OUT]) {
 			plist = prefix_list_lookup(
 				AFI_IP, dist->prefix[DISTRIBUTE_V4_OUT]);
 			if (plist) {
-				e->prefix[EIGRP_FILTER_OUT] = plist;
+				eigrp->prefix[EIGRP_FILTER_OUT] = plist;
 
 			} else
-				e->prefix[EIGRP_FILTER_OUT] = NULL;
+				eigrp->prefix[EIGRP_FILTER_OUT] = NULL;
 		} else
-			e->prefix[EIGRP_FILTER_OUT] = NULL;
+			eigrp->prefix[EIGRP_FILTER_OUT] = NULL;
 
 // This is commented out, because the distribute.[ch] code
 // changes looked poorly written from first glance
@@ -134,13 +134,13 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
         {
           routemap = route_map_lookup_by_name (dist->route[DISTRIBUTE_V4_IN]);
           if (routemap)
-            e->routemap[EIGRP_FILTER_IN] = routemap;
+            eigrp->routemap[EIGRP_FILTER_IN] = routemap;
           else
-            e->routemap[EIGRP_FILTER_IN] = NULL;
+            eigrp->routemap[EIGRP_FILTER_IN] = NULL;
         }
       else
         {
-          e->routemap[EIGRP_FILTER_IN] = NULL;
+          eigrp->routemap[EIGRP_FILTER_IN] = NULL;
         }
 
       /* route-map OUT for whole process */
@@ -148,31 +148,31 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
         {
           routemap = route_map_lookup_by_name (dist->route[DISTRIBUTE_V4_OUT]);
           if (routemap)
-            e->routemap[EIGRP_FILTER_OUT] = routemap;
+            eigrp->routemap[EIGRP_FILTER_OUT] = routemap;
           else
-            e->routemap[EIGRP_FILTER_OUT] = NULL;
+            eigrp->routemap[EIGRP_FILTER_OUT] = NULL;
         }
       else
         {
-          e->routemap[EIGRP_FILTER_OUT] = NULL;
+          eigrp->routemap[EIGRP_FILTER_OUT] = NULL;
         }
 #endif
 		// TODO: check Graceful restart after 10sec
 
 		/* check if there is already GR scheduled */
-		if (e->t_distribute != NULL) {
+		if (eigrp->t_distribute != NULL) {
 			/* if is, cancel schedule */
-			thread_cancel(e->t_distribute);
+			thread_cancel(eigrp->t_distribute);
 		}
 		/* schedule Graceful restart for whole process in 10sec */
-		e->t_distribute = NULL;
-		thread_add_timer(master, eigrp_distribute_timer_process, e,
-				 (10), &e->t_distribute);
+		eigrp->t_distribute = NULL;
+		thread_add_timer(master, eigrp_distribute_timer_process, eigrp,
+				 (10), &eigrp->t_distribute);
 
 		return;
 	}
 
-	ifp = if_lookup_by_name(dist->ifname, e->vrf_id);
+	ifp = if_lookup_by_name(dist->ifname, eigrp->vrf_id);
 	if (ifp == NULL)
 		return;
 
@@ -181,7 +181,7 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 	struct listnode *node, *nnode;
 	eigrp_interface_t *ei2;
 	/* Find proper interface */
-	for (ALL_LIST_ELEMENTS(e->eiflist, node, nnode, ei2)) {
+	for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode, ei2)) {
 		if (strcmp(ei2->ifp->name, ifp->name) == 0) {
 			ei = ei2;
 			break;
@@ -273,9 +273,9 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 		thread_cancel(ei->t_distribute);
 	}
 	/* schedule Graceful restart for interface in 10sec */
-	e->t_distribute = NULL;
+	eigrp->t_distribute = NULL;
 	thread_add_timer(master, eigrp_distribute_timer_interface, ei, 10,
-			 &e->t_distribute);
+			 &eigrp->t_distribute);
 }
 
 /*
@@ -291,8 +291,7 @@ void eigrp_distribute_update_interface(struct interface *ifp)
 		return;
 	dist = distribute_lookup(eigrp->distribute_ctx, ifp->name);
 	if (dist)
-		eigrp_distribute_update(eigrp->distribute_ctx,
-					dist);
+	    eigrp_distribute_update(eigrp->distribute_ctx, dist);
 }
 
 /* Update all interface's distribute list.

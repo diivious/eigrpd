@@ -61,45 +61,25 @@
 #include "eigrpd/eigrp_memory.h"
 #include "eigrpd/eigrp_errors.h"
 
-void eigrp_send_reply(eigrp_neighbor_t *nbr, eigrp_prefix_descriptor_t *pe)
+void eigrp_send_reply(eigrp_neighbor_t *nbr, eigrp_prefix_descriptor_t *prefix)
 {
-    eigrp_packet_t *ep;
-    uint16_t length = EIGRP_HEADER_LEN;
     eigrp_interface_t *ei = nbr->ei;
     eigrp_t *eigrp = ei->eigrp;
-    eigrp_prefix_descriptor_t *pe2;
-
-    // TODO: Work in progress
-    /* Filtering */
-    /* get list from eigrp process */
-    pe2 = XCALLOC(MTYPE_EIGRP_PREFIX_DESCRIPTOR,
-		  sizeof(eigrp_prefix_descriptor_t));
-    memcpy(pe2, pe, sizeof(eigrp_prefix_descriptor_t));
-
-    if (eigrp_update_prefix_apply(eigrp, ei, EIGRP_FILTER_OUT,
-				  pe2->destination)) {
-	zlog_info("REPLY SEND: Setting Metric to max");
-	pe2->reported_metric.delay = EIGRP_MAX_METRIC;
-    }
-
-    /*
-     * End of filtering
-     */
-
-    ep = eigrp_packet_new(EIGRP_PACKET_MTU(ei->ifp->mtu), nbr);
+    eigrp_packet_t *ep = NULL;
+    uint16_t length = EIGRP_HEADER_LEN;
 
     /* Prepare EIGRP INIT UPDATE header */
+    ep = eigrp_packet_new(EIGRP_PACKET_MTU(ei->ifp->mtu), nbr);
     eigrp_packet_header_init(EIGRP_OPC_REPLY, eigrp, ep->s, 0,
 			     eigrp->sequence_number, 0);
 
     // encode Authentication TLV, if needed
-    if (ei->params.auth_type == EIGRP_AUTH_TYPE_MD5
-	&& (ei->params.auth_keychain != NULL)) {
-	length += eigrp_add_authTLV_MD5_to_stream(ep->s, ei);
+    if (ei->params.auth_type == EIGRP_AUTH_TYPE_MD5 &&
+	(ei->params.auth_keychain != NULL)) {
+	length += eigrp_add_authTLV_MD5_encode(ep->s, ei);
     }
 
-
-    length += eigrp_add_internalTLV_to_stream(ep->s, pe2);
+    length += (nbr->tlv_encoder)(eigrp, nbr, ep->s, prefix);
 
     if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 	&& (ei->params.auth_keychain != NULL)) {
@@ -121,8 +101,6 @@ void eigrp_send_reply(eigrp_neighbor_t *nbr, eigrp_prefix_descriptor_t *pe)
     if (nbr->retrans_queue->count == 1) {
 	eigrp_send_packet_reliably(nbr);
     }
-
-    XFREE(MTYPE_EIGRP_PREFIX_DESCRIPTOR, pe2);
 }
 
 /*EIGRP REPLY read function*/

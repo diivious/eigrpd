@@ -1232,8 +1232,8 @@ uint16_t eigrp_add_internalTLV_to_stream(struct stream *s,
     return length;
 }
 
-uint16_t eigrp_add_authTLV_MD5_to_stream(struct stream *s,
-					 eigrp_interface_t *ei)
+uint16_t eigrp_add_authTLV_MD5_encode(struct stream *s,
+				      eigrp_interface_t *ei)
 {
     struct key *key;
     struct keychain *keychain;
@@ -1272,8 +1272,8 @@ uint16_t eigrp_add_authTLV_MD5_to_stream(struct stream *s,
     return 0;
 }
 
-uint16_t eigrp_add_authTLV_SHA256_to_stream(struct stream *s,
-					    eigrp_interface_t *ei)
+uint16_t eigrp_add_authTLV_SHA256_encode(struct stream *s,
+					 eigrp_interface_t *ei)
 {
     struct key *key;
     struct keychain *keychain;

@@ -77,6 +77,11 @@ extern uint16_t eigrp_add_authTLV_MD5_to_stream(struct stream *,
 extern uint16_t eigrp_add_authTLV_SHA256_to_stream(struct stream *,
 						   eigrp_interface_t *);
 
+extern uint16_t eigrp_add_authTLV_MD5_encode(struct stream *,
+					     eigrp_interface_t *);
+extern uint16_t eigrp_add_authTLV_SHA256_encode(struct stream *,
+						eigrp_interface_t *);
+
 extern int eigrp_unack_packet_retrans(struct thread *);
 extern int eigrp_unack_multicast_packet_retrans(struct thread *);
 

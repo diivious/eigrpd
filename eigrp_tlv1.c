@@ -271,11 +271,13 @@ static uint16_t eigrp_tlv1_addr_encode(eigrp_stream_t *pkt, eigrp_route_descript
     return (prefixlen + 1);
 }
 
-static uint16_t eigrp_tlv1_nexthop_decode(eigrp_stream_t *pkt, eigrp_route_descriptor_t *route)
+static uint16_t eigrp_tlv1_nexthop_decode(eigrp_t *eigrp,
+					  eigrp_stream_t *pkt,
+					  eigrp_route_descriptor_t *route)
 {
 
     // if doing no-nexthop-self, then use the of the source peer
-    if (FALSE) {
+    if (/*eigrp->no_nextop_self == */FALSE) {
 	route->nexthop.s_addr = stream_getl(pkt);
     } else {
 	route->nexthop.s_addr = 0L;
@@ -322,7 +324,7 @@ static eigrp_route_descriptor_t *eigrp_tlv1_decoder(eigrp_t *eigrp,
 	route->afi = AF_INET;
 
 	/* decode nexthop */
-	bytes += eigrp_tlv1_nexthop_decode(pkt, route);
+	bytes += eigrp_tlv1_nexthop_decode(eigrp, pkt, route);
 
 	/* figure out what type of TLV we are processing */
 	switch(type) {

@@ -385,7 +385,7 @@ void eigrp_update_send_init(eigrp_neighbor_t *nbr)
     // encode Authentication TLV, if needed
     if ((nbr->ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 	&& (nbr->ei->params.auth_keychain != NULL)) {
-	length += eigrp_add_authTLV_MD5_to_stream(ep->s, nbr->ei);
+	length += eigrp_add_authTLV_MD5_encode(ep->s, nbr->ei);
 	eigrp_make_md5_digest(nbr->ei, ep->s,
 			      EIGRP_AUTH_UPDATE_INIT_FLAG);
     }
@@ -495,7 +495,7 @@ void eigrp_update_send_EOT(eigrp_neighbor_t *nbr)
     // encode Authentication TLV, if needed
     if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 	&& (ei->params.auth_keychain != NULL)) {
-	length += eigrp_add_authTLV_MD5_to_stream(ep->s, ei);
+	length += eigrp_add_authTLV_MD5_encode(ep->s, ei);
     }
 
     for (rn = route_top(eigrp->topology_table); rn; rn = route_next(rn)) {
@@ -523,8 +523,7 @@ void eigrp_update_send_EOT(eigrp_neighbor_t *nbr)
 		     == EIGRP_AUTH_TYPE_MD5)
 		    && (ei->params.auth_keychain != NULL)) {
 		    length +=
-			eigrp_add_authTLV_MD5_to_stream(
-			    ep->s, ei);
+			eigrp_add_authTLV_MD5_encode(ep->s, ei);
 		}
 	    }
 	    /* Get destination address from prefix */
@@ -569,7 +568,7 @@ void eigrp_update_send(eigrp_interface_t *ei)
     // encode Authentication TLV, if needed
     if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 	&& (ei->params.auth_keychain != NULL)) {
-	length += eigrp_add_authTLV_MD5_to_stream(ep->s, ei);
+	length += eigrp_add_authTLV_MD5_encode(ep->s, ei);
     }
 
     has_tlv = 0;
@@ -606,8 +605,7 @@ void eigrp_update_send(eigrp_interface_t *ei)
 				     0, seq_no, 0);
 	    if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 		&& (ei->params.auth_keychain != NULL)) {
-		length += eigrp_add_authTLV_MD5_to_stream(ep->s,
-							  ei);
+		length += eigrp_add_authTLV_MD5_encode(ep->s, ei);
 	    }
 	    has_tlv = 0;
 	}
@@ -750,7 +748,7 @@ static void eigrp_update_send_GR_part(eigrp_neighbor_t *nbr)
     // encode Authentication TLV, if needed
     if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 	&& (ei->params.auth_keychain != NULL)) {
-	length += eigrp_add_authTLV_MD5_to_stream(ep->s, ei);
+	length += eigrp_add_authTLV_MD5_encode(ep->s, ei);
     }
 
     for (rn = route_top(eigrp->topology_table); rn; rn = route_next(rn)) {

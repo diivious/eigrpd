@@ -634,10 +634,10 @@ static eigrp_packet_t *eigrp_hello_encode(eigrp_interface_t *ei,
 	// encode Authentication TLV
 	if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 	    && (ei->params.auth_keychain != NULL)) {
-	    length += eigrp_add_authTLV_MD5_to_stream(ep->s, ei);
+	    length += eigrp_add_authTLV_MD5_encode(ep->s, ei);
 	} else if ((ei->params.auth_type == EIGRP_AUTH_TYPE_SHA256)
 		   && (ei->params.auth_keychain != NULL)) {
-	    length += eigrp_add_authTLV_SHA256_to_stream(ep->s, ei);
+	    length += eigrp_add_authTLV_SHA256_encode(ep->s, ei);
 	}
 
 	/* encode appropriate parameters to Hello packet */
