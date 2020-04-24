@@ -50,8 +50,6 @@
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_topology.h"
 
-
-
 /* Enable debug option variables -- valid only session. */
 unsigned long term_debug_eigrp = 0;
 unsigned long term_debug_eigrp_nei = 0;
@@ -559,14 +557,18 @@ DEFUN (no_debug_eigrp_packets,
 }
 
 /* Debug node. */
+static int config_write_debug(struct vty *vty);
 static struct cmd_node eigrp_debug_node = {
-	DEBUG_NODE, "", 1 /* VTYSH */
+	.name = "debug",
+	.node = DEBUG_NODE,
+	.prompt = "",
+	.config_write = config_write_debug,
 };
 
 /* Initialize debug commands. */
 void eigrp_debug_init(void)
 {
-	install_node(&eigrp_debug_node, config_write_debug);
+	install_node(&eigrp_debug_node);
 
 	install_element(ENABLE_NODE, &show_debugging_eigrp_cmd);
 	install_element(ENABLE_NODE, &debug_eigrp_packets_all_cmd);
