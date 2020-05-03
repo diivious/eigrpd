@@ -56,52 +56,38 @@
 
 /*EIGRP SIA-QUERY read function*/
 void eigrp_siaquery_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
-			    struct eigrp_header *eigrph, struct stream *s,
-			    eigrp_interface_t *ei, int size)
+			    struct eigrp_header *eigrph, struct stream *pkt,
+			    eigrp_interface_t *ei, int length)
 {
-    struct TLV_IPv4_Internal_type *tlv;
-
-    uint16_t type;
+    eigrp_fsm_action_message_t msg;
+    eigrp_route_descriptor_t *route;
 
     /* increment statistics. */
     ei->stats.rcvd.siaQuery++;
+
+    /* get neighbor struct */
     nbr->recv_sequence_number = ntohl(eigrph->sequence);
 
-    while (s->endp > s->getp) {
-	type = stream_getw(s);
-	if (type == EIGRP_TLV_IPv4_INT) {
-	    struct prefix dest_addr;
+    // process all TLVs in the packet
+    while (pkt->endp > pkt->getp) {
+	route = (nbr->tlv_decoder)(eigrp, nbr, pkt, length);
 
-	    stream_set_getp(s, s->getp - sizeof(uint16_t));
-
-	    tlv = eigrp_read_ipv4_tlv(s);
-
-	    dest_addr.family = AFI_IP;
-	    dest_addr.u.prefix4 = tlv->destination;
-	    dest_addr.prefixlen = tlv->prefix_length;
-	    eigrp_prefix_descriptor_t *dest =
-		eigrp_topology_table_lookup_ipv4(
-		    eigrp->topology_table, &dest_addr);
-
-	    /* If the destination exists (it should, but one never
-	     * know)*/
-	    if (dest != NULL) {
-		struct eigrp_fsm_action_message msg;
-		eigrp_route_descriptor_t *route =
-		    eigrp_prefix_descriptor_lookup(dest->entries,
-						   nbr);
-		msg.packet_type = EIGRP_OPC_SIAQUERY;
-		msg.eigrp = eigrp;
-		msg.data_type = EIGRP_INT;
-		msg.adv_router = nbr;
-		msg.metrics = tlv->metric;
-		msg.route = route;
-		msg.prefix = dest;
-		eigrp_fsm_event(&msg);
-	    }
-	    eigrp_IPv4_InternalTLV_free(tlv);
+	// should have got route off the packet, but one never know
+	if (route) {
+	    msg.packet_type = EIGRP_OPC_SIAQUERY;
+	    msg.eigrp = eigrp;
+	    msg.data_type = EIGRP_INT;
+	    msg.adv_router = nbr;
+	    msg.route = route;
+	    msg.metrics = route->metric;
+	    msg.prefix = route->prefix;
+	    eigrp_fsm_event(&msg);
+	} else {
+	    // neighbor sent corrupted packet - flush remaining packet
+	    break;
 	}
     }
+
     eigrp_hello_send_ack(nbr);
 }
 
@@ -141,7 +127,7 @@ void eigrp_siaquery_send(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 
     if (nbr->state == EIGRP_NEIGHBOR_UP) {
 	/*Put packet to retransmission queue*/
-	eigrp_fifo_push(nbr->retrans_queue, ep);
+	eigrp_packet_enqueue(nbr->retrans_queue, ep);
 
 	if (nbr->retrans_queue->count == 1) {
 	    eigrp_packet_send_reliably(eigrp, nbr);

@@ -176,7 +176,7 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 	if (ifp == NULL)
 		return;
 
-	/*struct eigrp_if_info * info = ifp->info;
+	/*struct eigrp_intf_info * info = ifp->info;
 	ei = info->eigrp_interface;*/
 	struct listnode *node, *nnode;
 	eigrp_interface_t *ei2;

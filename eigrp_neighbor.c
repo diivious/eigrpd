@@ -113,7 +113,7 @@ static eigrp_neighbor_t *eigrp_nbr_init(eigrp_interface_t *ei,
     nbr->tlv_encoder = (eigrp_tlv_encoder_t)&eigrp_tlv_encoder_safe;
 
     //  if (IS_DEBUG_EIGRP_EVENT)
-    //    zlog_debug("NSM[%s:%s]: start", IF_NAME (nbr->oi),
+    //    zlog_debug("NSM[%s:%s]: start", EIGRP_INTF_NAME (nbr->oi),
     //               inet_ntoa (nbr->router_id));
 
     return nbr;
@@ -209,8 +209,8 @@ void eigrp_nbr_delete(eigrp_neighbor_t *nbr)
 
     /* Cancel all events. */ /* Thread lookup cost would be negligible. */
     thread_cancel_event(master, nbr);
-    eigrp_fifo_free(nbr->multicast_queue);
-    eigrp_fifo_free(nbr->retrans_queue);
+    eigrp_packet_queue_free(nbr->multicast_queue);
+    eigrp_packet_queue_free(nbr->retrans_queue);
     THREAD_OFF(nbr->t_holddown);
 
     if (nbr->ei)
@@ -261,13 +261,13 @@ void eigrp_nbr_state_set(eigrp_neighbor_t *nbr, uint8_t state)
 
 	/* out with the old */
 	if (nbr->multicast_queue)
-	    eigrp_fifo_free(nbr->multicast_queue);
+	    eigrp_packet_queue_free(nbr->multicast_queue);
 	if (nbr->retrans_queue)
-	    eigrp_fifo_free(nbr->retrans_queue);
+	    eigrp_packet_queue_free(nbr->retrans_queue);
 
 	/* in with the new */
-	nbr->retrans_queue = eigrp_fifo_new();
-	nbr->multicast_queue = eigrp_fifo_new();
+	nbr->retrans_queue = eigrp_packet_queue_new();
+	nbr->multicast_queue = eigrp_packet_queue_new();
 
 	nbr->crypt_seqnum = 0;
     }

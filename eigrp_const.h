@@ -123,8 +123,8 @@ enum metric_change { METRIC_DECREASE, METRIC_SAME, METRIC_INCREASE };
 #define EIGRP_IFTYPE_LOOPBACK 5
 #define EIGRP_IFTYPE_MAX 6
 
-#define EIGRP_IF_ACTIVE                  0
-#define EIGRP_IF_PASSIVE                 1
+#define EIGRP_INTF_ACTIVE                  0
+#define EIGRP_INTF_PASSIVE                 1
 
 /* EIGRP TT destination type */
 #define EIGRP_TOPOLOGY_TYPE_CONNECTED           0 // Connected network

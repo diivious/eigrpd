@@ -130,14 +130,14 @@ typedef struct eigrp {
 } eigrp_t;
 DECLARE_QOBJ_TYPE(eigrp)
 
-typedef struct eigrp_fifo {
+typedef struct eigrp_packet_queue {
     eigrp_packet_t *head;
     eigrp_packet_t *tail;
 
     unsigned long count;
-} eigrp_fifo_t;
+} eigrp_packet_queue_t;
 
-typedef struct eigrp_if_params {
+typedef struct eigrp_intf_params {
     uint8_t passive_interface;
     uint32_t v_hello;
     uint16_t v_wait;
@@ -149,7 +149,7 @@ typedef struct eigrp_if_params {
 
     char *auth_keychain; /* Associated keychain with interface*/
     int auth_type;       /* EIGRP authentication type */
-} eigrp_if_params_t;
+} eigrp_intf_params_t;
 
 enum { MEMBER_ALLROUTERS = 0,
        MEMBER_MAX,
@@ -179,7 +179,7 @@ typedef struct eigrp_intf_stats {
 
 /*EIGRP interface structure*/
 typedef struct eigrp_interface {
-    eigrp_if_params_t params;
+    eigrp_intf_params_t params;
 
     /*multicast group refcnts */
     bool member_allrouters;
@@ -191,7 +191,7 @@ typedef struct eigrp_interface {
     struct interface *ifp;
 
     /* Packet send buffer. */
-    eigrp_fifo_t *obuf; /* Output queue */
+    eigrp_packet_queue_t *obuf; /* Output queue */
 
     /* To which multicast groups do we currently belong? */
 

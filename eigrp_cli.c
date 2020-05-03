@@ -494,8 +494,8 @@ void eigrp_cli_show_redistribute(struct vty *vty, struct lyd_node *dnode,
  * XPath: /frr-interface:lib/interface/frr-eigrpd:eigrp/delay
  */
 DEFPY(
-	eigrp_if_delay,
-	eigrp_if_delay_cmd,
+	eigrp_intf_delay,
+	eigrp_intf_delay_cmd,
 	"delay (1-16777215)$delay",
 	"Specify interface throughput delay\n"
 	"Throughput delay (tens of microseconds)\n")
@@ -506,8 +506,8 @@ DEFPY(
 }
 
 DEFPY(
-	no_eigrp_if_delay,
-	no_eigrp_if_delay_cmd,
+	no_eigrp_intf_delay,
+	no_eigrp_intf_delay_cmd,
 	"no delay [(1-16777215)]",
 	NO_STR
 	"Specify interface throughput delay\n"
@@ -530,8 +530,8 @@ void eigrp_cli_show_delay(struct vty *vty, struct lyd_node *dnode,
  * XPath: /frr-interface:lib/interface/frr-eigrpd:eigrp/bandwidth
  */
 DEFPY(
-	eigrp_if_bandwidth,
-	eigrp_if_bandwidth_cmd,
+	eigrp_intf_bandwidth,
+	eigrp_intf_bandwidth_cmd,
 	"eigrp bandwidth (1-10000000)$bw",
 	EIGRP_STR
 	"Set bandwidth informational parameter\n"
@@ -543,8 +543,8 @@ DEFPY(
 }
 
 DEFPY(
-	no_eigrp_if_bandwidth,
-	no_eigrp_if_bandwidth_cmd,
+	no_eigrp_intf_bandwidth,
+	no_eigrp_intf_bandwidth_cmd,
 	"no eigrp bandwidth [(1-10000000)]",
 	NO_STR
 	EIGRP_STR
@@ -568,8 +568,8 @@ void eigrp_cli_show_bandwidth(struct vty *vty, struct lyd_node *dnode,
  * XPath: /frr-interface:lib/interface/frr-eigrpd:eigrp/hello-interval
  */
 DEFPY(
-	eigrp_if_ip_hellointerval,
-	eigrp_if_ip_hellointerval_cmd,
+	eigrp_intf_ip_hellointerval,
+	eigrp_intf_ip_hellointerval_cmd,
 	"ip hello-interval eigrp (1-65535)$hello",
 	"Interface Internet Protocol config commands\n"
 	"Configures EIGRP hello interval\n"
@@ -582,8 +582,8 @@ DEFPY(
 }
 
 DEFPY(
-	no_eigrp_if_ip_hellointerval,
-	no_eigrp_if_ip_hellointerval_cmd,
+	no_eigrp_intf_ip_hellointerval,
+	no_eigrp_intf_ip_hellointerval_cmd,
 	"no ip hello-interval eigrp [(1-65535)]",
 	NO_STR
 	"Interface Internet Protocol config commands\n"
@@ -609,8 +609,8 @@ void eigrp_cli_show_hello_interval(struct vty *vty, struct lyd_node *dnode,
  * XPath: /frr-interface:lib/interface/frr-eigrpd:eigrp/hold-time
  */
 DEFPY(
-	eigrp_if_ip_holdinterval,
-	eigrp_if_ip_holdinterval_cmd,
+	eigrp_intf_ip_holdinterval,
+	eigrp_intf_ip_holdinterval_cmd,
 	"ip hold-time eigrp (1-65535)$hold",
 	"Interface Internet Protocol config commands\n"
 	"Configures EIGRP IPv4 hold time\n"
@@ -623,8 +623,8 @@ DEFPY(
 }
 
 DEFPY(
-	no_eigrp_if_ip_holdinterval,
-	no_eigrp_if_ip_holdinterval_cmd,
+	no_eigrp_intf_ip_holdinterval,
+	no_eigrp_intf_ip_holdinterval_cmd,
 	"no ip hold-time eigrp [(1-65535)]",
 	NO_STR
 	"Interface Internet Protocol config commands\n"
@@ -922,14 +922,14 @@ eigrp_cli_init(void)
 	install_node(&eigrp_interface_node);
 	if_cmd_init();
 
-	install_element(INTERFACE_NODE, &eigrp_if_delay_cmd);
-	install_element(INTERFACE_NODE, &no_eigrp_if_delay_cmd);
-	install_element(INTERFACE_NODE, &eigrp_if_bandwidth_cmd);
-	install_element(INTERFACE_NODE, &no_eigrp_if_bandwidth_cmd);
-	install_element(INTERFACE_NODE, &eigrp_if_ip_hellointerval_cmd);
-	install_element(INTERFACE_NODE, &no_eigrp_if_ip_hellointerval_cmd);
-	install_element(INTERFACE_NODE, &eigrp_if_ip_holdinterval_cmd);
-	install_element(INTERFACE_NODE, &no_eigrp_if_ip_holdinterval_cmd);
+	install_element(INTERFACE_NODE, &eigrp_intf_delay_cmd);
+	install_element(INTERFACE_NODE, &no_eigrp_intf_delay_cmd);
+	install_element(INTERFACE_NODE, &eigrp_intf_bandwidth_cmd);
+	install_element(INTERFACE_NODE, &no_eigrp_intf_bandwidth_cmd);
+	install_element(INTERFACE_NODE, &eigrp_intf_ip_hellointerval_cmd);
+	install_element(INTERFACE_NODE, &no_eigrp_intf_ip_hellointerval_cmd);
+	install_element(INTERFACE_NODE, &eigrp_intf_ip_holdinterval_cmd);
+	install_element(INTERFACE_NODE, &no_eigrp_intf_ip_holdinterval_cmd);
 	install_element(INTERFACE_NODE, &eigrp_ip_summary_address_cmd);
 	install_element(INTERFACE_NODE, &no_eigrp_ip_summary_address_cmd);
 	install_element(INTERFACE_NODE, &eigrp_authentication_mode_cmd);

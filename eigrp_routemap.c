@@ -54,7 +54,7 @@
 #include "eigrpd/eigrp_macros.h"
 #include "eigrpd/eigrp_routemap.h"
 
-void eigrp_if_rmap_update(struct if_rmap *if_rmap)
+void eigrp_intf_rmap_update(struct if_rmap *if_rmap)
 {
 	struct interface *ifp;
 	eigrp_interface_t *ei, *ei2;
@@ -94,13 +94,13 @@ void eigrp_if_rmap_update(struct if_rmap *if_rmap)
 		ei->routemap[EIGRP_FILTER_OUT] = NULL;
 }
 
-void eigrp_if_rmap_update_interface(struct interface *ifp)
+void eigrp_intf_rmap_update_interface(struct interface *ifp)
 {
 	struct if_rmap *if_rmap;
 
 	if_rmap = if_rmap_lookup(ifp->name);
 	if (if_rmap)
-		eigrp_if_rmap_update(if_rmap);
+		eigrp_intf_rmap_update(if_rmap);
 }
 
 void eigrp_routemap_update_redistribute(void)
@@ -126,7 +126,7 @@ void eigrp_rmap_update(const char *notused)
 	struct listnode *node, *nnode;
 
 	for (ALL_LIST_ELEMENTS(iflist, node, nnode, ifp))
-		eigrp_if_rmap_update_interface(ifp);
+		eigrp_intf_rmap_update_interface(ifp);
 
 	eigrp_routemap_update_redistribute();
 }

@@ -89,7 +89,7 @@ int eigrp_hello_timer(struct thread *thread)
     ei->t_hello = NULL;
 
     if (IS_DEBUG_EIGRP(0, TIMERS))
-	zlog_debug("Start Hello Timer (%s) Expire [%u]", IF_NAME(ei),
+	zlog_debug("Start Hello Timer (%s) Expire [%u]", EIGRP_INTF_NAME(ei),
 		   ei->params.v_hello);
 
     /* Sending hello packet. */
@@ -106,6 +106,7 @@ int eigrp_hello_timer(struct thread *thread)
 /**
  * @fn eigrp_hello_parameter_decode
  *
+ * @param[in]		eigrp	which AS/AFI we working with
  * @param[in]		nbr	neighbor the ACK should be sent to
  * @param[in]		param	pointer packet TLV is stored to
  *
@@ -119,10 +120,9 @@ int eigrp_hello_timer(struct thread *thread)
  * older TLV packet formats.
  */
 static eigrp_neighbor_t *
-eigrp_hello_parameter_decode(eigrp_neighbor_t *nbr,
+eigrp_hello_parameter_decode(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 			     struct eigrp_tlv_hdr_type *tlv)
 {
-    eigrp_t *eigrp = nbr->ei->eigrp;
     struct TLV_Parameter_Type *param = (struct TLV_Parameter_Type *)tlv;
 
     /* copy over the values passed in by the neighbor */
@@ -252,10 +252,9 @@ static void eigrp_sw_version_decode(eigrp_neighbor_t *nbr,
  * a match is found, move the sending neighbor to the down state. If
  * out address is not in the TLV, then ignore the peer termination
  */
-static void eigrp_peer_termination_decode(eigrp_neighbor_t *nbr,
+static void eigrp_peer_termination_decode(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 					  struct eigrp_tlv_hdr_type *tlv)
 {
-    eigrp_t *eigrp = nbr->ei->eigrp;
     struct TLV_Peer_Termination_type *param =
 	(struct TLV_Peer_Termination_type *)tlv;
 
@@ -357,8 +356,7 @@ void eigrp_hello_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 	    // determine what General TLV is being processed
 	    switch (type) {
 	    case EIGRP_TLV_PARAMETER:
-		nbr = eigrp_hello_parameter_decode(nbr,
-						   tlv_header);
+		nbr = eigrp_hello_parameter_decode(eigrp, nbr, tlv_header);
 		if (!nbr)
 		    return;
 		break;
@@ -379,7 +377,7 @@ void eigrp_hello_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 	    case EIGRP_TLV_NEXT_MCAST_SEQ:
 		break;
 	    case EIGRP_TLV_PEER_TERMINATION:
-		eigrp_peer_termination_decode(nbr, tlv_header);
+		eigrp_peer_termination_decode(eigrp, nbr, tlv_header);
 		return;
 		break;
 	    case EIGRP_TLV_PEER_MTRLIST:
@@ -716,14 +714,14 @@ void eigrp_hello_send_ack(eigrp_neighbor_t *nbr)
 		       inet_ntoa(nbr->src));
 
 	/* Add packet to the top of the interface output queue*/
-	eigrp_fifo_push(nbr->ei->obuf, ep);
+	eigrp_packet_enqueue(nbr->ei->obuf, ep);
 
 	/* Hook thread to write packet. */
 	if (nbr->ei->on_write_q == 0) {
 	    listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
 	    nbr->ei->on_write_q = 1;
 	}
-	thread_add_write(master, eigrp_write, nbr->ei->eigrp,
+	thread_add_write(master, eigrp_packet_write, nbr->ei->eigrp,
 			 nbr->ei->eigrp->fd, &nbr->ei->eigrp->t_write);
     }
 }
@@ -749,13 +747,13 @@ void eigrp_hello_send(eigrp_interface_t *ei, uint8_t flags,
     eigrp_packet_t *ep = NULL;
 
     /* If this is passive interface, do not send EIGRP Hello.
-       if ((EIGRP_IF_PASSIVE_STATUS (ei) == EIGRP_IF_PASSIVE) ||
+       if ((EIGRP_INTF_PASSIVE_STATUS (ei) == EIGRP_INTF_PASSIVE) ||
        (ei->type != EIGRP_IFTYPE_NBMA))
        return;
     */
 
     if (IS_DEBUG_EIGRP_PACKET(0, SEND))
-	zlog_debug("Queueing [Hello] Interface(%s)", IF_NAME(ei));
+	zlog_debug("Queueing [Hello] Interface(%s)", EIGRP_INTF_NAME(ei));
 
     /* if packet was succesfully created, then add it to the interface queue
      */
@@ -764,7 +762,7 @@ void eigrp_hello_send(eigrp_interface_t *ei, uint8_t flags,
 
     if (ep) {
 	// Add packet to the top of the interface output queue
-	eigrp_fifo_push(ei->obuf, ep);
+	eigrp_packet_enqueue(ei->obuf, ep);
 
 	/* Hook thread to write packet. */
 	if (ei->on_write_q == 0) {
@@ -774,10 +772,10 @@ void eigrp_hello_send(eigrp_interface_t *ei, uint8_t flags,
 
 	if (ei->eigrp->t_write == NULL) {
 	    if (flags & EIGRP_HELLO_GRACEFUL_SHUTDOWN) {
-		thread_execute(master, eigrp_write, ei->eigrp,
+		thread_execute(master, eigrp_packet_write, ei->eigrp,
 			       ei->eigrp->fd);
 	    } else {
-		thread_add_write(master, eigrp_write, ei->eigrp,
+		thread_add_write(master, eigrp_packet_write, ei->eigrp,
 				 ei->eigrp->fd,
 				 &ei->eigrp->t_write);
 	    }

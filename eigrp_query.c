@@ -185,7 +185,7 @@ void eigrp_query_send(eigrp_t *eigrp, eigrp_interface_t *ei)
 
 		dup = eigrp_packet_duplicate(ep, nbr);
 		/*Put packet to retransmission queue*/
-		eigrp_fifo_push(nbr->retrans_queue, dup);
+		eigrp_packet_enqueue(nbr->retrans_queue, dup);
 
 		if (nbr->retrans_queue->count == 1)
 		    eigrp_packet_send_reliably(eigrp, nbr);
@@ -225,7 +225,7 @@ void eigrp_query_send(eigrp_t *eigrp, eigrp_interface_t *ei)
 
 	dup = eigrp_packet_duplicate(ep, nbr);
 	/*Put packet to retransmission queue*/
-	eigrp_fifo_push(nbr->retrans_queue, dup);
+	eigrp_packet_enqueue(nbr->retrans_queue, dup);
 
 	if (nbr->retrans_queue->count == 1)
 	    eigrp_packet_send_reliably(eigrp, nbr);

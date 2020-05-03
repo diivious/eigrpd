@@ -144,14 +144,6 @@ void eigrp_header_dump(struct eigrp_header *eigrph)
 	zlog_debug("eigrp_AS %u", ntohs(eigrph->ASNumber));
 }
 
-const char *eigrp_if_name_string(eigrp_interface_t *ei)
-{
-	if (!ei)
-		return "inactive";
-
-	return ei->ifp->name;
-}
-
 void show_ip_eigrp_interface_header(struct vty *vty, eigrp_t *eigrp)
 {
 
@@ -166,7 +158,7 @@ void show_ip_eigrp_interface_header(struct vty *vty, eigrp_t *eigrp)
 void show_ip_eigrp_interface_sub(struct vty *vty, eigrp_t *eigrp,
 				 eigrp_interface_t *ei)
 {
-	vty_out(vty, "%-11s ", IF_NAME(ei));
+	vty_out(vty, "%-11s ", EIGRP_INTF_NAME(ei));
 	vty_out(vty, "%-11u", ei->params.bandwidth);
 	vty_out(vty, "%-11u", ei->params.delay);
 	vty_out(vty, "%-7u", ei->nbrs->count);
@@ -207,7 +199,7 @@ void show_ip_eigrp_neighbor_sub(struct vty *vty, eigrp_neighbor_t *nbr,
 {
 
 	vty_out(vty, "%-3u %-17s %-21s", 0, eigrp_neigh_ip_string(nbr),
-		IF_NAME(nbr->ei));
+		EIGRP_INTF_NAME(nbr->ei));
 	if (nbr->t_holddown)
 		vty_out(vty, "%-7lu",
 			thread_timer_remain_second(nbr->t_holddown));
@@ -270,11 +262,11 @@ void show_ip_eigrp_route_descriptor(struct vty *vty, eigrp_t *eigrp,
 
 	if (te->adv_router == eigrp->neighbor_self)
 		vty_out(vty, "%-7s%s, %s\n", " ", "via Connected",
-			IF_NAME(te->ei));
+			EIGRP_INTF_NAME(te->ei));
 	else {
 		vty_out(vty, "%-7s%s%s (%u/%u), %s\n", " ", "via ",
 			inet_ntoa(te->adv_router->src), te->distance,
-			te->reported_distance, IF_NAME(te->ei));
+			te->reported_distance, EIGRP_INTF_NAME(te->ei));
 	}
 }
 

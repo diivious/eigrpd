@@ -508,16 +508,13 @@ static eigrp_neighbor_t *eigrp_snmp_nbr_lookup(eigrp_t *eigrp,
 }
 
 static eigrp_neighbor_t *
-eigrp_snmp_nbr_lookup_next(struct in_addr *nbr_addr, unsigned int *ifindex,
+eigrp_snmp_nbr_lookup_next(eigrp_t *eigrp, struct in_addr *nbr_addr, unsigned int *ifindex,
 			   int first)
 {
 	struct listnode *node, *nnode, *node2, *nnode2;
 	eigrp_interface_t *ei;
 	eigrp_neighbor_t *nbr;
 	eigrp_neighbor_t *min = NULL;
-	eigrp_t *eigrp;
-
-	eigrp = eigrp_lookup();
 
 	for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode, ei)) {
 		for (ALL_LIST_ELEMENTS(ei->nbrs, node2, nnode2, nbr)) {
@@ -584,7 +581,7 @@ static eigrp_neighbor_t *eigrpNbrLookup(struct variable *v, oid *name,
 		if (len >= 1)
 			*ifindex = name[v->namelen + IN_ADDR_SIZE];
 
-		nbr = eigrp_snmp_nbr_lookup_next(nbr_addr, ifindex, first);
+		nbr = eigrp_snmp_nbr_lookup_next(eigrp, nbr_addr, ifindex, first);
 
 		if (nbr) {
 			*length = v->namelen + IN_ADDR_SIZE + 1;

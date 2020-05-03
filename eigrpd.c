@@ -116,7 +116,7 @@ void eigrp_router_id_update(eigrp_t *eigrp)
 
 	/* update eigrp_interface's */
 	FOR_ALL_INTERFACES (vrf, ifp)
-	    eigrp_if_update(eigrp, ifp);
+	    eigrp_intf_update(eigrp, ifp);
     }
 }
 
@@ -156,7 +156,7 @@ static eigrp_t *eigrp_new(uint16_t as, vrf_id_t vrf_id)
 
     /* init internal data structures */
     eigrp->eiflist = list_new();
-    eigrp->passive_interface_default = EIGRP_IF_ACTIVE;
+    eigrp->passive_interface_default = EIGRP_INTF_ACTIVE;
     eigrp->networks = eigrp_topology_new();
 
     eigrp->fd = eigrp_sock_init(vrf_lookup_by_id(vrf_id));
@@ -173,7 +173,7 @@ static eigrp_t *eigrp_new(uint16_t as, vrf_id_t vrf_id)
     eigrp->ibuf = stream_new(EIGRP_PACKET_MAX_LEN + 1);
 
     eigrp->t_read = NULL;
-    thread_add_read(master, eigrp_read, eigrp, eigrp->fd, &eigrp->t_read);
+    thread_add_read(master, eigrp_packet_read, eigrp, eigrp->fd, &eigrp->t_read);
     eigrp->oi_write_q = list_new();
 
     eigrp->topology_table = route_table_init();
@@ -207,8 +207,8 @@ static eigrp_t *eigrp_new(uint16_t as, vrf_id_t vrf_id)
 
     /*
       eigrp->if_rmap_ctx = if_rmap_ctx_create(eigrp->vrf_id);
-      if_rmap_hook_add (eigrp_if_rmap_update);
-      if_rmap_hook_delete (eigrp_if_rmap_update);
+      if_rmap_hook_add (eigrp_intf_rmap_update);
+      if_rmap_hook_delete (eigrp_intf_rmap_update);
     */
     QOBJ_REG(eigrp, eigrp);
     return eigrp;
@@ -272,7 +272,7 @@ void eigrp_finish_final(eigrp_t *eigrp)
     for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode, ei)) {
 	for (ALL_LIST_ELEMENTS(ei->nbrs, node2, nnode2, nbr))
 	    eigrp_nbr_delete(nbr);
-	eigrp_if_free(ei, INTERFACE_DOWN_BY_FINAL);
+	eigrp_intf_free(eigrp, ei, INTERFACE_DOWN_BY_FINAL);
     }
 
     THREAD_OFF(eigrp->t_write);

@@ -74,8 +74,8 @@ typedef struct eigrp_neighbor {
     struct thread *t_nbr_send_gr; /* thread for sending multiple GR packet
 				     chunks */
 
-    eigrp_fifo_t *retrans_queue;
-    eigrp_fifo_t *multicast_queue;
+    eigrp_packet_queue_t *retrans_queue;
+    eigrp_packet_queue_t *multicast_queue;
 
     uint32_t crypt_seqnum; /* Cryptographic Sequence Number. */
 

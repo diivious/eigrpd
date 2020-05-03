@@ -137,7 +137,6 @@ extern unsigned long term_debug_eigrp_zebra;
 #define IS_DEBUG_EIGRP_EVENT IS_DEBUG_EIGRP(event, EVENT)
 
 /* Prototypes. */
-extern const char *eigrp_if_name_string(eigrp_interface_t *);
 extern void eigrp_ip_header_dump(struct ip *);
 extern void eigrp_header_dump(struct eigrp_header *);
 

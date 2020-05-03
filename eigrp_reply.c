@@ -61,7 +61,7 @@
 #include "eigrpd/eigrp_memory.h"
 #include "eigrpd/eigrp_errors.h"
 
-void eigrp_send_reply(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+void eigrp_reply_send(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 		      eigrp_prefix_descriptor_t *prefix)
 {
     eigrp_interface_t *ei = nbr->ei;
@@ -96,7 +96,7 @@ void eigrp_send_reply(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
     ep->sequence_number = eigrp->sequence_number;
 
     /*Put packet to retransmission queue*/
-    eigrp_fifo_push(nbr->retrans_queue, ep);
+    eigrp_packet_enqueue(nbr->retrans_queue, ep);
 
     if (nbr->retrans_queue->count == 1) {
 	eigrp_packet_send_reliably(eigrp, nbr);

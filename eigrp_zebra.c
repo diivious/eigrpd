@@ -161,7 +161,7 @@ static int eigrp_interface_address_add(ZAPI_CALLBACK_ARGS)
 
     ei = ifp->info;
     if (ei && ei->eigrp)
-	eigrp_if_update(ei->eigrp, c->ifp);
+	eigrp_intf_update(ei->eigrp, c->ifp);
 
     return 0;
 }
@@ -191,7 +191,7 @@ static int eigrp_interface_address_delete(ZAPI_CALLBACK_ARGS)
 
 	/* Call interface hook functions to clean up */
 	if (prefix_cmp(&ei->address, c->address) == 0)
-		eigrp_if_free(ei, INTERFACE_DOWN_BY_ZEBRA);
+	    eigrp_intf_free(ei->eigrp, ei, INTERFACE_DOWN_BY_ZEBRA);
 
 	connected_free(&c);
 

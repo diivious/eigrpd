@@ -133,7 +133,7 @@ void eigrp_adjust_sndbuflen(eigrp_t *eigrp, unsigned int buflen)
 		zlog_warn("%s: failed to get SO_SNDBUF", __func__);
 }
 
-int eigrp_if_ipmulticast(eigrp_t *top, struct prefix *p,
+int eigrp_intf_ipmulticast(eigrp_t *top, struct prefix *p,
 			 unsigned int ifindex)
 {
 	uint8_t val;
@@ -170,7 +170,7 @@ int eigrp_if_ipmulticast(eigrp_t *top, struct prefix *p,
 }
 
 /* Join to the EIGRP multicast group. */
-int eigrp_if_add_allspfrouters(eigrp_t *top, struct prefix *p,
+int eigrp_intf_add_allspfrouters(eigrp_t *top, struct prefix *p,
 			       unsigned int ifindex)
 {
 	int ret;
@@ -192,7 +192,7 @@ int eigrp_if_add_allspfrouters(eigrp_t *top, struct prefix *p,
 	return ret;
 }
 
-int eigrp_if_drop_allspfrouters(eigrp_t *top, struct prefix *p,
+int eigrp_intf_drop_allspfrouters(eigrp_t *top, struct prefix *p,
 				unsigned int ifindex)
 {
 	int ret;
@@ -269,23 +269,23 @@ static void eigrp_network_run_interface(eigrp_t *eigrp, struct prefix *p,
 		if (p->family == co->address->family && !ifp->info
 		    && eigrp_network_match_iface(co->address, p)) {
 
-			ei = eigrp_if_new(eigrp, ifp, co->address);
+			ei = eigrp_intf_new(eigrp, ifp, co->address);
 
 			/* Relate eigrp interface to eigrp instance. */
 			ei->eigrp = eigrp;
 
 			/* if router_id is not configured, dont bring up
 			 * interfaces.
-			 * eigrp_router_id_update() will call eigrp_if_update
+			 * eigrp_router_id_update() will call eigrp_intf_update
 			 * whenever r-id is configured instead.
 			 */
 			if (if_is_operative(ifp))
-			    eigrp_if_up(eigrp, ei);
+			    eigrp_intf_up(eigrp, ei);
 		}
 	}
 }
 
-void eigrp_if_update(eigrp_t *eigrp, struct interface *ifp)
+void eigrp_intf_update(eigrp_t *eigrp, struct interface *ifp)
 {
     struct listnode *node, *nnode;
     struct route_node *rn;
@@ -346,7 +346,7 @@ int eigrp_network_unset(eigrp_t *eigrp, struct prefix *p)
 		}
 
 		if (!found) {
-			eigrp_if_free(ei, INTERFACE_DOWN_BY_VTY);
+		    eigrp_intf_free(eigrp, ei, INTERFACE_DOWN_BY_VTY);
 		}
 	}
 

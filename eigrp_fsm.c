@@ -497,7 +497,7 @@ int eigrp_fsm_event_keep_state(eigrp_fsm_action_message_t *msg)
 		prefix->distance = route->distance;
 	    prefix->reported_metric = route->total_metric;
 	    if (msg->packet_type == EIGRP_OPC_QUERY)
-		eigrp_send_reply(eigrp, msg->adv_router, prefix);
+		eigrp_reply_send(eigrp, msg->adv_router, prefix);
 	    prefix->req_action |= EIGRP_FSM_NEED_UPDATE;
 	    listnode_add(eigrp->topology_changes, prefix);
 	}
@@ -506,7 +506,7 @@ int eigrp_fsm_event_keep_state(eigrp_fsm_action_message_t *msg)
     }
 
     if (msg->packet_type == EIGRP_OPC_QUERY)
-	eigrp_send_reply(eigrp, msg->adv_router, prefix);
+	eigrp_reply_send(eigrp, msg->adv_router, prefix);
 
     return 1;
 }
@@ -526,7 +526,7 @@ int eigrp_fsm_event_lr(eigrp_fsm_action_message_t *msg)
 	assert(successors); // It's like Napolean and Waterloo
 
 	route = listnode_head(successors);
-	eigrp_send_reply(eigrp, route->adv_router, prefix);
+	eigrp_reply_send(eigrp, route->adv_router, prefix);
 	list_delete(&successors);
     }
 
@@ -580,7 +580,7 @@ int eigrp_fsm_event_lr_fcs(eigrp_fsm_action_message_t *msg)
 	assert(successors); // Having a spoon and all you need is a
 	// knife
 	route = listnode_head(successors);
-	eigrp_send_reply(eigrp, route->adv_router, prefix);
+	eigrp_reply_send(eigrp, route->adv_router, prefix);
 
 	list_delete(&successors);
     }

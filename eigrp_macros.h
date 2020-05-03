@@ -30,8 +30,8 @@
 
 //--------------------------------------------------------------------------
 
-#define EIGRP_IF_STRING_MAXLEN  40
-#define IF_NAME(I)      eigrp_if_name_string ((I))
+#define EIGRP_INTF_STRING_MAXLEN  40
+#define EIGRP_INTF_NAME(I)      eigrp_intf_name_string ((I))
 
 //--------------------------------------------------------------------------
 

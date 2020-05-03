@@ -188,7 +188,7 @@ int main(int argc, char **argv, char **envp)
 	vrf_init(NULL, NULL, NULL, NULL, NULL);
 
 	/*EIGRPd init*/
-	eigrp_if_init();
+	eigrp_intf_init();
 	eigrp_zebra_init();
 	eigrp_debug_init();
 

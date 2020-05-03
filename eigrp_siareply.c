@@ -127,7 +127,7 @@ void eigrp_siareply_send(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 
 	if (nbr->state == EIGRP_NEIGHBOR_UP) {
 		/*Put packet to retransmission queue*/
-		eigrp_fifo_push(nbr->retrans_queue, ep);
+		eigrp_packet_enqueue(nbr->retrans_queue, ep);
 
 		if (nbr->retrans_queue->count == 1) {
 		    eigrp_packet_send_reliably(eigrp, nbr);

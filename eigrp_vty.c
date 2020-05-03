@@ -340,7 +340,7 @@ DEFPY (clear_ip_eigrp_neighbors_int,
 	}
 
 	/* lookup interface by specified name */
-	ei = eigrp_if_lookup_by_name(eigrp, ifname);
+	ei = eigrp_intf_lookup_by_name(eigrp, ifname);
 	if (ei == NULL) {
 		vty_out(vty, " Interface (%s) doesn't exist\n", ifname);
 		return CMD_WARNING;
@@ -464,7 +464,7 @@ DEFPY (clear_ip_eigrp_neighbors_int_soft,
 	}
 
 	/* lookup interface by specified name */
-	ei = eigrp_if_lookup_by_name(eigrp, ifname);
+	ei = eigrp_intf_lookup_by_name(eigrp, ifname);
 	if (ei == NULL) {
 		vty_out(vty, " Interface (%s) doesn't exist\n", argv[4]->arg);
 		return CMD_WARNING;

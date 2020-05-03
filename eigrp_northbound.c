@@ -201,7 +201,7 @@ eigrpd_instance_passive_interface_create(struct nb_cb_create_args *args)
 		if (eif == NULL)
 			return NB_ERR_INCONSISTENCY;
 
-		eif->params.passive_interface = EIGRP_IF_PASSIVE;
+		eif->params.passive_interface = EIGRP_INTF_PASSIVE;
 		break;
 	}
 
@@ -228,7 +228,7 @@ eigrpd_instance_passive_interface_destroy(struct nb_cb_destroy_args *args)
 		if (eif == NULL)
 			break;
 
-		eif->params.passive_interface = EIGRP_IF_ACTIVE;
+		eif->params.passive_interface = EIGRP_INTF_ACTIVE;
 		break;
 	}
 
@@ -941,7 +941,7 @@ static int lib_interface_eigrp_delay_modify(struct nb_cb_modify_args *args)
 			return NB_ERR_INCONSISTENCY;
 
 		ei->params.delay = yang_dnode_get_uint32(args->dnode, NULL);
-		eigrp_if_reset(ifp);
+		eigrp_intf_reset(ifp);
 		break;
 	}
 
@@ -982,7 +982,7 @@ static int lib_interface_eigrp_bandwidth_modify(struct nb_cb_modify_args *args)
 			return NB_ERR_INCONSISTENCY;
 
 		ei->params.bandwidth = yang_dnode_get_uint32(args->dnode, NULL);
-		eigrp_if_reset(ifp);
+		eigrp_intf_reset(ifp);
 		break;
 	}
 

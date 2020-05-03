@@ -404,7 +404,7 @@ void eigrp_update_send_init(eigrp_t *eigrp, eigrp_neighbor_t *nbr)
 		   ep->length, ep->sequence_number, inet_ntoa(ep->dst));
 
     /*Put packet to retransmission queue*/
-    eigrp_fifo_push(nbr->retrans_queue, ep);
+    eigrp_packet_enqueue(nbr->retrans_queue, ep);
 
     if (nbr->retrans_queue->count == 1) {
 	eigrp_packet_send_reliably(eigrp, nbr);
@@ -435,7 +435,7 @@ static void eigrp_update_place_on_nbr_queue(eigrp_t *eigrp,
 		   ep->length, ep->sequence_number, inet_ntoa(ep->dst));
 
     /*Put packet to retransmission queue*/
-    eigrp_fifo_push(nbr->retrans_queue, ep);
+    eigrp_packet_enqueue(nbr->retrans_queue, ep);
 
     if (nbr->retrans_queue->count == 1)
 	eigrp_packet_send_reliably(eigrp, nbr);
@@ -464,7 +464,7 @@ static void eigrp_update_send_to_all_nbrs(eigrp_t *eigrp,
 	packet_sent = true;
 
 	/*Put packet to retransmission queue*/
-	eigrp_fifo_push(nbr->retrans_queue, ep_dup);
+	eigrp_packet_enqueue(nbr->retrans_queue, ep_dup);
 
 	if (nbr->retrans_queue->count == 1) {
 	    eigrp_packet_send_reliably(eigrp, nbr);
@@ -843,7 +843,7 @@ static void eigrp_update_send_GR_part(eigrp_neighbor_t *nbr)
 		   ep->length, ep->sequence_number, inet_ntoa(ep->dst));
 
     /*Put packet to retransmission queue*/
-    eigrp_fifo_push(nbr->retrans_queue, ep);
+    eigrp_packet_enqueue(nbr->retrans_queue, ep);
 
     if (nbr->retrans_queue->count == 1) {
 	eigrp_packet_send_reliably(eigrp, nbr);
