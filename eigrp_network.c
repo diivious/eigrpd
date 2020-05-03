@@ -280,35 +280,34 @@ static void eigrp_network_run_interface(eigrp_t *eigrp, struct prefix *p,
 			 * whenever r-id is configured instead.
 			 */
 			if (if_is_operative(ifp))
-				eigrp_if_up(ei);
+			    eigrp_if_up(eigrp, ei);
 		}
 	}
 }
 
-void eigrp_if_update(struct interface *ifp)
+void eigrp_if_update(eigrp_t *eigrp, struct interface *ifp)
 {
-	struct listnode *node, *nnode;
-	struct route_node *rn;
-	eigrp_t *eigrp;
+    struct listnode *node, *nnode;
+    struct route_node *rn;
 
-	/*
-	 * In the event there are multiple eigrp autonymnous systems running,
-	 * we need to check eac one and add the interface as approperate
-	 */
-	for (ALL_LIST_ELEMENTS(eigrp_om->eigrp, node, nnode, eigrp)) {
-		if (ifp->vrf_id != eigrp->vrf_id)
-			continue;
+    /*
+     * In the event there are multiple eigrp autonymnous systems running,
+     * we need to check eac one and add the interface as approperate
+     */
+    for (ALL_LIST_ELEMENTS(eigrp_om->eigrp, node, nnode, eigrp)) {
+	if (ifp->vrf_id != eigrp->vrf_id)
+	    continue;
 
-		/* EIGRP must be on and Router-ID must be configured. */
-		if (eigrp->router_id.s_addr == 0)
-			continue;
+	/* EIGRP must be on and Router-ID must be configured. */
+	if (eigrp->router_id.s_addr == 0)
+	    continue;
 
-		/* Run each network for this interface. */
-		for (rn = route_top(eigrp->networks); rn; rn = route_next(rn))
-			if (rn->info != NULL) {
-				eigrp_network_run_interface(eigrp, &rn->p, ifp);
-			}
-	}
+	/* Run each network for this interface. */
+	for (rn = route_top(eigrp->networks); rn; rn = route_next(rn))
+	    if (rn->info != NULL) {
+		eigrp_network_run_interface(eigrp, &rn->p, ifp);
+	    }
+    }
 }
 
 int eigrp_network_unset(eigrp_t *eigrp, struct prefix *p)

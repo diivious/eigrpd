@@ -45,30 +45,30 @@
  */
 
 // Vector Metrics
-#define EIGRP_TLV1_METRIC	\
-    uint32_t delay;		\
-    uint32_t bandwidth;		\
-    uint8_t mtu[3];		\
-    uint8_t hop_count;		\
-    uint8_t reliability;	\
-    uint8_t load;		\
-    uint8_t tag;		\
+#define EIGRP_TLV1_METRIC			\
+    uint32_t delay;				\
+    uint32_t bandwidth;				\
+    uint8_t mtu[3];				\
+    uint8_t hop_count;				\
+    uint8_t reliability;			\
+    uint8_t load;				\
+    uint8_t tag;				\
     uint8_t flags;
 #define EIGRP_TLV1_METRIC_SIZE	16
 
 // Nexthop (0 if this router)
-#define EIGRP_TLV1_IPV4_NEXTHOP	\
+#define EIGRP_TLV1_IPV4_NEXTHOP			\
     uint32_t nexthop;
 #define EIGRP_TLV1_IPV4_NEXTHOP_SIZE	4
 
 // External Data for redistributed route
-#define EIGRP_TLV1_EXTDATA	\
-    uint32_t orig;		\
-    uint32_t as;		\
-    uint32_t tag;		\
-    uint32_t metric;		\
-    uint16_t reserved;		\
-    uint8_t  protocol;		\
+#define EIGRP_TLV1_EXTDATA			\
+    uint32_t orig;				\
+    uint32_t as;				\
+    uint32_t tag;				\
+    uint32_t metric;				\
+    uint16_t reserved;				\
+    uint8_t  protocol;				\
     uint8_t  flags;
 #define EIGRP_TLV1_EXTDATA_SIZE	20
 
@@ -104,7 +104,7 @@ typedef struct eigrp_tlv1_extdata {
     EIGRP_TLV1_EXTDATA
 } __attribute__((packed)) eigrp_tlv1_extdata_t;
 
-#define EIGRP_IPV4_MIN_TLV	(EIGRP_TLV_HDR_SIZE + \
+#define EIGRP_IPV4_MIN_TLV	(EIGRP_TLV_HDR_SIZE +		\
 				 EIGRP_TLV1_IPV4_NEXTHOP_SIZE + \
 				 EIGRP_TLV1_METRIC_SIZE)
 
@@ -163,7 +163,7 @@ static uint16_t eigrp_tlv1_metric_encode(eigrp_stream_t *pkt, eigrp_metrics_t *m
 {
     /*
      * TLV1.2 supports classic metrics, need to scale it down to 32 bits
-    */
+     */
     stream_putl(pkt, eigrp_delay_to_scaled(metric->delay));
 
     stream_putl(pkt, metric->bandwidth);
@@ -295,8 +295,8 @@ static uint16_t eigrp_tlv1_nexthop_encode(eigrp_stream_t *pkt, eigrp_route_descr
  * decode an incoming TLV into a topology route and return it for processing
  */
 static eigrp_route_descriptor_t *eigrp_tlv1_decoder(eigrp_t *eigrp,
-					       eigrp_neighbor_t *nbr,
-					       eigrp_stream_t *pkt, uint16_t pktlen)
+						    eigrp_neighbor_t *nbr,
+						    eigrp_stream_t *pkt, uint16_t pktlen)
 {
     eigrp_route_descriptor_t *route = NULL;
     uint16_t type, length;

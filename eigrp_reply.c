@@ -61,10 +61,10 @@
 #include "eigrpd/eigrp_memory.h"
 #include "eigrpd/eigrp_errors.h"
 
-void eigrp_send_reply(eigrp_neighbor_t *nbr, eigrp_prefix_descriptor_t *prefix)
+void eigrp_send_reply(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+		      eigrp_prefix_descriptor_t *prefix)
 {
     eigrp_interface_t *ei = nbr->ei;
-    eigrp_t *eigrp = ei->eigrp;
     eigrp_packet_t *ep = NULL;
     uint16_t length = EIGRP_HEADER_LEN;
 
@@ -99,7 +99,7 @@ void eigrp_send_reply(eigrp_neighbor_t *nbr, eigrp_prefix_descriptor_t *prefix)
     eigrp_fifo_push(nbr->retrans_queue, ep);
 
     if (nbr->retrans_queue->count == 1) {
-	eigrp_send_packet_reliably(nbr);
+	eigrp_packet_send_reliably(eigrp, nbr);
     }
 }
 

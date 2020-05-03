@@ -154,7 +154,7 @@ eigrp_hello_parameter_decode(eigrp_neighbor_t *nbr,
 
 	    //     if(ntohl(nbr->ei->address->u.prefix4.s_addr) >
 	    //     ntohl(nbr->src.s_addr))
-	    eigrp_update_send_init(nbr);
+	    eigrp_update_send_init(eigrp, nbr);
 
 	    eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_PENDING);
 	}

@@ -58,7 +58,7 @@ uint32_t eigrp_query_send_all(eigrp_t *eigrp)
 {
     eigrp_interface_t *iface;
     struct listnode *node, *node2, *nnode2;
-    eigrp_prefix_descriptor_t *pe;
+    eigrp_prefix_descriptor_t *prefix;
     uint32_t counter;
 
     if (eigrp == NULL) {
@@ -68,16 +68,15 @@ uint32_t eigrp_query_send_all(eigrp_t *eigrp)
 
     counter = 0;
     for (ALL_LIST_ELEMENTS_RO(eigrp->eiflist, node, iface)) {
-	eigrp_send_query(iface);
+	eigrp_query_send(eigrp, iface);
 	counter++;
     }
 
-    for (ALL_LIST_ELEMENTS(eigrp->topology_changes_internalIPV4, node2,
-			   nnode2, pe)) {
-	if (pe->req_action & EIGRP_FSM_NEED_QUERY) {
-	    pe->req_action &= ~EIGRP_FSM_NEED_QUERY;
-	    listnode_delete(eigrp->topology_changes_internalIPV4,
-			    pe);
+    for (ALL_LIST_ELEMENTS(eigrp->topology_changes, node2,
+			   nnode2, prefix)) {
+	if (prefix->req_action & EIGRP_FSM_NEED_QUERY) {
+	    prefix->req_action &= ~EIGRP_FSM_NEED_QUERY;
+	    listnode_delete(eigrp->topology_changes, prefix);
 	}
     }
 
@@ -123,21 +122,21 @@ void eigrp_query_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
     eigrp_update_send_all(eigrp, nbr->ei);
 }
 
-void eigrp_send_query(eigrp_interface_t *ei)
+void eigrp_query_send(eigrp_t *eigrp, eigrp_interface_t *ei)
 {
     eigrp_packet_t *ep = NULL;
     eigrp_neighbor_t *nbr;
 
     uint16_t length = EIGRP_HEADER_LEN;
     struct listnode *node, *nnode, *node2, *nnode2;
-    eigrp_prefix_descriptor_t *pe;
+    eigrp_prefix_descriptor_t *prefix;
     bool has_tlv = false;
     bool new_packet = true;
     uint16_t eigrp_mtu = EIGRP_PACKET_MTU(ei->ifp->mtu);
     
-    for (ALL_LIST_ELEMENTS(ei->eigrp->topology_changes_internalIPV4, node,
-			   nnode, pe)) {
-	if (!(pe->req_action & EIGRP_FSM_NEED_QUERY))
+    for (ALL_LIST_ELEMENTS(ei->eigrp->topology_changes, node,
+			   nnode, prefix)) {
+	if (!(prefix->req_action & EIGRP_FSM_NEED_QUERY))
 	    continue;
 
 	if (new_packet) {
@@ -156,11 +155,11 @@ void eigrp_send_query(eigrp_interface_t *ei)
 	    new_packet = false;
 	}
 
-	length += eigrp_add_internalTLV_to_stream(ep->s, pe);
+	length += (nbr->tlv_encoder)(eigrp, nbr, ep->s, prefix);
 	has_tlv = true;
 	for (ALL_LIST_ELEMENTS(ei->nbrs, node2, nnode2, nbr)) {
 	    if (nbr->state == EIGRP_NEIGHBOR_UP)
-		listnode_add(pe->rij, nbr);
+		listnode_add(prefix->rij, nbr);
 	}
 
 	if (length + EIGRP_TLV_MAX_IPV4_BYTE > eigrp_mtu) {
@@ -189,7 +188,7 @@ void eigrp_send_query(eigrp_interface_t *ei)
 		eigrp_fifo_push(nbr->retrans_queue, dup);
 
 		if (nbr->retrans_queue->count == 1)
-		    eigrp_send_packet_reliably(nbr);
+		    eigrp_packet_send_reliably(eigrp, nbr);
 	    }
 
 	    has_tlv = false;
@@ -229,7 +228,7 @@ void eigrp_send_query(eigrp_interface_t *ei)
 	eigrp_fifo_push(nbr->retrans_queue, dup);
 
 	if (nbr->retrans_queue->count == 1)
-	    eigrp_send_packet_reliably(nbr);
+	    eigrp_packet_send_reliably(eigrp, nbr);
     }
 
     eigrp_packet_free(ep);

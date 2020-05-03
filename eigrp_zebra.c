@@ -144,23 +144,26 @@ static int eigrp_zebra_read_route(ZAPI_CALLBACK_ARGS)
 
 static int eigrp_interface_address_add(ZAPI_CALLBACK_ARGS)
 {
-	struct connected *c;
+    eigrp_interface_t *ei;
+    struct interface *ifp;
+    struct connected *c;
 
-	c = zebra_interface_address_read(cmd, zclient->ibuf, vrf_id);
-
-	if (c == NULL)
-		return 0;
-
-	if (IS_DEBUG_EIGRP(zebra, ZEBRA_INTERFACE)) {
-		char buf[128];
-		prefix2str(c->address, buf, sizeof(buf));
-		zlog_debug("Zebra: interface %s address add %s", c->ifp->name,
-			   buf);
-	}
-
-	eigrp_if_update(c->ifp);
-
+    c = zebra_interface_address_read(cmd, zclient->ibuf, vrf_id);
+    if (c == NULL)
 	return 0;
+    ifp = c->ifp;
+
+    if (IS_DEBUG_EIGRP(zebra, ZEBRA_INTERFACE)) {
+	char buf[128];
+	prefix2str(c->address, buf, sizeof(buf));
+	zlog_debug("Zebra: interface %s address add %s", ifp->name, buf);
+    }
+
+    ei = ifp->info;
+    if (ei && ei->eigrp)
+	eigrp_if_update(ei->eigrp, c->ifp);
+
+    return 0;
 }
 
 static int eigrp_interface_address_delete(ZAPI_CALLBACK_ARGS)

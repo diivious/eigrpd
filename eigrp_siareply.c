@@ -92,8 +92,8 @@ void eigrp_siareply_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
     eigrp_hello_send_ack(nbr);
 }
 
-void eigrp_send_siareply(eigrp_neighbor_t *nbr,
-			 eigrp_prefix_descriptor_t *pe)
+void eigrp_siareply_send(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+			 eigrp_prefix_descriptor_t *prefix)
 {
 	eigrp_packet_t *ep;
 	uint16_t length = EIGRP_HEADER_LEN;
@@ -107,11 +107,10 @@ void eigrp_send_siareply(eigrp_neighbor_t *nbr,
 	// encode Authentication TLV, if needed
 	if (nbr->ei->params.auth_type == EIGRP_AUTH_TYPE_MD5
 	    && nbr->ei->params.auth_keychain != NULL) {
-		length += eigrp_add_authTLV_MD5_to_stream(ep->s, nbr->ei);
+		length += eigrp_add_authTLV_MD5_encode(ep->s, nbr->ei);
 	}
 
-	length += eigrp_add_internalTLV_to_stream(ep->s, pe);
-
+	length += (nbr->tlv_encoder)(eigrp, nbr, ep->s, prefix);
 	if ((nbr->ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 	    && (nbr->ei->params.auth_keychain != NULL)) {
 		eigrp_make_md5_digest(nbr->ei, ep->s, EIGRP_AUTH_UPDATE_FLAG);
@@ -131,7 +130,7 @@ void eigrp_send_siareply(eigrp_neighbor_t *nbr,
 		eigrp_fifo_push(nbr->retrans_queue, ep);
 
 		if (nbr->retrans_queue->count == 1) {
-			eigrp_send_packet_reliably(nbr);
+		    eigrp_packet_send_reliably(eigrp, nbr);
 		}
 	} else
 		eigrp_packet_free(ep);

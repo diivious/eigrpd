@@ -657,7 +657,7 @@ int eigrp_read(struct thread *thread)
 		    ntohl(eigrph->sequence);
 		eigrp_update_send_EOT(nbr);
 	    } else
-		eigrp_send_packet_reliably(nbr);
+		eigrp_packet_send_reliably(eigrp, nbr);
 	}
 	ep = eigrp_fifo_next(nbr->multicast_queue);
 	if (ep) {
@@ -665,7 +665,7 @@ int eigrp_read(struct thread *thread)
 		ep = eigrp_fifo_pop(nbr->multicast_queue);
 		eigrp_packet_free(ep);
 		if (nbr->multicast_queue->count > 0) {
-		    eigrp_send_packet_reliably(nbr);
+		    eigrp_packet_send_reliably(eigrp, nbr);
 		}
 	    }
 	}
@@ -838,7 +838,7 @@ eigrp_packet_t *eigrp_packet_new(size_t size, eigrp_neighbor_t *nbr)
     return new;
 }
 
-void eigrp_send_packet_reliably(eigrp_neighbor_t *nbr)
+void eigrp_packet_send_reliably(eigrp_t *eigrp, eigrp_neighbor_t *nbr)
 {
     eigrp_packet_t *ep;
 
@@ -1146,90 +1146,6 @@ struct TLV_IPv4_Internal_type *eigrp_read_ipv4_tlv(struct stream *s)
     tlv->destination.s_addr = htonl(destination_tmp);
 
     return tlv;
-}
-
-uint16_t eigrp_add_internalTLV_to_stream(struct stream *s,
-					 eigrp_prefix_descriptor_t *pe)
-{
-    uint16_t length;
-
-    stream_putw(s, EIGRP_TLV_IPv4_INT);
-    switch (pe->destination->prefixlen) {
-    case 0:
-    case 1:
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-    case 6:
-    case 7:
-    case 8:
-	length = EIGRP_TLV_IPV4_SIZE_GRT_0_BIT;
-	stream_putw(s, length);
-	break;
-    case 9:
-    case 10:
-    case 11:
-    case 12:
-    case 13:
-    case 14:
-    case 15:
-    case 16:
-	length = EIGRP_TLV_IPV4_SIZE_GRT_8_BIT;
-	stream_putw(s, length);
-	break;
-    case 17:
-    case 18:
-    case 19:
-    case 20:
-    case 21:
-    case 22:
-    case 23:
-    case 24:
-	length = EIGRP_TLV_IPV4_SIZE_GRT_16_BIT;
-	stream_putw(s, length);
-	break;
-    case 25:
-    case 26:
-    case 27:
-    case 28:
-    case 29:
-    case 30:
-    case 31:
-    case 32:
-	length = EIGRP_TLV_IPV4_SIZE_GRT_24_BIT;
-	stream_putw(s, length);
-	break;
-    default:
-	flog_err(EC_LIB_DEVELOPMENT, "%s: Unexpected prefix length: %d",
-		 __func__, pe->destination->prefixlen);
-	return 0;
-    }
-    stream_putl(s, 0x00000000);
-
-    /*Metric*/
-    stream_putl(s, pe->reported_metric.delay);
-    stream_putl(s, pe->reported_metric.bandwidth);
-    stream_putc(s, pe->reported_metric.mtu[2]);
-    stream_putc(s, pe->reported_metric.mtu[1]);
-    stream_putc(s, pe->reported_metric.mtu[0]);
-    stream_putc(s, pe->reported_metric.hop_count);
-    stream_putc(s, pe->reported_metric.reliability);
-    stream_putc(s, pe->reported_metric.load);
-    stream_putc(s, pe->reported_metric.tag);
-    stream_putc(s, pe->reported_metric.flags);
-
-    stream_putc(s, pe->destination->prefixlen);
-
-    stream_putc(s, (ntohl(pe->destination->u.prefix4.s_addr) >> 24) & 0xFF);
-    if (pe->destination->prefixlen > 8)
-	stream_putc(s, (ntohl(pe->destination->u.prefix4.s_addr) >> 16) & 0xFF);
-    if (pe->destination->prefixlen > 16)
-	stream_putc(s, (ntohl(pe->destination->u.prefix4.s_addr) >> 8) & 0xFF);
-    if (pe->destination->prefixlen > 24)
-	stream_putc(s, ntohl(pe->destination->u.prefix4.s_addr) & 0xFF);
-
-    return length;
 }
 
 uint16_t eigrp_add_authTLV_MD5_encode(struct stream *s,

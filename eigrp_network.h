@@ -36,7 +36,7 @@ extern int eigrp_network_set(eigrp_t *eigrp, struct prefix *p);
 extern int eigrp_network_unset(eigrp_t *eigrp, struct prefix *p);
 
 extern int eigrp_hello_timer(struct thread *);
-extern void eigrp_if_update(struct interface *);
+extern void eigrp_if_update(eigrp_t *, struct interface *);
 extern int eigrp_if_add_allspfrouters(eigrp_t *, struct prefix *,
 				      unsigned int);
 extern int eigrp_if_drop_allspfrouters(eigrp_t *top, struct prefix *p,
