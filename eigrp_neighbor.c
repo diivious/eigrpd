@@ -352,10 +352,8 @@ int eigrp_nbr_count_get(eigrp_t *eigrp)
  * Send Hello packet with Peer Termination TLV with
  * neighbor's address, set it's state to DOWN and delete the neighbor
  */
-void eigrp_nbr_hard_restart(eigrp_neighbor_t *nbr, struct vty *vty)
+void eigrp_nbr_hard_restart(eigrp_t *eigrp, eigrp_neighbor_t *nbr, struct vty *vty)
 {
-    eigrp_t *eigrp = nbr->ei->eigrp;
-
     zlog_debug("Neighbor %s (%s) is down: manually cleared",
 	       inet_ntoa(nbr->src),
 	       ifindex2ifname(nbr->ei->ifp->ifindex, eigrp->vrf_id));

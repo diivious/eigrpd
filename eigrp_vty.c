@@ -406,7 +406,7 @@ DEFPY (clear_ip_eigrp_neighbors_IP,
 	}
 
 	/* execute hard reset on neighbor */
-	eigrp_nbr_hard_restart(nbr, vty);
+	eigrp_nbr_hard_restart(eigrp, nbr, vty);
 
 	return CMD_SUCCESS;
 }
