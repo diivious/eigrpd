@@ -542,20 +542,16 @@ eigrp_snmp_nbr_lookup_next(eigrp_t *eigrp, struct in_addr *nbr_addr, unsigned in
 	return NULL;
 }
 
-static eigrp_neighbor_t *eigrpNbrLookup(struct variable *v, oid *name,
-					     size_t *length,
-					     struct in_addr *nbr_addr,
-					     unsigned int *ifindex, int exact)
+static eigrp_neighbor_t *eigrpNbrLookup(eigrp_t *eigrp,
+					struct variable *v, oid *name,
+					size_t *length,
+					struct in_addr *nbr_addr,
+					unsigned int *ifindex, int exact)
 {
 	unsigned int len;
 	int first;
 	eigrp_neighbor_t *nbr;
 	eigrp_t *eigrp;
-
-	eigrp = eigrp_lookup();
-
-	if (!eigrp)
-		return NULL;
 
 	if (exact) {
 		if (*length != v->namelen + IN_ADDR_SIZE + 1)
@@ -1026,6 +1022,8 @@ static uint8_t *eigrpPeerEntry(struct variable *v, oid *name, size_t *length,
 	unsigned int ifindex;
 
 	eigrp = eigrp_lookup();
+	if (!eigrp)
+		return NULL;
 
 	/* Check whether the instance identifier is valid */
 	if (smux_header_generic(v, name, length, exact, var_len, write_method)

@@ -67,7 +67,7 @@ void eigrp_intf_rmap_update(struct if_rmap *if_rmap)
 		return;
 
 	ei = NULL;
-	e = eigrp_lookup();
+	e = eigrp_lookup(ifp->vrf_id);
 	for (ALL_LIST_ELEMENTS(e->eiflist, node, nnode, ei2)) {
 		if (strcmp(ei2->ifp->name, ifp->name) == 0) {
 			ei = ei2;
@@ -242,19 +242,17 @@ static int eigrp_route_set_delete(struct vty *vty,
 /* ARGSUSED */
 void eigrp_route_map_update(const char *notused)
 {
-	int i;
-	eigrp_t *e;
-	e = eigrp_lookup();
+    int i;
+    eigrp_t *eigrp = eigrp_lookup();
 
-	if (e) {
-		for (i = 0; i < ZEBRA_ROUTE_MAX; i++) {
-			if (e->route_map[i].name)
-				e->route_map[i].map = route_map_lookup_by_name(
-					e->route_map[i].name);
-		}
+    if (eigrp) {
+	for (i = 0; i < ZEBRA_ROUTE_MAX; i++) {
+	    if (eigrp->route_map[i].name)
+		eigrp->route_map[i].map = route_map_lookup_by_name(
+		    eigrp->route_map[i].name);
 	}
+    }
 }
-
 
 /* `match metric METRIC' */
 /* Match function return 1 if match is success else return zero. */

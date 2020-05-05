@@ -214,6 +214,26 @@ static eigrp_t *eigrp_new(uint16_t as, vrf_id_t vrf_id)
     return eigrp;
 }
 
+/*
+ * DVS: broken
+ *	if you try to run multiple eigrp instances over single VRF
+ *	lot of code does not pass vrf_id?
+ *
+ * Look for existing eigrp process based on the VRF its running over
+ */
+eigrp_t *eigrp_lookup(vrf_id_t vrf_id)
+{
+    eigrp_t *eigrp;
+    struct listnode *node, *nnode;
+
+    for (ALL_LIST_ELEMENTS(eigrp_om->eigrp, node, nnode, eigrp)) {
+	if (eigrp->vrf_id == vrf_id) {
+	    return eigrp;
+	}
+    }
+    return NULL;
+}
+
 eigrp_t *eigrp_get(uint16_t as, vrf_id_t vrf_id)
 {
     eigrp_t *eigrp;
@@ -293,15 +313,3 @@ void eigrp_finish_final(eigrp_t *eigrp)
     XFREE(MTYPE_EIGRP_TOP, eigrp);
 }
 
-/*Look for existing eigrp process*/
-eigrp_t *eigrp_lookup(vrf_id_t vrf_id)
-{
-    eigrp_t *eigrp;
-    struct listnode *node, *nnode;
-
-    for (ALL_LIST_ELEMENTS(eigrp_om->eigrp, node, nnode, eigrp))
-	if (eigrp->vrf_id == vrf_id)
-	    return eigrp;
-
-    return NULL;
-}

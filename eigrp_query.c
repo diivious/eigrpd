@@ -61,11 +61,6 @@ uint32_t eigrp_query_send_all(eigrp_t *eigrp)
     eigrp_prefix_descriptor_t *prefix;
     uint32_t counter;
 
-    if (eigrp == NULL) {
-	zlog_debug("EIGRP Routing Process not enabled");
-	return 0;
-    }
-
     counter = 0;
     for (ALL_LIST_ELEMENTS_RO(eigrp->eiflist, node, iface)) {
 	eigrp_query_send(eigrp, iface);
