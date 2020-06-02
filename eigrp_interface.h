@@ -40,7 +40,7 @@ extern int eigrp_intf_delete_hook(struct interface *);
 extern bool eigrp_intf_is_passive(eigrp_interface_t *ei);
 extern void eigrp_del_intf_params(eigrp_intf_params_t *);
 extern eigrp_interface_t *eigrp_intf_new(eigrp_t *, struct interface *,
-				       struct prefix *);
+					 struct prefix *);
 extern int eigrp_intf_up(eigrp_t *, eigrp_interface_t *);
 extern void eigrp_intf_update(eigrp_t *, struct interface *);
 extern void eigrp_intf_set_multicast(eigrp_interface_t *);
@@ -52,15 +52,13 @@ extern const char *eigrp_intf_name_string(eigrp_interface_t *);
 extern int eigrp_intf_ipmulticast(eigrp_t *, struct prefix *, unsigned int);
 extern void eigrp_intf_update(eigrp_t *, struct interface *);
 extern int eigrp_intf_add_allspfrouters(eigrp_t *, struct prefix *,
-				      unsigned int);
+					unsigned int);
 extern int eigrp_intf_drop_allspfrouters(eigrp_t *top, struct prefix *p,
-				       unsigned int ifindex);
+					 unsigned int ifindex);
 
-extern eigrp_interface_t *eigrp_intf_lookup_by_local_addr(eigrp_t *,
-							     struct interface *,
-							struct in_addr);
-extern eigrp_interface_t *eigrp_intf_lookup_by_name(eigrp_t *,
-						  const char *);
+extern eigrp_interface_t *
+eigrp_intf_lookup_by_local_addr(eigrp_t *, struct interface *, struct in_addr);
+extern eigrp_interface_t *eigrp_intf_lookup_by_name(eigrp_t *, const char *);
 
 /* Simulate down/up on the interface. */
 extern void eigrp_intf_reset(struct interface *);

@@ -55,10 +55,9 @@
 #include "eigrpd/eigrp_memory.h"
 #include "eigrpd/eigrp_errors.h"
 
-static inline eigrp_route_descriptor_t *eigrp_tlv_decoder_safe(eigrp_t *eigrp,
-							       eigrp_neighbor_t *nbr,
-							       eigrp_stream_t *pkt,
-							       uint16_t pktlen)
+static inline eigrp_route_descriptor_t *
+eigrp_tlv_decoder_safe(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+		       eigrp_stream_t *pkt, uint16_t pktlen)
 {
     return NULL;
 }
@@ -117,12 +116,10 @@ static eigrp_neighbor_t *eigrp_nbr_init(eigrp_interface_t *ei,
     //               inet_ntoa (nbr->router_id));
 
     return nbr;
-
 }
 
 eigrp_neighbor_t *eigrp_nbr_get(eigrp_interface_t *ei,
-				struct eigrp_header *eigrph,
-				struct ip *iph)
+				struct eigrp_header *eigrph, struct ip *iph)
 {
     eigrp_neighbor_t *nbr;
     struct listnode *node, *nnode;
@@ -308,15 +305,15 @@ void eigrp_nbr_state_update(eigrp_neighbor_t *nbr)
     case EIGRP_NEIGHBOR_PENDING: {
 	/*Reset Hold Down Timer for neighbor*/
 	THREAD_OFF(nbr->t_holddown);
-	thread_add_timer(master, holddown_timer_expired, nbr,
-			 nbr->v_holddown, &nbr->t_holddown);
+	thread_add_timer(master, holddown_timer_expired, nbr, nbr->v_holddown,
+			 &nbr->t_holddown);
 	break;
     }
     case EIGRP_NEIGHBOR_UP: {
 	/*Reset Hold Down Timer for neighbor*/
 	THREAD_OFF(nbr->t_holddown);
-	thread_add_timer(master, holddown_timer_expired, nbr,
-			 nbr->v_holddown, &nbr->t_holddown);
+	thread_add_timer(master, holddown_timer_expired, nbr, nbr->v_holddown,
+			 &nbr->t_holddown);
 	break;
     }
     }
@@ -352,7 +349,8 @@ int eigrp_nbr_count_get(eigrp_t *eigrp)
  * Send Hello packet with Peer Termination TLV with
  * neighbor's address, set it's state to DOWN and delete the neighbor
  */
-void eigrp_nbr_hard_restart(eigrp_t *eigrp, eigrp_neighbor_t *nbr, struct vty *vty)
+void eigrp_nbr_hard_restart(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+			    struct vty *vty)
 {
     zlog_debug("Neighbor %s (%s) is down: manually cleared",
 	       inet_ntoa(nbr->src),
@@ -365,8 +363,7 @@ void eigrp_nbr_hard_restart(eigrp_t *eigrp, eigrp_neighbor_t *nbr, struct vty *v
     }
 
     /* send Hello with Peer Termination TLV */
-    eigrp_hello_send(nbr->ei, EIGRP_HELLO_GRACEFUL_SHUTDOWN_NBR,
-		     &(nbr->src));
+    eigrp_hello_send(nbr->ei, EIGRP_HELLO_GRACEFUL_SHUTDOWN_NBR, &(nbr->src));
     /* set neighbor to DOWN */
     nbr->state = EIGRP_NEIGHBOR_DOWN;
     /* delete neighbor */

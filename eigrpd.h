@@ -55,30 +55,30 @@
 #include "eigrpd/eigrp_macros.h"
 
 /* Set EIGRP version is "classic" - wide metrics comes next */
-#define EIGRP_MAJOR_VERSION     1
-#define EIGRP_MINOR_VERSION	2
+#define EIGRP_MAJOR_VERSION 1
+#define EIGRP_MINOR_VERSION 2
 
-#define EIGRP_TLV_32B_VERSION	1	// Original 32bit scaled metrics
-#define EIGRP_TLV_64B_VERSION	2	// Current 64bit 'wide' metrics
-#define EIGRP_TLV_MTR_VERSION	3	// MTR TLVs with 32bit metric *Not Supported
-#define EIGRP_TLV_SAF_VERSION	4	// SAF TLVs with 64bit metric *Not Supported
+#define EIGRP_TLV_32B_VERSION 1 // Original 32bit scaled metrics
+#define EIGRP_TLV_64B_VERSION 2 // Current 64bit 'wide' metrics
+#define EIGRP_TLV_MTR_VERSION 3 // MTR TLVs with 32bit metric *Not Supported
+#define EIGRP_TLV_SAF_VERSION 4 // SAF TLVs with 64bit metric *Not Supported
 
 /* EIGRP master for system wide configuration and variables. */
 typedef struct eigrp_master {
-	/* EIGRP instance. */
-	struct list *eigrp;
+    /* EIGRP instance. */
+    struct list *eigrp;
 
-	/* EIGRP thread master. */
-	struct thread_master *master;
+    /* EIGRP thread master. */
+    struct thread_master *master;
 
-	/* Zebra interface list. */
-	struct list *iflist;
+    /* Zebra interface list. */
+    struct list *iflist;
 
-	/* EIGRP start time. */
-	time_t start_time;
+    /* EIGRP start time. */
+    time_t start_time;
 
-	/* Various EIGRP global configuration. */
-	uint8_t options;
+    /* Various EIGRP global configuration. */
+    uint8_t options;
 
 #define EIGRP_MASTER_SHUTDOWN (1 << 0) /* deferred-shutdown */
 } eigrp_master_t;

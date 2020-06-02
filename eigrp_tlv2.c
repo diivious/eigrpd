@@ -31,13 +31,15 @@
 
 static eigrp_route_descriptor_t *eigrp_tlv2_decoder(eigrp_t *eigrp,
 						    eigrp_neighbor_t *nbr,
-						    eigrp_stream_t *pkt, uint16_t pktlen)
+						    eigrp_stream_t *pkt,
+						    uint16_t pktlen)
 {
     return 0;
 }
 
 static uint16_t eigrp_tlv2_encoder(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
-				   eigrp_stream_t *pkt, eigrp_prefix_descriptor_t *prefix)
+				   eigrp_stream_t *pkt,
+				   eigrp_prefix_descriptor_t *prefix)
 {
     return 0;
 }
@@ -48,4 +50,3 @@ void eigrp_tlv2_init(eigrp_neighbor_t *nbr)
     nbr->tlv_decoder = &eigrp_tlv2_decoder;
     nbr->tlv_encoder = &eigrp_tlv2_encoder;
 }
-

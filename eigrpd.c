@@ -163,8 +163,8 @@ static eigrp_t *eigrp_new(uint16_t as, vrf_id_t vrf_id)
 
     if (eigrp->fd < 0) {
 	flog_err_sys(
-	    EC_LIB_SOCKET,
-	    "eigrp_new: fatal error: eigrp_sock_init was unable to open a socket");
+		EC_LIB_SOCKET,
+		"eigrp_new: fatal error: eigrp_sock_init was unable to open a socket");
 	exit(1);
     }
 
@@ -173,7 +173,8 @@ static eigrp_t *eigrp_new(uint16_t as, vrf_id_t vrf_id)
     eigrp->ibuf = stream_new(EIGRP_PACKET_MAX_LEN + 1);
 
     eigrp->t_read = NULL;
-    thread_add_read(master, eigrp_packet_read, eigrp, eigrp->fd, &eigrp->t_read);
+    thread_add_read(master, eigrp_packet_read, eigrp, eigrp->fd,
+		    &eigrp->t_read);
     eigrp->oi_write_q = list_new();
 
     eigrp->topology_table = route_table_init();
@@ -199,11 +200,9 @@ static eigrp_t *eigrp_new(uint16_t as, vrf_id_t vrf_id)
 
     /* Distribute list install. */
     eigrp->distribute_ctx =
-	distribute_list_ctx_create(vrf_lookup_by_id(eigrp->vrf_id));
-    distribute_list_add_hook(eigrp->distribute_ctx,
-			     eigrp_distribute_update);
-    distribute_list_delete_hook(eigrp->distribute_ctx,
-				eigrp_distribute_update);
+	    distribute_list_ctx_create(vrf_lookup_by_id(eigrp->vrf_id));
+    distribute_list_add_hook(eigrp->distribute_ctx, eigrp_distribute_update);
+    distribute_list_delete_hook(eigrp->distribute_ctx, eigrp_distribute_update);
 
     /*
       eigrp->if_rmap_ctx = if_rmap_ctx_create(eigrp->vrf_id);
@@ -312,4 +311,3 @@ void eigrp_finish_final(eigrp_t *eigrp)
     distribute_list_delete(&eigrp->distribute_ctx);
     XFREE(MTYPE_EIGRP_TOP, eigrp);
 }
-

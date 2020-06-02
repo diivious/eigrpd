@@ -83,7 +83,8 @@ void eigrp_siaquery_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 	    msg.prefix = route->prefix;
 	    eigrp_fsm_event(&msg);
 	} else {
-	    // neighbor sent corrupted packet - flush remaining packet
+	    // neighbor sent corrupted packet - flush remaining
+	    // packet
 	    break;
 	}
     }

@@ -47,7 +47,8 @@ eigrp_bandwidth_t eigrp_scaled_to_bandwidth(eigrp_scaled_t scaled)
     if (scaled != EIGRP_CLASSIC_MAX) {
 	bandwidth = (EIGRP_CLASSIC_SCALER * EIGRP_BANDWIDTH_SCALER);
 	bandwidth = scaled * bandwidth;
-	bandwidth = (bandwidth < EIGRP_METRIC_MAX) ? bandwidth : EIGRP_BANDWIDTH_MAX;
+	bandwidth = (bandwidth < EIGRP_METRIC_MAX) ? bandwidth
+						   : EIGRP_BANDWIDTH_MAX;
     }
 
     return bandwidth;
@@ -67,8 +68,7 @@ eigrp_delay_t eigrp_scaled_to_delay(eigrp_scaled_t scaled)
     return scaled;
 }
 
-eigrp_metric_t eigrp_calculate_metrics(eigrp_t *eigrp,
-				       eigrp_metrics_t metric)
+eigrp_metric_t eigrp_calculate_metrics(eigrp_t *eigrp, eigrp_metrics_t metric)
 {
     eigrp_metric_t composite;
     composite = 0;
@@ -82,7 +82,8 @@ eigrp_metric_t eigrp_calculate_metrics(eigrp_t *eigrp,
     if (eigrp->k_values[0])
 	composite += (eigrp->k_values[0] * metric.bandwidth);
     if (eigrp->k_values[1])
-	composite += ((eigrp->k_values[1] * metric.bandwidth) / (256 - metric.load));
+	composite +=
+		((eigrp->k_values[1] * metric.bandwidth) / (256 - metric.load));
     if (eigrp->k_values[2])
 	composite += (eigrp->k_values[2] * metric.delay);
     if (eigrp->k_values[3] && !eigrp->k_values[4])
@@ -90,7 +91,8 @@ eigrp_metric_t eigrp_calculate_metrics(eigrp_t *eigrp,
     if (!eigrp->k_values[3] && eigrp->k_values[4])
 	composite *= (eigrp->k_values[4] / metric.reliability);
     if (eigrp->k_values[3] && eigrp->k_values[4])
-	composite *= ((eigrp->k_values[4] / metric.reliability) + eigrp->k_values[3]);
+	composite *= ((eigrp->k_values[4] / metric.reliability)
+		      + eigrp->k_values[3]);
 
     composite = (composite <= EIGRP_METRIC_MAX) ? composite : EIGRP_METRIC_MAX;
 
@@ -105,20 +107,21 @@ eigrp_metric_t eigrp_calculate_total_metrics(eigrp_t *eigrp,
     eigrp_bandwidth_t bw;
 
     entry->total_metric = entry->reported_metric;
-    temp_delay = entry->total_metric.delay + eigrp_delay_to_scaled(ei->params.delay);
+    temp_delay =
+	    entry->total_metric.delay + eigrp_delay_to_scaled(ei->params.delay);
 
-    entry->total_metric.delay = temp_delay > EIGRP_METRIC_MAX ? 
-	EIGRP_METRIC_MAX : temp_delay;
+    entry->total_metric.delay =
+	    temp_delay > EIGRP_METRIC_MAX ? EIGRP_METRIC_MAX : temp_delay;
 
     bw = eigrp_bandwidth_to_scaled(ei->params.bandwidth);
-    entry->total_metric.bandwidth = entry->total_metric.bandwidth > bw ? 
-	bw : entry->total_metric.bandwidth;
+    entry->total_metric.bandwidth = entry->total_metric.bandwidth > bw
+					    ? bw
+					    : entry->total_metric.bandwidth;
 
     return eigrp_calculate_metrics(eigrp, entry->total_metric);
 }
 
-bool eigrp_metrics_is_same(eigrp_metrics_t metric1,
-			   eigrp_metrics_t metric2)
+bool eigrp_metrics_is_same(eigrp_metrics_t metric1, eigrp_metrics_t metric2)
 {
     if ((metric1.bandwidth == metric2.bandwidth)
 	&& (metric1.delay == metric2.delay)

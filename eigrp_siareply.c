@@ -84,7 +84,8 @@ void eigrp_siareply_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 	} else {
 	    // Destination must exists
 	    char buf[PREFIX_STRLEN];
-	    zlog_err("%s: Received prefix %s which we do not know about",__PRETTY_FUNCTION__,
+	    zlog_err("%s: Received prefix %s which we do not know about",
+		     __PRETTY_FUNCTION__,
 		     prefix2str(prefix->destination, buf, sizeof(buf)));
 	    continue;
 	}
@@ -95,43 +96,43 @@ void eigrp_siareply_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 void eigrp_siareply_send(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 			 eigrp_prefix_descriptor_t *prefix)
 {
-	eigrp_packet_t *ep;
-	uint16_t length = EIGRP_HEADER_LEN;
+    eigrp_packet_t *ep;
+    uint16_t length = EIGRP_HEADER_LEN;
 
-	ep = eigrp_packet_new(EIGRP_PACKET_MTU(nbr->ei->ifp->mtu), nbr);
+    ep = eigrp_packet_new(EIGRP_PACKET_MTU(nbr->ei->ifp->mtu), nbr);
 
-	/* Prepare EIGRP INIT UPDATE header */
-	eigrp_packet_header_init(EIGRP_OPC_SIAREPLY, nbr->ei->eigrp, ep->s, 0,
-				 nbr->ei->eigrp->sequence_number, 0);
+    /* Prepare EIGRP INIT UPDATE header */
+    eigrp_packet_header_init(EIGRP_OPC_SIAREPLY, nbr->ei->eigrp, ep->s, 0,
+			     nbr->ei->eigrp->sequence_number, 0);
 
-	// encode Authentication TLV, if needed
-	if (nbr->ei->params.auth_type == EIGRP_AUTH_TYPE_MD5
-	    && nbr->ei->params.auth_keychain != NULL) {
-		length += eigrp_add_authTLV_MD5_encode(ep->s, nbr->ei);
+    // encode Authentication TLV, if needed
+    if (nbr->ei->params.auth_type == EIGRP_AUTH_TYPE_MD5
+	&& nbr->ei->params.auth_keychain != NULL) {
+	length += eigrp_add_authTLV_MD5_encode(ep->s, nbr->ei);
+    }
+
+    length += (nbr->tlv_encoder)(eigrp, nbr, ep->s, prefix);
+    if ((nbr->ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
+	&& (nbr->ei->params.auth_keychain != NULL)) {
+	eigrp_make_md5_digest(nbr->ei, ep->s, EIGRP_AUTH_UPDATE_FLAG);
+    }
+
+    /* EIGRP Checksum */
+    eigrp_packet_checksum(nbr->ei, ep->s, length);
+
+    ep->length = length;
+    ep->dst.s_addr = nbr->src.s_addr;
+
+    /*This ack number we await from neighbor*/
+    ep->sequence_number = nbr->ei->eigrp->sequence_number;
+
+    if (nbr->state == EIGRP_NEIGHBOR_UP) {
+	/*Put packet to retransmission queue*/
+	eigrp_packet_enqueue(nbr->retrans_queue, ep);
+
+	if (nbr->retrans_queue->count == 1) {
+	    eigrp_packet_send_reliably(eigrp, nbr);
 	}
-
-	length += (nbr->tlv_encoder)(eigrp, nbr, ep->s, prefix);
-	if ((nbr->ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
-	    && (nbr->ei->params.auth_keychain != NULL)) {
-		eigrp_make_md5_digest(nbr->ei, ep->s, EIGRP_AUTH_UPDATE_FLAG);
-	}
-
-	/* EIGRP Checksum */
-	eigrp_packet_checksum(nbr->ei, ep->s, length);
-
-	ep->length = length;
-	ep->dst.s_addr = nbr->src.s_addr;
-
-	/*This ack number we await from neighbor*/
-	ep->sequence_number = nbr->ei->eigrp->sequence_number;
-
-	if (nbr->state == EIGRP_NEIGHBOR_UP) {
-		/*Put packet to retransmission queue*/
-		eigrp_packet_enqueue(nbr->retrans_queue, ep);
-
-		if (nbr->retrans_queue->count == 1) {
-		    eigrp_packet_send_reliably(eigrp, nbr);
-		}
-	} else
-		eigrp_packet_free(ep);
+    } else
+	eigrp_packet_free(ep);
 }

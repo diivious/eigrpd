@@ -30,8 +30,8 @@
 
 //--------------------------------------------------------------------------
 
-#define EIGRP_INTF_STRING_MAXLEN  40
-#define EIGRP_INTF_NAME(I)      eigrp_intf_name_string ((I))
+#define EIGRP_INTF_STRING_MAXLEN 40
+#define EIGRP_INTF_NAME(I) eigrp_intf_name_string((I))
 
 //--------------------------------------------------------------------------
 
@@ -42,6 +42,6 @@
 
 /* FSM macros*/
 #define EIGRP_FSM_EVENT_SCHEDULE(I, E)                                         \
-	thread_add_event(master, eigrp_fsm_event, (I), (E))
+    thread_add_event(master, eigrp_fsm_event, (I), (E))
 
 #endif /* _ZEBRA_EIGRP_MACROS_H_ */

@@ -155,8 +155,7 @@ static int eigrp_zebra_interface_address_delete(ZAPI_CALLBACK_ARGS)
     if (IS_DEBUG_EIGRP(zebra, ZEBRA_INTERFACE)) {
 	char buf[128];
 	prefix2str(c->address, buf, sizeof(buf));
-	zlog_debug("Zebra: interface %s address delete %s",
-		   c->ifp->name, buf);
+	zlog_debug("Zebra: interface %s address delete %s", c->ifp->name, buf);
     }
 
     ifp = c->ifp;
@@ -238,8 +237,7 @@ void eigrp_zebra_route_delete(eigrp_t *eigrp, struct prefix *p)
 
     if (IS_DEBUG_EIGRP(zebra, ZEBRA_REDISTRIBUTE)) {
 	char buf[PREFIX_STRLEN];
-	zlog_debug("Zebra: Route del %s",
-		   prefix2str(p, buf, PREFIX_STRLEN));
+	zlog_debug("Zebra: Route del %s", prefix2str(p, buf, PREFIX_STRLEN));
     }
 
     return;
@@ -248,8 +246,9 @@ void eigrp_zebra_route_delete(eigrp_t *eigrp, struct prefix *p)
 static int eigrp_is_type_redistributed(int type, vrf_id_t vrf_id)
 {
     return ((DEFAULT_ROUTE_TYPE(type))
-	    ? vrf_bitmap_check(zclient->default_information[AFI_IP], vrf_id)
-	    : vrf_bitmap_check(zclient->redist[AFI_IP][type], vrf_id));
+		    ? vrf_bitmap_check(zclient->default_information[AFI_IP],
+				       vrf_id)
+		    : vrf_bitmap_check(zclient->redist[AFI_IP][type], vrf_id));
 }
 
 int eigrp_redistribute_set(eigrp_t *eigrp, int type,
@@ -280,8 +279,8 @@ int eigrp_redistribute_unset(eigrp_t *eigrp, int type)
 
     if (eigrp_is_type_redistributed(type, eigrp->vrf_id)) {
 	memset(&eigrp->dmetric[type], 0, sizeof(struct eigrp_metrics));
-	zclient_redistribute(ZEBRA_REDISTRIBUTE_DELETE, zclient, AFI_IP,
-			     type, 0, eigrp->vrf_id);
+	zclient_redistribute(ZEBRA_REDISTRIBUTE_DELETE, zclient, AFI_IP, type,
+			     0, eigrp->vrf_id);
 	--eigrp->redistribute;
     }
 
@@ -295,11 +294,11 @@ void eigrp_zebra_init(void)
     zclient = zclient_new(master, &opt);
 
     zclient_init(zclient, ZEBRA_ROUTE_EIGRP, 0, &eigrpd_privs);
-    zclient->zebra_connected		= eigrp_zebra_connected;
-    zclient->router_id_update		= eigrp_zebra_router_id_update;
-    zclient->interface_address_add	= eigrp_zebra_interface_address_add;
-    zclient->interface_address_delete	= eigrp_zebra_interface_address_delete;
-    zclient->redistribute_route_add	= eigrp_zebra_redistribute_route;
-    zclient->redistribute_route_del	= eigrp_zebra_redistribute_route;
-    zclient->route_notify_owner		= eigrp_zebra_route_notify_owner;
+    zclient->zebra_connected = eigrp_zebra_connected;
+    zclient->router_id_update = eigrp_zebra_router_id_update;
+    zclient->interface_address_add = eigrp_zebra_interface_address_add;
+    zclient->interface_address_delete = eigrp_zebra_interface_address_delete;
+    zclient->redistribute_route_add = eigrp_zebra_redistribute_route;
+    zclient->redistribute_route_del = eigrp_zebra_redistribute_route;
+    zclient->route_notify_owner = eigrp_zebra_route_notify_owner;
 }

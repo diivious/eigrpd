@@ -1,33 +1,33 @@
 /*
-  * EIGRP Interface Functions.
-  * Copyright (C) 2013-2016
-  * Authors:
-  *   Donnie Savage
-  *   Jan Janovic
-  *   Matej Perina
-  *   Peter Orsag
-  *   Peter Paluch
-  *   Frantisek Gazo
-  *   Tomas Hvorkovy
-  *   Martin Kontsek
-  *   Lukas Koribsky
-  *
-  * This file is part of GNU Zebra.
-  *
-  * GNU Zebra is free software; you can redistribute it and/or modify it
-  * under the terms of the GNU General Public License as published by the
-  * Free Software Foundation; either version 2, or (at your option) any
-  * later version.
-  *
-  * GNU Zebra is distributed in the hope that it will be useful, but
-  * WITHOUT ANY WARRANTY; without even the implied warranty of
-  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  * General Public License for more details.
-  *
-  * You should have received a copy of the GNU General Public License along
-  * with this program; see the file COPYING; if not, write to the Free Software
-  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
-  */
+ * EIGRP Interface Functions.
+ * Copyright (C) 2013-2016
+ * Authors:
+ *   Donnie Savage
+ *   Jan Janovic
+ *   Matej Perina
+ *   Peter Orsag
+ *   Peter Paluch
+ *   Frantisek Gazo
+ *   Tomas Hvorkovy
+ *   Martin Kontsek
+ *   Lukas Koribsky
+ *
+ * This file is part of GNU Zebra.
+ *
+ * GNU Zebra is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2, or (at your option) any
+ * later version.
+ *
+ * GNU Zebra is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; see the file COPYING; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+ */
 
 #include <zebra.h>
 
@@ -88,14 +88,14 @@ static uint8_t eigrp_intf_settype(struct interface *ifp)
 
 const char *eigrp_intf_name_string(eigrp_interface_t *ei)
 {
-	if (!ei)
-		return "inactive";
+    if (!ei)
+	return "inactive";
 
-	return ei->ifp->name;
+    return ei->ifp->name;
 }
 
 eigrp_interface_t *eigrp_intf_new(eigrp_t *eigrp, struct interface *ifp,
-				struct prefix *p)
+				  struct prefix *p)
 {
     eigrp_interface_t *ei = ifp->info;
     int i;
@@ -182,18 +182,15 @@ static int eigrp_ifp_up(struct interface *ifp)
     eigrp_interface_t *ei = ifp->info;
 
     if (IS_DEBUG_EIGRP(zebra, ZEBRA_INTERFACE))
-	zlog_debug("Zebra: Interface[%s] state change to up.",
-		   ifp->name);
+	zlog_debug("Zebra: Interface[%s] state change to up.", ifp->name);
 
     if (!ei)
 	return 0;
 
     if (ei->curr_bandwidth != ifp->bandwidth) {
 	if (IS_DEBUG_EIGRP(zebra, ZEBRA_INTERFACE))
-	    zlog_debug(
-		"Zebra: Interface[%s] bandwidth change %d -> %d.",
-		ifp->name, ei->curr_bandwidth,
-		ifp->bandwidth);
+	    zlog_debug("Zebra: Interface[%s] bandwidth change %d -> %d.",
+		       ifp->name, ei->curr_bandwidth, ifp->bandwidth);
 
 	ei->curr_bandwidth = ifp->bandwidth;
 	// eigrp_intf_recalculate_output_cost (ifp);
@@ -201,9 +198,8 @@ static int eigrp_ifp_up(struct interface *ifp)
 
     if (ei->curr_mtu != ifp->mtu) {
 	if (IS_DEBUG_EIGRP(zebra, ZEBRA_INTERFACE))
-	    zlog_debug(
-		"Zebra: Interface[%s] MTU change %u -> %u.",
-		ifp->name, ei->curr_mtu, ifp->mtu);
+	    zlog_debug("Zebra: Interface[%s] MTU change %u -> %u.", ifp->name,
+		       ei->curr_mtu, ifp->mtu);
 
 	ei->curr_mtu = ifp->mtu;
 	/* Must reset the interface (simulate down/up) when MTU
@@ -220,8 +216,7 @@ static int eigrp_ifp_up(struct interface *ifp)
 static int eigrp_ifp_down(struct interface *ifp)
 {
     if (IS_DEBUG_EIGRP(zebra, ZEBRA_INTERFACE))
-	zlog_debug("Zebra: Interface[%s] state change to down.",
-		   ifp->name);
+	zlog_debug("Zebra: Interface[%s] state change to down.", ifp->name);
 
     if (ifp->info)
 	eigrp_intf_down(ifp->info);
@@ -234,13 +229,14 @@ static int eigrp_ifp_destroy(struct interface *ifp)
     eigrp_interface_t *ei;
 
     if (if_is_up(ifp))
-	zlog_warn("Zebra: got delete of %s, but interface is still up", ifp->name);
+	zlog_warn("Zebra: got delete of %s, but interface is still up",
+		  ifp->name);
 
     if (IS_DEBUG_EIGRP(zebra, ZEBRA_INTERFACE))
 	zlog_debug(
-	    "Zebra: interface delete %s index %d flags %llx metric %d mtu %d",
-	    ifp->name, ifp->ifindex, (unsigned long long)ifp->flags,
-	    ifp->metric, ifp->mtu);
+		"Zebra: interface delete %s index %d flags %llx metric %d mtu %d",
+		ifp->name, ifp->ifindex, (unsigned long long)ifp->flags,
+		ifp->metric, ifp->mtu);
 
     if (ifp->info) {
 	ei = ifp->info;
@@ -254,8 +250,8 @@ struct list *eigrp_iflist;
 
 void eigrp_intf_init(void)
 {
-    if_zapi_callbacks(eigrp_ifp_create, eigrp_ifp_up,
-		      eigrp_ifp_down, eigrp_ifp_destroy);
+    if_zapi_callbacks(eigrp_ifp_create, eigrp_ifp_up, eigrp_ifp_down,
+		      eigrp_ifp_destroy);
     /* Initialize Zebra interface data structure. */
     // hook_register_prio(if_add, 0, eigrp_intf_new);
     hook_register_prio(if_del, 0, eigrp_intf_delete_hook);
@@ -311,7 +307,8 @@ int eigrp_intf_up(eigrp_t *eigrp, eigrp_interface_t *ei)
 
     dest_addr = ei->address;
     apply_mask(&dest_addr);
-    prefix = eigrp_topology_table_lookup_ipv4(eigrp->topology_table, &dest_addr);
+    prefix =
+	    eigrp_topology_table_lookup_ipv4(eigrp->topology_table, &dest_addr);
 
     if (prefix == NULL) {
 	prefix = eigrp_prefix_descriptor_new();
@@ -397,7 +394,7 @@ void eigrp_intf_set_multicast(eigrp_interface_t *ei)
 	 */
 	if (!ei->member_allrouters
 	    && (eigrp_intf_add_allspfrouters(ei->eigrp, &ei->address,
-					   ei->ifp->ifindex)
+					     ei->ifp->ifindex)
 		>= 0))
 	    /* Set the flag only if the system call to join
 	     * succeeded. */
@@ -408,7 +405,7 @@ void eigrp_intf_set_multicast(eigrp_interface_t *ei)
 	if (ei->member_allrouters) {
 	    /* Only actually drop if this is the last reference */
 	    eigrp_intf_drop_allspfrouters(ei->eigrp, &ei->address,
-					ei->ifp->ifindex);
+					  ei->ifp->ifindex);
 	    /* Unset the flag regardless of whether the system call
 	       to leave
 	       the group succeeded, since it's much safer to assume
@@ -431,8 +428,7 @@ void eigrp_intf_free(eigrp_t *eigrp, eigrp_interface_t *ei, int source)
 
     dest_addr = ei->address;
     apply_mask(&dest_addr);
-    pe = eigrp_topology_table_lookup_ipv4(eigrp->topology_table,
-					  &dest_addr);
+    pe = eigrp_topology_table_lookup_ipv4(eigrp->topology_table, &dest_addr);
     if (pe)
 	eigrp_prefix_descriptor_delete(eigrp, eigrp->topology_table, pe);
 
@@ -455,8 +451,8 @@ void eigrp_intf_reset(struct interface *ifp)
 }
 
 eigrp_interface_t *eigrp_intf_lookup_by_local_addr(eigrp_t *eigrp,
-						 struct interface *ifp,
-						 struct in_addr address)
+						   struct interface *ifp,
+						   struct in_addr address)
 {
     struct listnode *node;
     eigrp_interface_t *ei;
@@ -484,7 +480,7 @@ eigrp_interface_t *eigrp_intf_lookup_by_local_addr(eigrp_t *eigrp,
  * Function is used for lookup interface by name.
  */
 eigrp_interface_t *eigrp_intf_lookup_by_name(eigrp_t *eigrp,
-					   const char *if_name)
+					     const char *if_name)
 {
     eigrp_interface_t *ei;
     struct listnode *node;

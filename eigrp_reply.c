@@ -74,8 +74,8 @@ void eigrp_reply_send(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 			     eigrp->sequence_number, 0);
 
     // encode Authentication TLV, if needed
-    if (ei->params.auth_type == EIGRP_AUTH_TYPE_MD5 &&
-	(ei->params.auth_keychain != NULL)) {
+    if (ei->params.auth_type == EIGRP_AUTH_TYPE_MD5
+	&& (ei->params.auth_keychain != NULL)) {
 	length += eigrp_add_authTLV_MD5_encode(ep->s, ei);
     }
 
@@ -136,7 +136,8 @@ void eigrp_reply_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 	} else {
 	    // Destination must exists
 	    char buf[PREFIX_STRLEN];
-	    zlog_err("%s: Received prefix %s which we do not know about",__PRETTY_FUNCTION__,
+	    zlog_err("%s: Received prefix %s which we do not know about",
+		     __PRETTY_FUNCTION__,
 		     prefix2str(prefix->destination, buf, sizeof(buf)));
 	    continue;
 	}

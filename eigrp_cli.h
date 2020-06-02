@@ -46,8 +46,7 @@ extern void eigrp_cli_show_network(struct vty *vty, struct lyd_node *dnode,
 				   bool show_defaults);
 extern void eigrp_cli_show_neighbor(struct vty *vty, struct lyd_node *dnode,
 				    bool show_defaults);
-extern void eigrp_cli_show_redistribute(struct vty *vty,
-					struct lyd_node *dnode,
+extern void eigrp_cli_show_redistribute(struct vty *vty, struct lyd_node *dnode,
 					bool show_defaults);
 extern void eigrp_cli_show_delay(struct vty *vty, struct lyd_node *dnode,
 				 bool show_defaults);

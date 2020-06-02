@@ -138,9 +138,8 @@ void eigrp_prefix_descriptor_add(struct route_table *topology,
 	    char buf[PREFIX_STRLEN];
 
 	    zlog_debug(
-		"%s: %s Should we have found this prefix in the topo table?",
-		__func__,
-		prefix2str(pe->destination, buf, sizeof(buf)));
+		    "%s: %s Should we have found this prefix in the topo table?",
+		    __func__, prefix2str(pe->destination, buf, sizeof(buf)));
 	}
 	route_unlock_node(rn);
     }
@@ -151,8 +150,7 @@ void eigrp_prefix_descriptor_add(struct route_table *topology,
 /*
  * Adding topology entry to topology node
  */
-void eigrp_route_descriptor_add(eigrp_t *eigrp,
-				eigrp_prefix_descriptor_t *node,
+void eigrp_route_descriptor_add(eigrp_t *eigrp, eigrp_prefix_descriptor_t *node,
 				eigrp_route_descriptor_t *route)
 {
     struct list *l = list_new();
@@ -163,8 +161,7 @@ void eigrp_route_descriptor_add(eigrp_t *eigrp,
 	listnode_add_sort(node->entries, route);
 	route->prefix = node;
 
-	eigrp_zebra_route_add(eigrp, node->destination,
-			      l, node->fdistance);
+	eigrp_zebra_route_add(eigrp, node->destination, l, node->fdistance);
     }
 
     list_delete(&l);
@@ -223,8 +220,7 @@ void eigrp_route_descriptor_delete(eigrp_t *eigrp,
 /*
  * Deleting all nodes from topology table
  */
-void eigrp_topology_delete_all(eigrp_t *eigrp,
-			       struct route_table *topology)
+void eigrp_topology_delete_all(eigrp_t *eigrp, struct route_table *topology)
 {
     struct route_node *rn;
     eigrp_prefix_descriptor_t *pe;
@@ -305,8 +301,8 @@ eigrp_topology_get_successor_max(eigrp_prefix_descriptor_t *table_node,
     return successors;
 }
 
-eigrp_route_descriptor_t *
-eigrp_prefix_descriptor_lookup(struct list *entries, eigrp_neighbor_t *nbr)
+eigrp_route_descriptor_t *eigrp_prefix_descriptor_lookup(struct list *entries,
+							 eigrp_neighbor_t *nbr)
 {
     eigrp_route_descriptor_t *data;
     struct listnode *node, *nnode;
@@ -376,8 +372,7 @@ eigrp_topology_update_distance(eigrp_fsm_action_message_t *msg)
 	    return change; // No change
 	}
 
-	new_reported_distance =
-	    eigrp_calculate_metrics(eigrp, msg->metrics);
+	new_reported_distance = eigrp_calculate_metrics(eigrp, msg->metrics);
 
 	if (route->reported_distance < new_reported_distance) {
 	    change = METRIC_INCREASE;
@@ -392,8 +387,7 @@ eigrp_topology_update_distance(eigrp_fsm_action_message_t *msg)
 	break;
     case EIGRP_EXT:
 	if (prefix->nt == EIGRP_TOPOLOGY_TYPE_REMOTE_EXTERNAL) {
-	    if (eigrp_metrics_is_same(msg->metrics,
-				      route->reported_metric))
+	    if (eigrp_metrics_is_same(msg->metrics, route->reported_metric))
 		return change;
 	} else {
 	    change = METRIC_INCREASE;
@@ -401,8 +395,7 @@ eigrp_topology_update_distance(eigrp_fsm_action_message_t *msg)
 	}
 	break;
     default:
-	flog_err(EC_LIB_DEVELOPMENT, "%s: Please implement handler",
-		 __func__);
+	flog_err(EC_LIB_DEVELOPMENT, "%s: Please implement handler", __func__);
 	break;
     }
 distance_done:
@@ -443,20 +436,15 @@ void eigrp_topology_update_node_flags(eigrp_t *eigrp,
 	if (route->reported_distance < dest->fdistance) {
 	    // is feasible successor, can be successor
 	    if (((uint64_t)route->distance
-		 <= (uint64_t)dest->distance
-		 * (uint64_t)eigrp->variance)
+		 <= (uint64_t)dest->distance * (uint64_t)eigrp->variance)
 		&& route->distance != EIGRP_MAX_METRIC) {
 		// is successor
-		route->flags |=
-		    EIGRP_ROUTE_DESCRIPTOR_SUCCESSOR_FLAG;
-		route->flags &=
-		    ~EIGRP_ROUTE_DESCRIPTOR_FSUCCESSOR_FLAG;
+		route->flags |= EIGRP_ROUTE_DESCRIPTOR_SUCCESSOR_FLAG;
+		route->flags &= ~EIGRP_ROUTE_DESCRIPTOR_FSUCCESSOR_FLAG;
 	    } else {
 		// is feasible successor only
-		route->flags |=
-		    EIGRP_ROUTE_DESCRIPTOR_FSUCCESSOR_FLAG;
-		route->flags &=
-		    ~EIGRP_ROUTE_DESCRIPTOR_SUCCESSOR_FLAG;
+		route->flags |= EIGRP_ROUTE_DESCRIPTOR_FSUCCESSOR_FLAG;
+		route->flags &= ~EIGRP_ROUTE_DESCRIPTOR_SUCCESSOR_FLAG;
 	    }
 	} else {
 	    route->flags &= ~EIGRP_ROUTE_DESCRIPTOR_FSUCCESSOR_FLAG;
@@ -488,8 +476,7 @@ void eigrp_update_routing_table(eigrp_t *eigrp,
     }
 }
 
-void eigrp_topology_neighbor_down(eigrp_t *eigrp,
-				  eigrp_neighbor_t *nbr)
+void eigrp_topology_neighbor_down(eigrp_t *eigrp, eigrp_neighbor_t *nbr)
 {
     eigrp_prefix_descriptor_t *pe;
     eigrp_route_descriptor_t *route;

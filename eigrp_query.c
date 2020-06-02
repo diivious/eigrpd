@@ -67,8 +67,7 @@ uint32_t eigrp_query_send_all(eigrp_t *eigrp)
 	counter++;
     }
 
-    for (ALL_LIST_ELEMENTS(eigrp->topology_changes, node2,
-			   nnode2, prefix)) {
+    for (ALL_LIST_ELEMENTS(eigrp->topology_changes, node2, nnode2, prefix)) {
 	if (prefix->req_action & EIGRP_FSM_NEED_QUERY) {
 	    prefix->req_action &= ~EIGRP_FSM_NEED_QUERY;
 	    listnode_delete(eigrp->topology_changes, prefix);
@@ -107,7 +106,8 @@ void eigrp_query_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 	    msg.prefix = route->prefix;
 	    eigrp_fsm_event(&msg);
 	} else {
-	    // neighbor sent corrupted packet - flush remaining packet
+	    // neighbor sent corrupted packet - flush remaining
+	    // packet
 	    break;
 	}
     }
@@ -128,9 +128,8 @@ void eigrp_query_send(eigrp_t *eigrp, eigrp_interface_t *ei)
     bool has_tlv = false;
     bool new_packet = true;
     uint16_t eigrp_mtu = EIGRP_PACKET_MTU(ei->ifp->mtu);
-    
-    for (ALL_LIST_ELEMENTS(ei->eigrp->topology_changes, node,
-			   nnode, prefix)) {
+
+    for (ALL_LIST_ELEMENTS(ei->eigrp->topology_changes, node, nnode, prefix)) {
 	if (!(prefix->req_action & EIGRP_FSM_NEED_QUERY))
 	    continue;
 
@@ -138,8 +137,7 @@ void eigrp_query_send(eigrp_t *eigrp, eigrp_interface_t *ei)
 	    ep = eigrp_packet_new(eigrp_mtu, NULL);
 
 	    /* Prepare EIGRP INIT UPDATE header */
-	    eigrp_packet_header_init(EIGRP_OPC_QUERY, ei->eigrp,
-				     ep->s, 0,
+	    eigrp_packet_header_init(EIGRP_OPC_QUERY, ei->eigrp, ep->s, 0,
 				     ei->eigrp->sequence_number, 0);
 
 	    // encode Authentication TLV, if needed
@@ -160,8 +158,7 @@ void eigrp_query_send(eigrp_t *eigrp, eigrp_interface_t *ei)
 	if (length + EIGRP_TLV_MAX_IPV4_BYTE > eigrp_mtu) {
 	    if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 		&& ei->params.auth_keychain != NULL) {
-		eigrp_make_md5_digest(ei, ep->s,
-				      EIGRP_AUTH_UPDATE_FLAG);
+		eigrp_make_md5_digest(ei, ep->s, EIGRP_AUTH_UPDATE_FLAG);
 	    }
 
 	    eigrp_packet_checksum(ei, ep->s, length);

@@ -41,16 +41,16 @@ extern eigrp_route_descriptor_t *eigrp_route_descriptor_new(void);
 
 extern void eigrp_topology_free(eigrp_t *eigrp, struct route_table *table);
 extern void eigrp_prefix_descriptor_add(struct route_table *table,
-				   eigrp_prefix_descriptor_t *pe);
+					eigrp_prefix_descriptor_t *pe);
 extern void eigrp_route_descriptor_add(eigrp_t *eigrp,
-				    eigrp_prefix_descriptor_t *pe,
-				    eigrp_route_descriptor_t *ne);
-extern void eigrp_prefix_descriptor_delete(eigrp_t *eigrp,
-				      struct route_table *table,
-				      eigrp_prefix_descriptor_t *pe);
-extern void eigrp_route_descriptor_delete(eigrp_t *eigrp,
 				       eigrp_prefix_descriptor_t *pe,
 				       eigrp_route_descriptor_t *ne);
+extern void eigrp_prefix_descriptor_delete(eigrp_t *eigrp,
+					   struct route_table *table,
+					   eigrp_prefix_descriptor_t *pe);
+extern void eigrp_route_descriptor_delete(eigrp_t *eigrp,
+					  eigrp_prefix_descriptor_t *pe,
+					  eigrp_route_descriptor_t *ne);
 extern void eigrp_topology_delete_all(eigrp_t *eigrp,
 				      struct route_table *table);
 extern eigrp_prefix_descriptor_t *
@@ -77,10 +77,10 @@ extern void eigrp_update_topology_table_prefix(eigrp_t *eigrp,
 					       eigrp_prefix_descriptor_t *pe);
 
 /* Static inline functions */
-static inline const char
-*eigrp_topology_ip_string(eigrp_prefix_descriptor_t *tn)
+static inline const char *
+eigrp_topology_ip_string(eigrp_prefix_descriptor_t *tn)
 {
-	return inet_ntoa(tn->destination->u.prefix4);
+    return inet_ntoa(tn->destination->u.prefix4);
 }
 
 #endif

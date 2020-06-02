@@ -35,15 +35,17 @@
 /* Neighbor Data Structure */
 typedef struct eigrp_neighbor {
 
-    uint8_t os_rel_major;  // system version - just for show
-    uint8_t os_rel_minor;  // system version - just for show
+    uint8_t os_rel_major; // system version - just for show
+    uint8_t os_rel_minor; // system version - just for show
 
     /* TLV decoders for this peer - version dependent */
-    uint8_t tlv_rel_major; // eigrp version - tells us what TLV format to use
-    uint8_t tlv_rel_minor; // eigrp version - tells us what TLV format to use
-    
-    eigrp_tlv_decoder_t	tlv_decoder;
-    eigrp_tlv_encoder_t	tlv_encoder;
+    uint8_t tlv_rel_major; // eigrp version - tells us what TLV format to
+			   // use
+    uint8_t tlv_rel_minor; // eigrp version - tells us what TLV format to
+			   // use
+
+    eigrp_tlv_decoder_t tlv_decoder;
+    eigrp_tlv_encoder_t tlv_encoder;
 
     uint8_t K1;
     uint8_t K2;
@@ -91,23 +93,23 @@ typedef struct eigrp_neighbor {
 
 /* Prototypes */
 extern eigrp_neighbor_t *eigrp_nbr_get(eigrp_interface_t *,
-					    struct eigrp_header *,
-					    struct ip *addr);
+				       struct eigrp_header *, struct ip *addr);
 extern eigrp_neighbor_t *eigrp_nbr_new(eigrp_interface_t *);
 extern void eigrp_nbr_delete(eigrp_neighbor_t *neigh);
 
 extern int holddown_timer_expired(struct thread *thread);
 
-extern int eigrp_neighborship_check(eigrp_neighbor_t *, struct TLV_Parameter_Type *tlv);
+extern int eigrp_neighborship_check(eigrp_neighbor_t *,
+				    struct TLV_Parameter_Type *tlv);
 extern void eigrp_nbr_state_update(eigrp_neighbor_t *);
 extern void eigrp_nbr_state_set(eigrp_neighbor_t *, uint8_t state);
 extern uint8_t eigrp_nbr_state_get(eigrp_neighbor_t *);
 extern int eigrp_nbr_count_get(eigrp_t *);
 extern const char *eigrp_nbr_state_str(eigrp_neighbor_t *);
-extern eigrp_neighbor_t *
-eigrp_nbr_lookup_by_addr(eigrp_interface_t *, struct in_addr *);
-extern eigrp_neighbor_t *
-eigrp_nbr_lookup_by_addr_process(eigrp_t *, struct in_addr addr);
+extern eigrp_neighbor_t *eigrp_nbr_lookup_by_addr(eigrp_interface_t *,
+						  struct in_addr *);
+extern eigrp_neighbor_t *eigrp_nbr_lookup_by_addr_process(eigrp_t *,
+							  struct in_addr addr);
 extern void eigrp_nbr_hard_restart(eigrp_t *, eigrp_neighbor_t *, struct vty *);
 
 extern int eigrp_nbr_split_horizon_check(eigrp_route_descriptor_t *,
@@ -116,7 +118,7 @@ extern int eigrp_nbr_split_horizon_check(eigrp_route_descriptor_t *,
 /* Static inline functions */
 static inline const char *eigrp_neigh_ip_string(eigrp_neighbor_t *nbr)
 {
-	return inet_ntoa(nbr->src);
+    return inet_ntoa(nbr->src);
 }
 
 #endif /* _ZEBRA_EIGRP_NEIGHBOR_H */

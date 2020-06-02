@@ -10,9 +10,8 @@
 
 #include "if_rmap.h"
 
-extern bool eigrp_routemap_prefix_apply(eigrp_t *eigrp,
-					eigrp_interface_t *ei, int in,
-					struct prefix *prefix);
+extern bool eigrp_routemap_prefix_apply(eigrp_t *eigrp, eigrp_interface_t *ei,
+					int in, struct prefix *prefix);
 extern void eigrp_routemap_update(const char *);
 extern void eigrp_routemap_update_redistribute(void);
 

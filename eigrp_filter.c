@@ -79,8 +79,7 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
     if (!dist->ifname) {
 	/* access list IN for whole process */
 	if (dist->list[DISTRIBUTE_V4_IN]) {
-	    alist = access_list_lookup(
-		AFI_IP, dist->list[DISTRIBUTE_V4_IN]);
+	    alist = access_list_lookup(AFI_IP, dist->list[DISTRIBUTE_V4_IN]);
 	    if (alist)
 		eigrp->list[EIGRP_FILTER_IN] = alist;
 	    else
@@ -91,8 +90,7 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 
 	/* access list OUT for whole process */
 	if (dist->list[DISTRIBUTE_V4_OUT]) {
-	    alist = access_list_lookup(
-		AFI_IP, dist->list[DISTRIBUTE_V4_OUT]);
+	    alist = access_list_lookup(AFI_IP, dist->list[DISTRIBUTE_V4_OUT]);
 	    if (alist)
 		eigrp->list[EIGRP_FILTER_OUT] = alist;
 	    else
@@ -103,8 +101,7 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 
 	/* PREFIX_LIST IN for process */
 	if (dist->prefix[DISTRIBUTE_V4_IN]) {
-	    plist = prefix_list_lookup(
-		AFI_IP, dist->prefix[DISTRIBUTE_V4_IN]);
+	    plist = prefix_list_lookup(AFI_IP, dist->prefix[DISTRIBUTE_V4_IN]);
 	    if (plist) {
 		eigrp->prefix[EIGRP_FILTER_IN] = plist;
 	    } else
@@ -114,8 +111,7 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 
 	/* PREFIX_LIST OUT for process */
 	if (dist->prefix[DISTRIBUTE_V4_OUT]) {
-	    plist = prefix_list_lookup(
-		AFI_IP, dist->prefix[DISTRIBUTE_V4_OUT]);
+	    plist = prefix_list_lookup(AFI_IP, dist->prefix[DISTRIBUTE_V4_OUT]);
 	    if (plist) {
 		eigrp->prefix[EIGRP_FILTER_OUT] = plist;
 
@@ -166,8 +162,8 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 	}
 	/* schedule Graceful restart for whole process in 10sec */
 	eigrp->t_distribute = NULL;
-	thread_add_timer(master, eigrp_distribute_timer_process, eigrp,
-			 (10), &eigrp->t_distribute);
+	thread_add_timer(master, eigrp_distribute_timer_process, eigrp, (10),
+			 &eigrp->t_distribute);
 
 	return;
     }
@@ -191,8 +187,7 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 
     /* Access-list for interface in */
     if (dist->list[DISTRIBUTE_V4_IN]) {
-	alist = access_list_lookup(AFI_IP,
-				   dist->list[DISTRIBUTE_V4_IN]);
+	alist = access_list_lookup(AFI_IP, dist->list[DISTRIBUTE_V4_IN]);
 	if (alist) {
 	    ei->list[EIGRP_FILTER_IN] = alist;
 	} else
@@ -203,8 +198,7 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 
     /* Access-list for interface in */
     if (dist->list[DISTRIBUTE_V4_OUT]) {
-	alist = access_list_lookup(AFI_IP,
-				   dist->list[DISTRIBUTE_V4_OUT]);
+	alist = access_list_lookup(AFI_IP, dist->list[DISTRIBUTE_V4_OUT]);
 	if (alist)
 	    ei->list[EIGRP_FILTER_OUT] = alist;
 	else
@@ -215,8 +209,7 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 
     /* Prefix-list for interface in */
     if (dist->prefix[DISTRIBUTE_V4_IN]) {
-	plist = prefix_list_lookup(AFI_IP,
-				   dist->prefix[DISTRIBUTE_V4_IN]);
+	plist = prefix_list_lookup(AFI_IP, dist->prefix[DISTRIBUTE_V4_IN]);
 	if (plist)
 	    ei->prefix[EIGRP_FILTER_IN] = plist;
 	else
@@ -226,8 +219,7 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 
     /* Prefix-list for interface out */
     if (dist->prefix[DISTRIBUTE_V4_OUT]) {
-	plist = prefix_list_lookup(AFI_IP,
-				   dist->prefix[DISTRIBUTE_V4_OUT]);
+	plist = prefix_list_lookup(AFI_IP, dist->prefix[DISTRIBUTE_V4_OUT]);
 	if (plist)
 	    ei->prefix[EIGRP_FILTER_OUT] = plist;
 	else
