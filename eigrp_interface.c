@@ -71,7 +71,7 @@ static void eigrp_intf_stream_unset(eigrp_interface_t *ei)
     if (ei->on_write_q) {
 	listnode_delete(eigrp->oi_write_q, ei);
 	if (list_isempty(eigrp->oi_write_q))
-	    thread_cancel(eigrp->t_write);
+		thread_cancel(&(eigrp->t_write));
 	ei->on_write_q = 0;
     }
 }

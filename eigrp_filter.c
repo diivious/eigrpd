@@ -158,7 +158,7 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 	/* check if there is already GR scheduled */
 	if (eigrp->t_distribute != NULL) {
 	    /* if is, cancel schedule */
-	    thread_cancel(eigrp->t_distribute);
+		thread_cancel(&(eigrp->t_distribute));
 	}
 	/* schedule Graceful restart for whole process in 10sec */
 	eigrp->t_distribute = NULL;
@@ -262,7 +262,7 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
     /* check if there is already GR scheduled */
     if (ei->t_distribute != NULL) {
 	/* if is, cancel schedule */
-	thread_cancel(ei->t_distribute);
+	    thread_cancel(&(ei->t_distribute));
     }
     /* schedule Graceful restart for interface in 10sec */
     eigrp->t_distribute = NULL;

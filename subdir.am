@@ -25,6 +25,7 @@ eigrpd_libeigrp_a_SOURCES = \
 	eigrpd/eigrp_hello.c \
 	eigrpd/eigrp_interface.c \
 	eigrpd/eigrp_memory.c \
+	eigrpd/eigrp_metric.c \
 	eigrpd/eigrp_neighbor.c \
 	eigrpd/eigrp_network.c \
 	eigrpd/eigrp_northbound.c \
@@ -34,6 +35,8 @@ eigrpd_libeigrp_a_SOURCES = \
 	eigrpd/eigrp_siaquery.c \
 	eigrpd/eigrp_siareply.c \
 	eigrpd/eigrp_snmp.c \
+	eigrpd/eigrp_tlv1.c \
+	eigrpd/eigrp_tlv2.c \
 	eigrpd/eigrp_topology.c \
 	eigrpd/eigrp_update.c \
 	eigrpd/eigrp_vrf.c \
