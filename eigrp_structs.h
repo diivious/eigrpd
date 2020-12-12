@@ -195,7 +195,6 @@ typedef struct eigrp_interface {
     eigrp_packet_queue_t *obuf; /* Output queue */
 
     /* To which multicast groups do we currently belong? */
-
     uint32_t curr_bandwidth;
     uint32_t curr_mtu;
 
@@ -217,21 +216,6 @@ typedef struct eigrp_interface {
 
     /* Statistics fields. */
     eigrp_intf_stats_t stats; // Statistics fields
-
-    uint32_t hello_in;   /* Hello message input count. */
-    uint32_t update_in;  /* Update message input count. */
-    uint32_t query_in;   /* Querry message input count. */
-    uint32_t reply_in;   /* Reply message input count. */
-    uint32_t hello_out;  /* Hello message output count. */
-    uint32_t update_out; /* Update message output count. */
-    uint32_t query_out;  /* Query message output count. */
-    uint32_t reply_out;  /* Reply message output count. */
-    uint32_t siaQuery_in;
-    uint32_t siaQuery_out;
-    uint32_t siaReply_in;
-    uint32_t siaReply_out;
-    uint32_t ack_out;
-    uint32_t ack_in;
 
     uint32_t crypt_seqnum; /* Cryptographic Sequence Number */
 

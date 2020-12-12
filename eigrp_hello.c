@@ -387,7 +387,7 @@ void eigrp_hello_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
     /*If received packet is hello with Parameter TLV*/
     if (ntohl(eigrph->ack) == 0) {
 	/* increment statistics. */
-	ei->hello_in++;
+	ei->stats.rcvd.hello++;
 	if (nbr)
 	    eigrp_nbr_state_update(nbr);
     }
