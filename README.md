@@ -1,6 +1,3 @@
-# eigrpd
-This is the re-write of the eigrpd code from FRR
-
 EIGRP
 =========
 
@@ -43,7 +40,7 @@ Next, download EIGRP source
 	git clone https://github.com/diivious/eigrpd.git eigrpd
 ```
 
-Once setup, checkout the FRR code
+Once setup, checkout the FRR source
 
 ```
 	git clone https://github.com/frrouting/frr.git FRR
@@ -53,7 +50,7 @@ Delete the existing eigrpd directory
 
 ```
 	cd frr
-	rm -rd eigrpd
+	rm -rf eigrpd
 ```
 
 Copy this version of EIGRP top FRR
@@ -67,20 +64,20 @@ Lastly, build FRR as normal
 ```
 	./bootstrap.sh
 	./configure \
-    --enable-exampledir=/usr/share/doc/frr/examples/ \
-    --localstatedir=/var/opt/frr \
-    --sbindir=/usr/lib/frr \
-    --sysconfdir=/etc/frr \
-    --enable-multipath=64 \
-    --enable-user=frr \
-    --enable-group=frr \
-    --enable-vty-group=frrvty \
-    --enable-configfile-mask=0640 \
-    --enable-logfile-mask=0640 \
-    --enable-fpm \
-    --with-pkg-git-version \
-    --with-pkg-extra-version=-dVs-EIGRP-v0
-    make
+	    --enable-exampledir=/usr/share/doc/frr/examples/ \
+	    --localstatedir=/var/opt/frr \
+	    --sbindir=/usr/lib/frr \
+	    --sysconfdir=/etc/frr \
+	    --enable-multipath=64 \
+	    --enable-user=frr \
+	    --enable-group=frr \
+	    --enable-vty-group=frrvty \
+	    --enable-configfile-mask=0640 \
+	    --enable-logfile-mask=0640 \
+	    --enable-fpm \
+	    --with-pkg-git-version \
+	    --with-pkg-extra-version=-dVs-EIGRP-v0
+	make
 ```
 
 Contributing
