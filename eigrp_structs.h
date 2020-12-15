@@ -59,6 +59,11 @@ typedef struct eigrp_extdata {
     uint8_t flags;
 } eigrp_extdata_t;
 
+/*
+ *DVS: this stuct is a mess of a dumping ground for any and everythign.
+ *     will be cleaned up as it exposes to much to functions that do not need it.
+ *
+ */
 struct eigrp {
     vrf_id_t vrf_id;
 
