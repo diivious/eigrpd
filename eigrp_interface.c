@@ -66,7 +66,7 @@ static void eigrp_intf_stream_set(eigrp_interface_t *ei)
 
 static void eigrp_intf_stream_unset(eigrp_interface_t *ei)
 {
-    eigrp_t *eigrp = ei->eigrp;
+    struct eigrp *eigrp = ei->eigrp;
 
     if (ei->on_write_q) {
 	listnode_delete(eigrp->oi_write_q, ei);
@@ -94,7 +94,7 @@ const char *eigrp_intf_name_string(eigrp_interface_t *ei)
     return ei->ifp->name;
 }
 
-eigrp_interface_t *eigrp_intf_new(eigrp_t *eigrp, struct interface *ifp,
+eigrp_interface_t *eigrp_intf_new(struct eigrp *eigrp, struct interface *ifp,
 				  struct prefix *p)
 {
     eigrp_interface_t *ei = ifp->info;
@@ -146,7 +146,7 @@ eigrp_interface_t *eigrp_intf_new(eigrp_t *eigrp, struct interface *ifp,
 int eigrp_intf_delete_hook(struct interface *ifp)
 {
     eigrp_interface_t *ei = ifp->info;
-    eigrp_t *eigrp;
+    struct eigrp *eigrp;
 
     if (!ei)
 	return 0;
@@ -264,7 +264,7 @@ void eigrp_del_intf_params(eigrp_intf_params_t *eip)
 	free(eip->auth_keychain);
 }
 
-int eigrp_intf_up(eigrp_t *eigrp, eigrp_interface_t *ei)
+int eigrp_intf_up(struct eigrp *eigrp, eigrp_interface_t *ei)
 {
     eigrp_prefix_descriptor_t *prefix;
     eigrp_route_descriptor_t *route;
@@ -416,7 +416,7 @@ void eigrp_intf_set_multicast(eigrp_interface_t *ei)
     }
 }
 
-void eigrp_intf_free(eigrp_t *eigrp, eigrp_interface_t *ei, int source)
+void eigrp_intf_free(struct eigrp *eigrp, eigrp_interface_t *ei, int source)
 {
     struct prefix dest_addr;
     eigrp_prefix_descriptor_t *pe;
@@ -450,7 +450,7 @@ void eigrp_intf_reset(struct interface *ifp)
     eigrp_intf_up(ei->eigrp, ei);
 }
 
-eigrp_interface_t *eigrp_intf_lookup_by_local_addr(eigrp_t *eigrp,
+eigrp_interface_t *eigrp_intf_lookup_by_local_addr(struct eigrp *eigrp,
 						   struct interface *ifp,
 						   struct in_addr address)
 {
@@ -479,7 +479,7 @@ eigrp_interface_t *eigrp_intf_lookup_by_local_addr(eigrp_t *eigrp,
  * @par
  * Function is used for lookup interface by name.
  */
-eigrp_interface_t *eigrp_intf_lookup_by_name(eigrp_t *eigrp,
+eigrp_interface_t *eigrp_intf_lookup_by_name(struct eigrp *eigrp,
 					     const char *if_name)
 {
     eigrp_interface_t *ei;

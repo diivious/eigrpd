@@ -142,7 +142,7 @@ void eigrp_header_dump(struct eigrp_header *eigrph)
     zlog_debug("eigrp_AS %u", ntohs(eigrph->ASNumber));
 }
 
-void show_ip_eigrp_interface_header(struct vty *vty, eigrp_t *eigrp)
+void show_ip_eigrp_interface_header(struct vty *vty, struct eigrp *eigrp)
 {
 
     vty_out(vty,
@@ -152,7 +152,7 @@ void show_ip_eigrp_interface_header(struct vty *vty, eigrp_t *eigrp)
 	    "", "Un/Reliable", "SRTT", "Un/Reliable", "Flow Timer", "Routes");
 }
 
-void show_ip_eigrp_interface_sub(struct vty *vty, eigrp_t *eigrp,
+void show_ip_eigrp_interface_sub(struct vty *vty, struct eigrp *eigrp,
 				 eigrp_interface_t *ei)
 {
     vty_out(vty, "%-11s ", EIGRP_INTF_NAME(ei));
@@ -164,7 +164,7 @@ void show_ip_eigrp_interface_sub(struct vty *vty, eigrp_t *eigrp,
     vty_out(vty, "%-8u %-8u \n", ei->params.v_hello, ei->params.v_wait);
 }
 
-void show_ip_eigrp_interface_detail(struct vty *vty, eigrp_t *eigrp,
+void show_ip_eigrp_interface_detail(struct vty *vty, struct eigrp *eigrp,
 				    eigrp_interface_t *ei)
 {
     vty_out(vty, "%-2s %s %d %-3s \n", "", "Hello interval is ", 0, " sec");
@@ -181,7 +181,7 @@ void show_ip_eigrp_interface_detail(struct vty *vty, eigrp_t *eigrp,
     vty_out(vty, "%-2s %s \n", "", "Use multicast");
 }
 
-void show_ip_eigrp_neighbor_header(struct vty *vty, eigrp_t *eigrp)
+void show_ip_eigrp_neighbor_header(struct vty *vty, struct eigrp *eigrp)
 {
     vty_out(vty,
 	    "\nEIGRP neighbors for AS(%d)\n\n%-3s %-17s %-20s %-6s %-8s %-6s %-5s %-5s %-5s\n %-41s %-6s %-8s %-6s %-4s %-6s %-5s \n",
@@ -216,7 +216,7 @@ void show_ip_eigrp_neighbor_sub(struct vty *vty, eigrp_neighbor_t *nbr,
 /*
  * Print standard header for show EIGRP topology output
  */
-void show_ip_eigrp_topology_header(struct vty *vty, eigrp_t *eigrp)
+void show_ip_eigrp_topology_header(struct vty *vty, struct eigrp *eigrp)
 {
     vty_out(vty, "\nEIGRP Topology Table for AS(%d)/ID(%s)\n\n", eigrp->AS,
 	    inet_ntoa(eigrp->router_id));
@@ -241,7 +241,7 @@ void show_ip_eigrp_prefix_descriptor(struct vty *vty,
 	list_delete(&successors);
 }
 
-void show_ip_eigrp_route_descriptor(struct vty *vty, eigrp_t *eigrp,
+void show_ip_eigrp_route_descriptor(struct vty *vty, struct eigrp *eigrp,
 				    eigrp_route_descriptor_t *te, bool *first)
 {
     if (te->reported_distance == EIGRP_MAX_METRIC)

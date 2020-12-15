@@ -62,11 +62,11 @@ typedef struct eigrp_fsm_action_message eigrp_fsm_action_message_t;
 typedef struct eigrp_packet eigrp_packet_t;
 typedef struct eigrp_tlv_header eigrp_tlv_header_t;
 
-typedef eigrp_route_descriptor_t *(*eigrp_tlv_decoder_t)(eigrp_t *eigrp,
+typedef eigrp_route_descriptor_t *(*eigrp_tlv_decoder_t)(struct eigrp *eigrp,
 							 eigrp_neighbor_t *nbr,
 							 eigrp_stream_t *pkt,
 							 uint16_t pktlen);
-typedef uint16_t (*eigrp_tlv_encoder_t)(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+typedef uint16_t (*eigrp_tlv_encoder_t)(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 					eigrp_stream_t *pkt,
 					eigrp_prefix_descriptor_t *route);
 

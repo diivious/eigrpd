@@ -77,7 +77,7 @@ const struct message eigrp_packet_type_str[] = {
 static unsigned char zeropad[16] = {0};
 
 /* Forward function reference*/
-static struct stream *eigrp_packet_recv(eigrp_t *eigrp, int fd,
+static struct stream *eigrp_packet_recv(struct eigrp *eigrp, int fd,
 					struct interface **ifp,
 					struct stream *s);
 static int eigrp_verify_header(struct stream *s, eigrp_interface_t *ei,
@@ -306,7 +306,7 @@ int eigrp_check_sha256_digest(struct stream *s,
 
 int eigrp_packet_write(struct thread *thread)
 {
-    eigrp_t *eigrp = THREAD_ARG(thread);
+    struct eigrp *eigrp = THREAD_ARG(thread);
     struct eigrp_header *eigrph;
     eigrp_interface_t *ei;
     eigrp_packet_t *ep;
@@ -465,7 +465,7 @@ int eigrp_packet_read(struct thread *thread)
 {
     int ret;
     struct stream *ibuf;
-    eigrp_t *eigrp;
+    struct eigrp *eigrp;
     eigrp_interface_t *ei;
     struct ip *iph;
     struct eigrp_header *eigrph;
@@ -686,7 +686,7 @@ int eigrp_packet_read(struct thread *thread)
     return 0;
 }
 
-static struct stream *eigrp_packet_recv(eigrp_t *eigrp, int fd,
+static struct stream *eigrp_packet_recv(struct eigrp *eigrp, int fd,
 					struct interface **ifp,
 					struct stream *ibuf)
 {
@@ -818,7 +818,7 @@ eigrp_packet_t *eigrp_packet_new(size_t size, eigrp_neighbor_t *nbr)
     return new;
 }
 
-void eigrp_packet_send_reliably(eigrp_t *eigrp, eigrp_neighbor_t *nbr)
+void eigrp_packet_send_reliably(struct eigrp *eigrp, eigrp_neighbor_t *nbr)
 {
     eigrp_packet_t *ep;
 
@@ -860,7 +860,7 @@ void eigrp_packet_checksum(eigrp_interface_t *ei, struct stream *s,
 }
 
 /* Make EIGRP header. */
-void eigrp_packet_header_init(int type, eigrp_t *eigrp, struct stream *s,
+void eigrp_packet_header_init(int type, struct eigrp *eigrp, struct stream *s,
 			      uint32_t flags, uint32_t sequence, uint32_t ack)
 {
     struct eigrp_header *eigrph;

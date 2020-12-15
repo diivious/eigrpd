@@ -59,7 +59,7 @@ typedef struct eigrp_extdata {
     uint8_t flags;
 } eigrp_extdata_t;
 
-typedef struct eigrp {
+struct eigrp {
     vrf_id_t vrf_id;
 
     uint16_t AS;	 /* Autonomous system number */
@@ -127,7 +127,7 @@ typedef struct eigrp {
     struct distribute_ctx *distribute_ctx;
 
     QOBJ_FIELDS
-} eigrp_t;
+};
 DECLARE_QOBJ_TYPE(eigrp)
 
 typedef struct eigrp_packet_queue {
@@ -186,7 +186,7 @@ typedef struct eigrp_interface {
     bool member_allrouters;
 
     /* This interface's parent eigrp instance. */
-    eigrp_t *eigrp;
+    struct eigrp *eigrp;
 
     /* Interface data from zebra. */
     struct interface *ifp;
@@ -453,7 +453,7 @@ typedef enum {
 
 typedef struct eigrp_fsm_action_message {
     uint8_t packet_type;	  // UPDATE, QUERY, SIAQUERY, SIAREPLY
-    eigrp_t *eigrp;		  // which thread sent mesg
+    struct eigrp *eigrp;		  // which thread sent mesg
     eigrp_neighbor_t *adv_router; // advertising neighbor
     eigrp_route_descriptor_t *route;
     eigrp_prefix_descriptor_t *prefix;

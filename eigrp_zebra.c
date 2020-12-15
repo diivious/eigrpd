@@ -61,7 +61,7 @@ struct in_addr router_id_zebra;
 /* Router-id update message from zebra. */
 static int eigrp_zebra_router_id_update(ZAPI_CALLBACK_ARGS)
 {
-    eigrp_t *eigrp;
+    struct eigrp *eigrp;
     struct prefix router_id;
     zebra_router_id_update_read(zclient->ibuf, &router_id);
 
@@ -96,7 +96,7 @@ static void eigrp_zebra_connected(struct zclient *zclient)
 static int eigrp_zebra_redistribute_route(ZAPI_CALLBACK_ARGS)
 {
     struct zapi_route api;
-    eigrp_t *eigrp;
+    struct eigrp *eigrp;
 
     if (zapi_route_decode(zclient->ibuf, &api) < 0)
 	return -1;
@@ -172,7 +172,7 @@ static int eigrp_zebra_interface_address_delete(ZAPI_CALLBACK_ARGS)
     return 0;
 }
 
-void eigrp_zebra_route_add(eigrp_t *eigrp, struct prefix *p,
+void eigrp_zebra_route_add(struct eigrp *eigrp, struct prefix *p,
 			   struct list *successors, uint32_t distance)
 {
     struct zapi_route api;
@@ -221,7 +221,7 @@ void eigrp_zebra_route_add(eigrp_t *eigrp, struct prefix *p,
     zclient_route_send(ZEBRA_ROUTE_ADD, zclient, &api);
 }
 
-void eigrp_zebra_route_delete(eigrp_t *eigrp, struct prefix *p)
+void eigrp_zebra_route_delete(struct eigrp *eigrp, struct prefix *p)
 {
     struct zapi_route api;
 
@@ -251,7 +251,7 @@ static int eigrp_is_type_redistributed(int type, vrf_id_t vrf_id)
 		    : vrf_bitmap_check(zclient->redist[AFI_IP][type], vrf_id));
 }
 
-int eigrp_redistribute_set(eigrp_t *eigrp, int type,
+int eigrp_redistribute_set(struct eigrp *eigrp, int type,
 			   struct eigrp_metrics metric)
 {
 
@@ -274,7 +274,7 @@ int eigrp_redistribute_set(eigrp_t *eigrp, int type,
     return CMD_SUCCESS;
 }
 
-int eigrp_redistribute_unset(eigrp_t *eigrp, int type)
+int eigrp_redistribute_unset(struct eigrp *eigrp, int type)
 {
 
     if (eigrp_is_type_redistributed(type, eigrp->vrf_id)) {

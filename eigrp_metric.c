@@ -68,7 +68,7 @@ eigrp_delay_t eigrp_scaled_to_delay(eigrp_scaled_t scaled)
     return scaled;
 }
 
-eigrp_metric_t eigrp_calculate_metrics(eigrp_t *eigrp, eigrp_metrics_t metric)
+eigrp_metric_t eigrp_calculate_metrics(struct eigrp *eigrp, eigrp_metrics_t metric)
 {
     eigrp_metric_t composite;
     composite = 0;
@@ -99,7 +99,7 @@ eigrp_metric_t eigrp_calculate_metrics(eigrp_t *eigrp, eigrp_metrics_t metric)
     return composite;
 }
 
-eigrp_metric_t eigrp_calculate_total_metrics(eigrp_t *eigrp,
+eigrp_metric_t eigrp_calculate_total_metrics(struct eigrp *eigrp,
 					     eigrp_route_descriptor_t *entry)
 {
     eigrp_interface_t *ei = entry->ei;

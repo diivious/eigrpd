@@ -118,7 +118,7 @@ eigrp_route_descriptor_t *eigrp_route_descriptor_new(void)
 /*
  * Freeing topology table list
  */
-void eigrp_topology_free(eigrp_t *eigrp, struct route_table *table)
+void eigrp_topology_free(struct eigrp *eigrp, struct route_table *table)
 {
     eigrp_topology_delete_all(eigrp, table);
     route_table_finish(table);
@@ -150,7 +150,7 @@ void eigrp_prefix_descriptor_add(struct route_table *topology,
 /*
  * Adding topology entry to topology node
  */
-void eigrp_route_descriptor_add(eigrp_t *eigrp, eigrp_prefix_descriptor_t *node,
+void eigrp_route_descriptor_add(struct eigrp *eigrp, eigrp_prefix_descriptor_t *node,
 				eigrp_route_descriptor_t *route)
 {
     struct list *l = list_new();
@@ -170,7 +170,7 @@ void eigrp_route_descriptor_add(eigrp_t *eigrp, eigrp_prefix_descriptor_t *node,
 /*
  * Deleting topology node from topology table
  */
-void eigrp_prefix_descriptor_delete(eigrp_t *eigrp, struct route_table *table,
+void eigrp_prefix_descriptor_delete(struct eigrp *eigrp, struct route_table *table,
 				    eigrp_prefix_descriptor_t *pe)
 {
     eigrp_route_descriptor_t *ne;
@@ -206,7 +206,7 @@ void eigrp_prefix_descriptor_delete(eigrp_t *eigrp, struct route_table *table,
 /*
  * Deleting topology entry from topology node
  */
-void eigrp_route_descriptor_delete(eigrp_t *eigrp,
+void eigrp_route_descriptor_delete(struct eigrp *eigrp,
 				   eigrp_prefix_descriptor_t *node,
 				   eigrp_route_descriptor_t *route)
 {
@@ -220,7 +220,7 @@ void eigrp_route_descriptor_delete(eigrp_t *eigrp,
 /*
  * Deleting all nodes from topology table
  */
-void eigrp_topology_delete_all(eigrp_t *eigrp, struct route_table *topology)
+void eigrp_topology_delete_all(struct eigrp *eigrp, struct route_table *topology)
 {
     struct route_node *rn;
     eigrp_prefix_descriptor_t *pe;
@@ -316,7 +316,7 @@ eigrp_route_descriptor_t *eigrp_prefix_descriptor_lookup(struct list *entries,
 }
 
 /* Lookup all prefixes from specified neighbor */
-struct list *eigrp_neighbor_prefixes_lookup(eigrp_t *eigrp,
+struct list *eigrp_neighbor_prefixes_lookup(struct eigrp *eigrp,
 					    eigrp_neighbor_t *nbr)
 {
     struct listnode *node2, *node22;
@@ -348,7 +348,7 @@ struct list *eigrp_neighbor_prefixes_lookup(eigrp_t *eigrp,
 enum metric_change
 eigrp_topology_update_distance(eigrp_fsm_action_message_t *msg)
 {
-    eigrp_t *eigrp = msg->eigrp;
+    struct eigrp *eigrp = msg->eigrp;
     eigrp_prefix_descriptor_t *prefix = msg->prefix;
     eigrp_route_descriptor_t *route = msg->route;
     enum metric_change change = METRIC_SAME;
@@ -408,7 +408,7 @@ distance_done:
     return change;
 }
 
-void eigrp_topology_update_all_node_flags(eigrp_t *eigrp)
+void eigrp_topology_update_all_node_flags(struct eigrp *eigrp)
 {
     eigrp_prefix_descriptor_t *pe;
     struct route_node *rn;
@@ -426,7 +426,7 @@ void eigrp_topology_update_all_node_flags(eigrp_t *eigrp)
     }
 }
 
-void eigrp_topology_update_node_flags(eigrp_t *eigrp,
+void eigrp_topology_update_node_flags(struct eigrp *eigrp,
 				      eigrp_prefix_descriptor_t *dest)
 {
     struct listnode *node;
@@ -453,7 +453,7 @@ void eigrp_topology_update_node_flags(eigrp_t *eigrp,
     }
 }
 
-void eigrp_update_routing_table(eigrp_t *eigrp,
+void eigrp_update_routing_table(struct eigrp *eigrp,
 				eigrp_prefix_descriptor_t *prefix)
 {
     struct list *successors;
@@ -476,7 +476,7 @@ void eigrp_update_routing_table(eigrp_t *eigrp,
     }
 }
 
-void eigrp_topology_neighbor_down(eigrp_t *eigrp, eigrp_neighbor_t *nbr)
+void eigrp_topology_neighbor_down(struct eigrp *eigrp, eigrp_neighbor_t *nbr)
 {
     eigrp_prefix_descriptor_t *pe;
     eigrp_route_descriptor_t *route;
@@ -510,7 +510,7 @@ void eigrp_topology_neighbor_down(eigrp_t *eigrp, eigrp_neighbor_t *nbr)
     eigrp_update_send_all(eigrp, nbr->ei);
 }
 
-void eigrp_update_topology_table_prefix(eigrp_t *eigrp,
+void eigrp_update_topology_table_prefix(struct eigrp *eigrp,
 					struct route_table *table,
 					eigrp_prefix_descriptor_t *prefix)
 {

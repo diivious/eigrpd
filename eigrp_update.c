@@ -64,7 +64,7 @@
 #include "eigrpd/eigrp_memory.h"
 #include "eigrpd/eigrp_metric.h"
 
-bool eigrp_update_prefix_apply(eigrp_t *eigrp, eigrp_interface_t *ei, int in,
+bool eigrp_update_prefix_apply(struct eigrp *eigrp, eigrp_interface_t *ei, int in,
 			       struct prefix *prefix)
 {
     struct access_list *alist;
@@ -132,7 +132,7 @@ static void remove_received_prefix_gr(struct list *nbr_prefixes,
  * weren't advertised by neighbor:
  * We will send message to FSM with prefix delay set to infinity.
  */
-static void eigrp_update_receive_GR_ask(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+static void eigrp_update_receive_GR_ask(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 					struct list *nbr_prefixes)
 {
     struct listnode *node1;
@@ -167,7 +167,7 @@ static void eigrp_update_receive_GR_ask(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 /*
  * EIGRP UPDATE read function
  */
-void eigrp_update_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+void eigrp_update_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			  struct eigrp_header *eigrph, struct stream *pkt,
 			  eigrp_interface_t *ei, int length)
 {
@@ -370,7 +370,7 @@ void eigrp_update_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 }
 
 /*send EIGRP Update packet*/
-void eigrp_update_send_init(eigrp_t *eigrp, eigrp_neighbor_t *nbr)
+void eigrp_update_send_init(struct eigrp *eigrp, eigrp_neighbor_t *nbr)
 {
     eigrp_packet_t *ep;
     uint16_t length = EIGRP_HEADER_LEN;
@@ -414,7 +414,7 @@ void eigrp_update_send_init(eigrp_t *eigrp, eigrp_neighbor_t *nbr)
     }
 }
 
-static void eigrp_update_place_on_nbr_queue(eigrp_t *eigrp,
+static void eigrp_update_place_on_nbr_queue(struct eigrp *eigrp,
 					    eigrp_neighbor_t *nbr,
 					    eigrp_packet_t *ep, uint32_t seq_no,
 					    int length)
@@ -444,7 +444,7 @@ static void eigrp_update_place_on_nbr_queue(eigrp_t *eigrp,
 	eigrp_packet_send_reliably(eigrp, nbr);
 }
 
-static void eigrp_update_send_to_all_nbrs(eigrp_t *eigrp, eigrp_interface_t *ei,
+static void eigrp_update_send_to_all_nbrs(struct eigrp *eigrp, eigrp_interface_t *ei,
 					  eigrp_packet_t *ep)
 {
     struct listnode *node, *nnode;
@@ -485,7 +485,7 @@ void eigrp_update_send_EOT(eigrp_neighbor_t *nbr)
     eigrp_prefix_descriptor_t *prefix;
     struct listnode *node2, *nnode2;
     eigrp_interface_t *ei = nbr->ei;
-    eigrp_t *eigrp = ei->eigrp;
+    struct eigrp *eigrp = ei->eigrp;
     struct prefix *dest_addr;
     uint32_t seq_no = eigrp->sequence_number;
     uint16_t eigrp_mtu = EIGRP_PACKET_MTU(ei->ifp->mtu);
@@ -544,7 +544,7 @@ void eigrp_update_send_EOT(eigrp_neighbor_t *nbr)
     eigrp->sequence_number = seq_no++;
 }
 
-void eigrp_update_send(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+void eigrp_update_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 		       eigrp_interface_t *ei)
 {
     eigrp_packet_t *ep;
@@ -658,7 +658,7 @@ void eigrp_update_send(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
     ei->eigrp->sequence_number = seq_no++;
 }
 
-void eigrp_update_send_all(eigrp_t *eigrp, eigrp_interface_t *exception)
+void eigrp_update_send_all(struct eigrp *eigrp, eigrp_interface_t *exception)
 {
     eigrp_interface_t *iface;
     struct listnode *node, *node2, *nnode2;
@@ -697,7 +697,7 @@ void eigrp_update_send_all(eigrp_t *eigrp, eigrp_interface_t *exception)
 static void eigrp_update_send_GR_part(eigrp_neighbor_t *nbr)
 {
     eigrp_interface_t *ei = nbr->ei;
-    eigrp_t *eigrp = ei->eigrp;
+    struct eigrp *eigrp = ei->eigrp;
     eigrp_packet_t *ep;
     eigrp_prefix_descriptor_t *prefix;
 
@@ -909,7 +909,7 @@ void eigrp_update_send_GR(eigrp_neighbor_t *nbr, enum GR_type gr_type,
     struct list *prefixes;
     struct route_node *rn;
     eigrp_interface_t *ei = nbr->ei;
-    eigrp_t *eigrp = ei->eigrp;
+    struct eigrp *eigrp = ei->eigrp;
 
     if (gr_type == EIGRP_GR_FILTER) {
 	/* function was called after applying filtration */
@@ -991,7 +991,7 @@ void eigrp_update_send_interface_GR(eigrp_interface_t *ei, enum GR_type gr_type,
  * Function used for sending Graceful restart Update packet
  * to all neighbors in eigrp process.
  */
-void eigrp_update_send_process_GR(eigrp_t *eigrp, enum GR_type gr_type,
+void eigrp_update_send_process_GR(struct eigrp *eigrp, enum GR_type gr_type,
 				  struct vty *vty)
 {
     struct listnode *node;

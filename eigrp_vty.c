@@ -59,7 +59,7 @@
 #include "eigrpd/eigrp_vty_clippy.c"
 #endif
 
-static void eigrp_vty_display_prefix_entry(struct vty *vty, eigrp_t *eigrp,
+static void eigrp_vty_display_prefix_entry(struct vty *vty, struct eigrp *eigrp,
 					   eigrp_prefix_descriptor_t *pe,
 					   bool all)
 {
@@ -79,7 +79,7 @@ static void eigrp_vty_display_prefix_entry(struct vty *vty, eigrp_t *eigrp,
     }
 }
 
-static eigrp_t *eigrp_vty_get_eigrp(struct vty *vty, const char *vrf_name)
+static struct eigrp *eigrp_vty_get_eigrp(struct vty *vty, const char *vrf_name)
 {
     struct vrf *vrf;
 
@@ -103,7 +103,7 @@ DEFPY(show_ip_eigrp_topology_all, show_ip_eigrp_topology_all_cmd,
 		      "IP-EIGRP topology\n"
 		      "Show all links in topology table\n")
 {
-    eigrp_t *eigrp;
+    struct eigrp *eigrp;
     eigrp_prefix_descriptor_t *tn;
     struct route_node *rn;
 
@@ -133,7 +133,7 @@ DEFPY(show_ip_eigrp_topology, show_ip_eigrp_topology_cmd,
 		      "For a specific address\n"
 		      "For a specific prefix\n")
 {
-    eigrp_t *eigrp;
+    struct eigrp *eigrp;
     eigrp_prefix_descriptor_t *tn;
     struct route_node *rn;
     struct prefix cmp;
@@ -181,7 +181,7 @@ DEFPY(show_ip_eigrp_interfaces, show_ip_eigrp_interfaces_cmd,
 		      "Detailed information\n")
 {
     eigrp_interface_t *ei;
-    eigrp_t *eigrp;
+    struct eigrp *eigrp;
     struct listnode *node;
 
     eigrp = eigrp_vty_get_eigrp(vty, vrf);
@@ -211,7 +211,7 @@ DEFPY(show_ip_eigrp_neighbors, show_ip_eigrp_neighbors_cmd,
 		      "Interface to show on\n"
 		      "Detailed Information\n")
 {
-    eigrp_t *eigrp;
+    struct eigrp *eigrp;
     eigrp_interface_t *ei;
     struct listnode *node, *node2, *nnode2;
     eigrp_neighbor_t *nbr;
@@ -244,7 +244,7 @@ DEFPY(clear_ip_eigrp_neighbors, clear_ip_eigrp_neighbors_cmd,
       CLEAR_STR IP_STR "Clear IP-EIGRP\n" VRF_CMD_HELP_STR
 		       "Clear IP-EIGRP neighbors\n")
 {
-    eigrp_t *eigrp;
+    struct eigrp *eigrp;
     eigrp_interface_t *ei;
     struct listnode *node, *node2, *nnode2;
     eigrp_neighbor_t *nbr;
@@ -293,7 +293,7 @@ DEFPY(clear_ip_eigrp_neighbors_int, clear_ip_eigrp_neighbors_int_cmd,
 		       "Clear IP-EIGRP neighbors\n"
 		       "Interface's name\n")
 {
-    eigrp_t *eigrp;
+    struct eigrp *eigrp;
     eigrp_interface_t *ei;
     struct listnode *node2, *nnode2;
     eigrp_neighbor_t *nbr;
@@ -345,7 +345,7 @@ DEFPY(clear_ip_eigrp_neighbors_IP, clear_ip_eigrp_neighbors_IP_cmd,
 		       "Clear IP-EIGRP neighbors\n"
 		       "IP-EIGRP neighbor address\n")
 {
-    eigrp_t *eigrp;
+    struct eigrp *eigrp;
     eigrp_neighbor_t *nbr;
 
     /* Check if eigrp process is enabled */
@@ -379,7 +379,7 @@ DEFPY(clear_ip_eigrp_neighbors_soft, clear_ip_eigrp_neighbors_soft_cmd,
 		       "Clear IP-EIGRP neighbors\n"
 		       "Resync with peers without adjacency reset\n")
 {
-    eigrp_t *eigrp;
+    struct eigrp *eigrp;
 
     /* Check if eigrp process is enabled */
     eigrp = eigrp_vty_get_eigrp(vty, vrf);
@@ -404,7 +404,7 @@ DEFPY(clear_ip_eigrp_neighbors_int_soft, clear_ip_eigrp_neighbors_int_soft_cmd,
 		       "Interface's name\n"
 		       "Resync with peer without adjacency reset\n")
 {
-    eigrp_t *eigrp;
+    struct eigrp *eigrp;
     eigrp_interface_t *ei;
 
     /* Check if eigrp process is enabled */
@@ -436,7 +436,7 @@ DEFPY(clear_ip_eigrp_neighbors_IP_soft, clear_ip_eigrp_neighbors_IP_soft_cmd,
 		       "IP-EIGRP neighbor address\n"
 		       "Resync with peer without adjacency reset\n")
 {
-    eigrp_t *eigrp;
+    struct eigrp *eigrp;
     eigrp_neighbor_t *nbr;
 
 

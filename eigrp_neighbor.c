@@ -56,12 +56,12 @@
 #include "eigrpd/eigrp_errors.h"
 
 static inline eigrp_route_descriptor_t *
-eigrp_tlv_decoder_safe(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+eigrp_tlv_decoder_safe(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 		       eigrp_stream_t *pkt, uint16_t pktlen)
 {
     return NULL;
 }
-static inline uint16_t eigrp_tlv_encoder_safe(eigrp_t *eigrp,
+static inline uint16_t eigrp_tlv_encoder_safe(struct eigrp *eigrp,
 					      eigrp_neighbor_t *nbr,
 					      eigrp_stream_t *pkt,
 					      eigrp_prefix_descriptor_t *route)
@@ -175,7 +175,7 @@ eigrp_neighbor_t *eigrp_nbr_lookup_by_addr(eigrp_interface_t *ei,
  * Function is used for neighbor lookup by address
  * in whole EIGRP process.
  */
-eigrp_neighbor_t *eigrp_nbr_lookup_by_addr_process(eigrp_t *eigrp,
+eigrp_neighbor_t *eigrp_nbr_lookup_by_addr_process(struct eigrp *eigrp,
 						   struct in_addr nbr_addr)
 {
     eigrp_interface_t *ei;
@@ -218,7 +218,7 @@ void eigrp_nbr_delete(eigrp_neighbor_t *nbr)
 int holddown_timer_expired(struct thread *thread)
 {
     eigrp_neighbor_t *nbr = THREAD_ARG(thread);
-    eigrp_t *eigrp = nbr->ei->eigrp;
+    struct eigrp *eigrp = nbr->ei->eigrp;
 
     zlog_info("Neighbor %s (%s) is down: holding time expired",
 	      inet_ntoa(nbr->src),
@@ -319,7 +319,7 @@ void eigrp_nbr_state_update(eigrp_neighbor_t *nbr)
     }
 }
 
-int eigrp_nbr_count_get(eigrp_t *eigrp)
+int eigrp_nbr_count_get(struct eigrp *eigrp)
 {
     eigrp_interface_t *iface;
     struct listnode *node, *node2, *nnode2;
@@ -349,7 +349,8 @@ int eigrp_nbr_count_get(eigrp_t *eigrp)
  * Send Hello packet with Peer Termination TLV with
  * neighbor's address, set it's state to DOWN and delete the neighbor
  */
-void eigrp_nbr_hard_restart(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+void eigrp_nbr_hard_restart(struct eigrp *eigrp,
+			    eigrp_neighbor_t *nbr,
 			    struct vty *vty)
 {
     zlog_debug("Neighbor %s (%s) is down: manually cleared",

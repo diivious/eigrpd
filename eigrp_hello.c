@@ -120,7 +120,7 @@ int eigrp_hello_timer(struct thread *thread)
  * older TLV packet formats.
  */
 static eigrp_neighbor_t *
-eigrp_hello_parameter_decode(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+eigrp_hello_parameter_decode(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			     struct eigrp_tlv_hdr_type *tlv)
 {
     struct TLV_Parameter_Type *param = (struct TLV_Parameter_Type *)tlv;
@@ -245,7 +245,7 @@ static void eigrp_sw_version_decode(eigrp_neighbor_t *nbr,
  * a match is found, move the sending neighbor to the down state. If
  * out address is not in the TLV, then ignore the peer termination
  */
-static void eigrp_peer_termination_decode(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+static void eigrp_peer_termination_decode(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 					  struct eigrp_tlv_hdr_type *tlv)
 {
     struct TLV_Peer_Termination_type *param =
@@ -316,7 +316,7 @@ static uint16_t eigrp_peer_termination_encode(struct stream *s,
  * @usage
  * Not all TLVs are current decoder.  This is a work in progress..
  */
-void eigrp_hello_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+void eigrp_hello_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			 struct eigrp_header *eigrph, struct stream *s,
 			 eigrp_interface_t *ei, int size)
 {
@@ -473,7 +473,7 @@ static uint16_t eigrp_tidlist_encode(struct stream *s)
  * Part of conditional receive process
  *
  */
-static uint16_t eigrp_sequence_encode(eigrp_t *eigrp, struct stream *s)
+static uint16_t eigrp_sequence_encode(struct eigrp *eigrp, struct stream *s)
 {
     uint16_t length = EIGRP_TLV_SEQ_BASE_LEN;
     eigrp_interface_t *ei;
@@ -523,7 +523,7 @@ static uint16_t eigrp_sequence_encode(eigrp_t *eigrp, struct stream *s)
  * Part of conditional receive process
  *
  */
-static uint16_t eigrp_next_sequence_encode(eigrp_t *eigrp, struct stream *s)
+static uint16_t eigrp_next_sequence_encode(struct eigrp *eigrp, struct stream *s)
 {
     uint16_t length = EIGRP_NEXT_SEQUENCE_TLV_SIZE;
 

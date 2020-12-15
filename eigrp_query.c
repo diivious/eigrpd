@@ -54,7 +54,7 @@
 #include "eigrpd/eigrp_fsm.h"
 #include "eigrpd/eigrp_memory.h"
 
-uint32_t eigrp_query_send_all(eigrp_t *eigrp)
+uint32_t eigrp_query_send_all(struct eigrp *eigrp)
 {
     eigrp_interface_t *iface;
     struct listnode *node, *node2, *nnode2;
@@ -78,7 +78,7 @@ uint32_t eigrp_query_send_all(eigrp_t *eigrp)
 }
 
 /*EIGRP QUERY read function*/
-void eigrp_query_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+void eigrp_query_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			 struct eigrp_header *eigrph, struct stream *pkt,
 			 eigrp_interface_t *ei, int length)
 {
@@ -117,7 +117,7 @@ void eigrp_query_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
     eigrp_update_send_all(eigrp, nbr->ei);
 }
 
-void eigrp_query_send(eigrp_t *eigrp, eigrp_interface_t *ei)
+void eigrp_query_send(struct eigrp *eigrp, eigrp_interface_t *ei)
 {
     eigrp_packet_t *ep = NULL;
     eigrp_neighbor_t *nbr;

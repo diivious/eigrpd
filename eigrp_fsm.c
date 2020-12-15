@@ -262,7 +262,7 @@ static enum eigrp_fsm_events
 eigrp_get_fsm_event(eigrp_fsm_action_message_t *msg)
 {
     // Loading base information from message
-    // eigrp_t *eigrp = msg->eigrp;
+    // struct eigrp *eigrp = msg->eigrp;
     eigrp_prefix_descriptor_t *prefix = msg->prefix;
     eigrp_route_descriptor_t *route = msg->route;
     uint8_t actual_state = prefix->state;
@@ -425,7 +425,7 @@ int eigrp_fsm_event(eigrp_fsm_action_message_t *msg)
  */
 int eigrp_fsm_event_nq_fcn(eigrp_fsm_action_message_t *msg)
 {
-    eigrp_t *eigrp = msg->eigrp;
+    struct eigrp *eigrp = msg->eigrp;
     eigrp_prefix_descriptor_t *prefix = msg->prefix;
     struct list *successors = eigrp_topology_get_successor(prefix);
     eigrp_route_descriptor_t *route;
@@ -452,7 +452,7 @@ int eigrp_fsm_event_nq_fcn(eigrp_fsm_action_message_t *msg)
 
 int eigrp_fsm_event_q_fcn(eigrp_fsm_action_message_t *msg)
 {
-    eigrp_t *eigrp = msg->eigrp;
+    struct eigrp *eigrp = msg->eigrp;
     eigrp_prefix_descriptor_t *prefix = msg->prefix;
     struct list *successors = eigrp_topology_get_successor(prefix);
     eigrp_route_descriptor_t *route;
@@ -478,7 +478,7 @@ int eigrp_fsm_event_q_fcn(eigrp_fsm_action_message_t *msg)
 
 int eigrp_fsm_event_keep_state(eigrp_fsm_action_message_t *msg)
 {
-    eigrp_t *eigrp = msg->eigrp;
+    struct eigrp *eigrp = msg->eigrp;
     eigrp_prefix_descriptor_t *prefix = msg->prefix;
     eigrp_route_descriptor_t *route = listnode_head(prefix->entries);
 
@@ -505,7 +505,7 @@ int eigrp_fsm_event_keep_state(eigrp_fsm_action_message_t *msg)
 
 int eigrp_fsm_event_lr(eigrp_fsm_action_message_t *msg)
 {
-    eigrp_t *eigrp = msg->eigrp;
+    struct eigrp *eigrp = msg->eigrp;
     eigrp_prefix_descriptor_t *prefix = msg->prefix;
     eigrp_route_descriptor_t *route = listnode_head(prefix->entries);
 
@@ -554,7 +554,7 @@ int eigrp_fsm_event_dinc(eigrp_fsm_action_message_t *msg)
 
 int eigrp_fsm_event_lr_fcs(eigrp_fsm_action_message_t *msg)
 {
-    eigrp_t *eigrp = msg->eigrp;
+    struct eigrp *eigrp = msg->eigrp;
     eigrp_prefix_descriptor_t *prefix = msg->prefix;
     eigrp_route_descriptor_t *route = listnode_head(prefix->entries);
 
@@ -585,7 +585,7 @@ int eigrp_fsm_event_lr_fcs(eigrp_fsm_action_message_t *msg)
 
 int eigrp_fsm_event_lr_fcn(eigrp_fsm_action_message_t *msg)
 {
-    eigrp_t *eigrp = msg->eigrp;
+    struct eigrp *eigrp = msg->eigrp;
     eigrp_prefix_descriptor_t *prefix = msg->prefix;
     eigrp_route_descriptor_t *best_successor;
     struct list *successors = eigrp_topology_get_successor(prefix);

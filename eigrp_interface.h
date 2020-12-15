@@ -39,26 +39,26 @@ extern int eigrp_intf_delete_hook(struct interface *);
 
 extern bool eigrp_intf_is_passive(eigrp_interface_t *ei);
 extern void eigrp_del_intf_params(eigrp_intf_params_t *);
-extern eigrp_interface_t *eigrp_intf_new(eigrp_t *, struct interface *,
+extern eigrp_interface_t *eigrp_intf_new(struct eigrp *, struct interface *,
 					 struct prefix *);
-extern int eigrp_intf_up(eigrp_t *, eigrp_interface_t *);
-extern void eigrp_intf_update(eigrp_t *, struct interface *);
+extern int eigrp_intf_up(struct eigrp *, eigrp_interface_t *);
+extern void eigrp_intf_update(struct eigrp *, struct interface *);
 extern void eigrp_intf_set_multicast(eigrp_interface_t *);
 extern uint8_t eigrp_default_iftype(struct interface *);
-extern void eigrp_intf_free(eigrp_t *, eigrp_interface_t *, int);
+extern void eigrp_intf_free(struct eigrp *, eigrp_interface_t *, int);
 extern int eigrp_intf_down(eigrp_interface_t *);
 extern const char *eigrp_intf_name_string(eigrp_interface_t *);
 
-extern int eigrp_intf_ipmulticast(eigrp_t *, struct prefix *, unsigned int);
-extern void eigrp_intf_update(eigrp_t *, struct interface *);
-extern int eigrp_intf_add_allspfrouters(eigrp_t *, struct prefix *,
+extern int eigrp_intf_ipmulticast(struct eigrp *, struct prefix *, unsigned int);
+extern void eigrp_intf_update(struct eigrp *, struct interface *);
+extern int eigrp_intf_add_allspfrouters(struct eigrp *, struct prefix *,
 					unsigned int);
-extern int eigrp_intf_drop_allspfrouters(eigrp_t *top, struct prefix *p,
+extern int eigrp_intf_drop_allspfrouters(struct eigrp *top, struct prefix *p,
 					 unsigned int ifindex);
 
 extern eigrp_interface_t *
-eigrp_intf_lookup_by_local_addr(eigrp_t *, struct interface *, struct in_addr);
-extern eigrp_interface_t *eigrp_intf_lookup_by_name(eigrp_t *, const char *);
+eigrp_intf_lookup_by_local_addr(struct eigrp *, struct interface *, struct in_addr);
+extern eigrp_interface_t *eigrp_intf_lookup_by_name(struct eigrp *, const char *);
 
 /* Simulate down/up on the interface. */
 extern void eigrp_intf_reset(struct interface *);

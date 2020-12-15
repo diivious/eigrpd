@@ -60,7 +60,7 @@ void eigrp_intf_rmap_update(struct if_rmap *if_rmap)
     eigrp_interface_t *ei, *ei2;
     struct listnode *node, *nnode;
     struct route_map *rmap;
-    eigrp_t *e;
+    struct eigrp *e;
 
     ifp = if_lookup_by_name(if_rmap->ifname);
     if (ifp == NULL)
@@ -106,7 +106,7 @@ void eigrp_intf_rmap_update_interface(struct interface *ifp)
 void eigrp_routemap_update_redistribute(void)
 {
     int i;
-    eigrp_t *e;
+    struct eigrp *e;
 
     e = eigrp_lookup();
 
@@ -243,7 +243,7 @@ static int eigrp_route_set_delete(struct vty *vty,
 void eigrp_route_map_update(const char *notused)
 {
     int i;
-    eigrp_t *eigrp = eigrp_lookup();
+    struct eigrp *eigrp = eigrp_lookup();
 
     if (eigrp) {
 	for (i = 0; i < ZEBRA_ROUTE_MAX; i++) {
@@ -267,7 +267,7 @@ static enum route_map_cmd_result_t route_match_metric(void *rule,
     //  eigrp_route_descriptor_t *te;
     //  eigrp_prefix_descriptor_t *pe;
     //  struct listnode *node, *node2, *nnode, *nnode2;
-    //  eigrp_t *e;
+    //  struct eigrp *e;
     //
     //  e = eigrp_lookup();
     //

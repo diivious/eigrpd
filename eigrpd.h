@@ -92,13 +92,13 @@ extern struct zebra_privs_t eigrpd_privs;
 /* Prototypes */
 extern void eigrp_master_init(void);
 extern void eigrp_terminate(void);
-extern void eigrp_finish(eigrp_t *);
-extern void eigrp_finish_final(eigrp_t *);
+extern void eigrp_finish(struct eigrp *);
+extern void eigrp_finish_final(struct eigrp *);
 
-extern eigrp_t *eigrp_get(uint16_t as, vrf_id_t vrf_id);
-extern eigrp_t *eigrp_lookup(vrf_id_t vrf_id);
+extern struct eigrp *eigrp_get(uint16_t as, vrf_id_t vrf_id);
+extern struct eigrp *eigrp_lookup(vrf_id_t vrf_id);
 
-extern void eigrp_router_id_update(eigrp_t *);
+extern void eigrp_router_id_update(struct eigrp *);
 
 // DVS: fix this
 #include "eigrp_cli.h"

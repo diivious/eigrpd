@@ -61,7 +61,7 @@
 #include "eigrpd/eigrp_memory.h"
 #include "eigrpd/eigrp_errors.h"
 
-void eigrp_reply_send(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+void eigrp_reply_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 		      eigrp_prefix_descriptor_t *prefix)
 {
     eigrp_interface_t *ei = nbr->ei;
@@ -104,7 +104,7 @@ void eigrp_reply_send(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
 }
 
 /*EIGRP REPLY read function*/
-void eigrp_reply_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+void eigrp_reply_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			 struct eigrp_header *eigrph, struct stream *pkt,
 			 eigrp_interface_t *ei, int length)
 {

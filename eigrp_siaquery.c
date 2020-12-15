@@ -55,7 +55,7 @@
 #include "eigrpd/eigrp_memory.h"
 
 /*EIGRP SIA-QUERY read function*/
-void eigrp_siaquery_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+void eigrp_siaquery_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			    struct eigrp_header *eigrph, struct stream *pkt,
 			    eigrp_interface_t *ei, int length)
 {
@@ -92,7 +92,7 @@ void eigrp_siaquery_receive(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
     eigrp_hello_send_ack(nbr);
 }
 
-void eigrp_siaquery_send(eigrp_t *eigrp, eigrp_neighbor_t *nbr,
+void eigrp_siaquery_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			 eigrp_prefix_descriptor_t *prefix)
 {
     eigrp_packet_t *ep;
