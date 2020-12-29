@@ -70,7 +70,7 @@ static inline uint16_t eigrp_tlv_encoder_safe(struct eigrp *eigrp,
 }
 
 
-eigrp_neighbor_t *eigrp_nbr_new(eigrp_interface_t *ei)
+eigrp_neighbor_t *eigrp_nbr_create(eigrp_interface_t *ei)
 {
     eigrp_neighbor_t *nbr;
 
@@ -89,14 +89,11 @@ eigrp_neighbor_t *eigrp_nbr_new(eigrp_interface_t *ei)
 /**
  * Create a new neighbor structure and initalize it.
  */
-static eigrp_neighbor_t *eigrp_nbr_init(eigrp_interface_t *ei,
-					struct eigrp_header *eigrph,
-					struct ip *iph)
+static void eigrp_nbr_init(eigrp_neighbor_t *nbr,
+			   struct in_addr src)
 {
-    eigrp_neighbor_t *nbr;
 
-    nbr = eigrp_nbr_new(ei);
-    nbr->src = iph->ip_src;
+    nbr->src = src;
 
     /* copy over the values passed in by the neighbor */
     nbr->K1 = EIGRP_K1_DEFAULT;
@@ -114,12 +111,10 @@ static eigrp_neighbor_t *eigrp_nbr_init(eigrp_interface_t *ei,
     //  if (IS_DEBUG_EIGRP_EVENT)
     //    zlog_debug("NSM[%s:%s]: start", EIGRP_INTF_NAME (nbr->oi),
     //               inet_ntoa (nbr->router_id));
-
-    return nbr;
 }
 
-eigrp_neighbor_t *eigrp_nbr_get(eigrp_interface_t *ei,
-				struct eigrp_header *eigrph, struct ip *iph)
+eigrp_neighbor_t *eigrp_nbr_lookup(eigrp_interface_t *ei,
+				   struct eigrp_header *eigrph, struct ip *iph)
 {
     eigrp_neighbor_t *nbr;
     struct listnode *node, *nnode;
@@ -130,7 +125,8 @@ eigrp_neighbor_t *eigrp_nbr_get(eigrp_interface_t *ei,
 	}
     }
 
-    nbr = eigrp_nbr_init(ei, eigrph, iph);
+    nbr = eigrp_nbr_create(ei);
+    eigrp_nbr_init(nbr, iph->ip_src);
     listnode_add(ei->nbrs, nbr);
 
     return nbr;

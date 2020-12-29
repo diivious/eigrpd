@@ -92,9 +92,9 @@ typedef struct eigrp_neighbor {
 
 
 /* Prototypes */
-extern eigrp_neighbor_t *eigrp_nbr_get(eigrp_interface_t *,
+extern eigrp_neighbor_t *eigrp_nbr_lookup(eigrp_interface_t *,
 				       struct eigrp_header *, struct ip *addr);
-extern eigrp_neighbor_t *eigrp_nbr_new(eigrp_interface_t *);
+extern eigrp_neighbor_t *eigrp_nbr_create(eigrp_interface_t *);
 extern void eigrp_nbr_delete(eigrp_neighbor_t *neigh);
 
 extern int holddown_timer_expired(struct thread *thread);

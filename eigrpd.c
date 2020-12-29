@@ -179,7 +179,7 @@ static struct eigrp *eigrp_new(uint16_t as, vrf_id_t vrf_id)
 
     eigrp->topology_table = route_table_init();
 
-    eigrp->neighbor_self = eigrp_nbr_new(NULL);
+    eigrp->neighbor_self = eigrp_nbr_create(NULL);
     eigrp->neighbor_self->src.s_addr = INADDR_ANY;
 
     eigrp->variance = EIGRP_VARIANCE_DEFAULT;

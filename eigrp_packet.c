@@ -616,7 +616,7 @@ int eigrp_packet_read(struct thread *thread)
 
 
     // neighbor must be valid, eigrp_nbr_get creates if none existed
-    nbr = eigrp_nbr_get(ei, eigrph, iph);
+    nbr = eigrp_nbr_lookup(ei, eigrph, iph);
     assert(nbr);
 
     /* New testing block of code for handling Acks */
