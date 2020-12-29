@@ -87,10 +87,10 @@ extern void eigrp_tlv2_init(eigrp_neighbor_t *);
  * untill there is reason to have their own header, these externs are found in
  * eigrp_hello.c
  */
-extern void eigrp_sw_version_initialize(void);
+extern void eigrp_sw_version_init(void);
 extern void eigrp_hello_send(eigrp_interface_t *, uint8_t, struct in_addr *);
 extern void eigrp_hello_send_ack(eigrp_neighbor_t *);
-extern void eigrp_hello_receive(struct eigrp *, eigrp_neighbor_t *,
+extern void eigrp_hello_receive(struct eigrp *, struct ip *,
 				struct eigrp_header *, struct stream *,
 				eigrp_interface_t *, int);
 extern int eigrp_hello_timer(struct thread *);

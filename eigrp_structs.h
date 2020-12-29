@@ -204,13 +204,16 @@ typedef struct eigrp_interface {
     uint32_t curr_mtu;
 
     uint8_t multicast_memberships;
+    struct {
+	bool	mixed;
+	uint8_t v1;
+	uint8_t v2;
+    } version;
 
     /* EIGRP Network Type. */
     uint8_t type;
 
-    struct prefix address; /* Interface prefix */
-
-    /* Neighbor information. */
+     /* Neighbor information. */
     struct list *nbrs; /* EIGRP Neighbor List */
 
     /* Threads. */
@@ -223,6 +226,8 @@ typedef struct eigrp_interface {
     eigrp_intf_stats_t stats; // Statistics fields
 
     uint32_t crypt_seqnum; /* Cryptographic Sequence Number */
+
+    struct prefix address; /* Interface prefix */
 
     /* Access-list. */
     struct access_list *list[EIGRP_FILTER_MAX];

@@ -103,6 +103,29 @@ int eigrp_hello_timer(struct thread *thread)
     return 0;
 }
 
+static bool eigrp_hello_k_same (struct eigrp *eigrp, eigrp_neighbor_t *nbr)
+{
+    if ((eigrp->k_values[0] == nbr->K1) &&
+	(eigrp->k_values[1] == nbr->K2) &&
+	(eigrp->k_values[2] == nbr->K3) &&
+	(eigrp->k_values[3] == nbr->K4) &&
+	(eigrp->k_values[4] == nbr->K5)) {
+	return FALSE;
+    }
+    return TRUE;
+}
+
+static void eigrp_hello_k_update (eigrp_neighbor_t *nbr, struct TLV_Parameter_Type *param)
+{
+    /* copy over the values passed in by the neighbor */
+    nbr->K1 = param->K1;
+    nbr->K2 = param->K2;
+    nbr->K3 = param->K3;
+    nbr->K4 = param->K4;
+    nbr->K5 = param->K5;
+    nbr->K6 = param->K6;
+}
+
 /**
  * @fn eigrp_hello_parameter_decode
  *
@@ -124,24 +147,18 @@ eigrp_hello_parameter_decode(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			     struct eigrp_tlv_hdr_type *tlv)
 {
     struct TLV_Parameter_Type *param = (struct TLV_Parameter_Type *)tlv;
+    
+    /* update nbr k values */
+    eigrp_hello_k_update (nbr, param);
 
-    /* copy over the values passed in by the neighbor */
-    nbr->K1 = param->K1;
-    nbr->K2 = param->K2;
-    nbr->K3 = param->K3;
-    nbr->K4 = param->K4;
-    nbr->K5 = param->K5;
-    nbr->K6 = param->K6;
+    /* upader holding param */
     nbr->v_holddown = ntohs(param->hold_time);
 
     /*
      * Check K1-K5 have the correct values to be able to become neighbors
      * K6 does not have to match
      */
-    if ((eigrp->k_values[0] == nbr->K1) && (eigrp->k_values[1] == nbr->K2)
-	&& (eigrp->k_values[2] == nbr->K3) && (eigrp->k_values[3] == nbr->K4)
-	&& (eigrp->k_values[4] == nbr->K5)) {
-
+    if (eigrp_hello_k_same(eigrp, nbr)) {
 	if (eigrp_nbr_state_get(nbr) == EIGRP_NEIGHBOR_DOWN) {
 	    zlog_info("Neighbor %s (%s) is pending: new adjacency",
 		      inet_ntoa(nbr->src),
@@ -210,8 +227,9 @@ eigrp_hello_authentication_decode(struct stream *s,
  * This consists of two bytes of OS version, and two bytes of EIGRP
  * revision number.
  */
-static void eigrp_sw_version_decode(eigrp_neighbor_t *nbr,
-				    struct eigrp_tlv_hdr_type *tlv)
+static void eigrp_sw_version_decode(eigrp_neighbor_t *nbr, eigrp_interface_t *ei,
+				    struct eigrp_tlv_hdr_type *tlv,
+				    bool new)
 {
     struct TLV_Software_Type *version = (struct TLV_Software_Type *)tlv;
 
@@ -225,9 +243,14 @@ static void eigrp_sw_version_decode(eigrp_neighbor_t *nbr,
      */
     if (nbr->tlv_rel_major == EIGRP_TLV_64B_VERSION) {
 	eigrp_tlv2_init(nbr);
+	if (new) ei->version.v2++;
     } else {
 	eigrp_tlv1_init(nbr);
+	if (new) ei->version.v1++;
     }
+
+    /* quick check to see if we need to send V1 and V2 TLVs */
+    ei->version.mixed = (ei->version.v1 && ei->version.v2);
 
     return;
 }
@@ -235,12 +258,6 @@ static void eigrp_sw_version_decode(eigrp_neighbor_t *nbr,
 /**
  * @fn eigrp_peer_termination_decode
  *
- * @param[in]		nbr	neighbor the ACK shoudl be sent to
- * @param[in]		tlv	pointer to TLV software version information
- *
- * @return void
- *
- * @par
  * Read the address in the TLV and match to out address. If
  * a match is found, move the sending neighbor to the down state. If
  * out address is not in the TLV, then ignore the peer termination
@@ -268,13 +285,6 @@ static void eigrp_peer_termination_decode(struct eigrp *eigrp, eigrp_neighbor_t 
 /**
  * @fn eigrp_peer_termination_encode
  *
- * @param[in,out]   s      	  packet stream TLV is stored to
- * @param[in]		nbr_addr  pointer to neighbor address for Peer
- * Termination TLV
- *
- * @return uint16_t    number of bytes added to packet stream
- *
- * @par
  * Function used to encode Peer Termination TLV to Hello packet.
  */
 static uint16_t eigrp_peer_termination_encode(struct stream *s,
@@ -316,25 +326,40 @@ static uint16_t eigrp_peer_termination_encode(struct stream *s,
  * @usage
  * Not all TLVs are current decoder.  This is a work in progress..
  */
-void eigrp_hello_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
+void eigrp_hello_receive(struct eigrp *eigrp, struct ip *iph,
 			 struct eigrp_header *eigrph, struct stream *s,
 			 eigrp_interface_t *ei, int size)
 {
+    eigrp_neighbor_t *nbr;
     struct eigrp_tlv_hdr_type *tlv_header;
     uint16_t type;
     uint16_t length;
+    bool     new_nbr = FALSE;
+    
+    if (IS_DEBUG_EIGRP_PACKET(eigrph->opcode - 1, RECV)) {
+	zlog_debug("Processing Hello size[%u] int(%s) src(%s)", size,
+		   ifindex2ifname(ei->ifp->ifindex, eigrp->vrf_id),
+		   inet_ntoa(iph->ip_src));
+    }
 
-    if (IS_DEBUG_EIGRP_PACKET(eigrph->opcode - 1, RECV))
-	zlog_debug("Processing Hello size[%u] int(%s) nbr(%s)", size,
-		   ifindex2ifname(nbr->ei->ifp->ifindex, eigrp->vrf_id),
-		   inet_ntoa(nbr->src));
-
+    /* check for mall formed packet, if so abort now */
     size -= EIGRP_HEADER_LEN;
     if (size < 0)
 	return;
 
-    tlv_header = (struct eigrp_tlv_hdr_type *)eigrph->tlv;
+    /* see if we know this neighbor, if not, then lets make friends */
+    nbr = eigrp_nbr_lookup(ei, eigrph, iph);
+    if (!nbr) {
+	nbr = eigrp_nbr_create(ei, iph);
+	new_nbr = TRUE;
+    }
 
+    /* humm... inti failed, this is bad it means we are out of memory.. */
+    if (!nbr) {
+	return;
+    }
+
+    tlv_header = (struct eigrp_tlv_hdr_type *)eigrph->tlv;
     do {
 	type = ntohs(tlv_header->type);
 	length = ntohs(tlv_header->length);
@@ -361,7 +386,7 @@ void eigrp_hello_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 	    case EIGRP_TLV_SEQ:
 		break;
 	    case EIGRP_TLV_SW_VERSION:
-		eigrp_sw_version_decode(nbr, tlv_header);
+		eigrp_sw_version_decode(nbr, ei, tlv_header, new_nbr);
 		break;
 	    case EIGRP_TLV_NEXT_MCAST_SEQ:
 		break;
@@ -377,12 +402,9 @@ void eigrp_hello_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 	    }
 	}
 
-	tlv_header =
-		(struct eigrp_tlv_hdr_type *)(((char *)tlv_header) + length);
+	tlv_header = (struct eigrp_tlv_hdr_type *)(((char *)tlv_header) + length);
 	size -= length;
-
     } while (size > 0);
-
 
     /*If received packet is hello with Parameter TLV*/
     if (ntohl(eigrph->ack) == 0) {
@@ -399,7 +421,7 @@ void eigrp_hello_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 uint32_t FRR_MAJOR;
 uint32_t FRR_MINOR;
 
-void eigrp_sw_version_initialize(void)
+void eigrp_sw_version_init(void)
 {
     char ver_string[] = VERSION;
     char *dash = strstr(ver_string, "-");

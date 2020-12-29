@@ -90,6 +90,44 @@ static int eigrp_retrans_count_exceeded(eigrp_packet_t *ep,
     return 1;
 }
 
+/*
+ * New testing block of code for handling Acks
+ */
+static void eigrp_packet_ack (struct eigrp *eigrp,
+			      struct eigrp_header *eigrph,
+			      eigrp_neighbor_t *nbr)
+{
+    struct eigrp_packet *ep = NULL;
+
+    ep = eigrp_packet_queue_next(nbr->retrans_queue);
+    if ((ep) && (ntohl(eigrph->ack) == ep->sequence_number)) {
+	ep = eigrp_packet_dequeue(nbr->retrans_queue);
+	eigrp_packet_free(ep);
+
+	if ((nbr->state == EIGRP_NEIGHBOR_PENDING)
+	    && (ntohl(eigrph->ack) == nbr->init_sequence_number)) {
+	    eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_UP);
+	    zlog_info("Neighbor(%s) adjacency became full",
+		      inet_ntoa(nbr->src));
+	    nbr->init_sequence_number = 0;
+	    nbr->recv_sequence_number = ntohl(eigrph->sequence);
+	    eigrp_update_send_EOT(nbr);
+	} else
+	    eigrp_packet_send_reliably(eigrp, nbr);
+    }
+
+    ep = eigrp_packet_queue_next(nbr->multicast_queue);
+    if (ep) {
+	if (ntohl(eigrph->ack) == ep->sequence_number) {
+	    ep = eigrp_packet_dequeue(nbr->multicast_queue);
+	    eigrp_packet_free(ep);
+	    if (nbr->multicast_queue->count > 0) {
+		eigrp_packet_send_reliably(eigrp, nbr);
+	    }
+	}
+    }
+}
+
 int eigrp_make_md5_digest(eigrp_interface_t *ei, struct stream *s,
 			  uint8_t flags)
 {
@@ -237,8 +275,8 @@ int eigrp_check_md5_digest(struct stream *s,
     return 1;
 }
 
-int eigrp_make_sha256_digest(eigrp_interface_t *ei, struct stream *s,
-			     uint8_t flags)
+int eigrp_make_sha256_digest (eigrp_interface_t *ei, struct stream *s,
+			      uint8_t flags)
 {
     struct key *key = NULL;
     struct keychain *keychain;
@@ -297,9 +335,9 @@ int eigrp_make_sha256_digest(eigrp_interface_t *ei, struct stream *s,
     return EIGRP_AUTH_TYPE_SHA256_LEN;
 }
 
-int eigrp_check_sha256_digest(struct stream *s,
-			      struct TLV_SHA256_Authentication_Type *authTLV,
-			      eigrp_neighbor_t *nbr, uint8_t flags)
+int eigrp_check_sha256_digest (struct stream *s,
+			       struct TLV_SHA256_Authentication_Type *authTLV,
+			       eigrp_neighbor_t *nbr, uint8_t flags)
 {
     return 1;
 }
@@ -461,7 +499,7 @@ out:
 }
 
 /* Starting point of packet process function. */
-int eigrp_packet_read(struct thread *thread)
+int eigrp_packet_read (struct thread *thread)
 {
     int ret;
     struct stream *ibuf;
@@ -614,48 +652,28 @@ int eigrp_packet_read(struct thread *thread)
     /* Read rest of the packet and call each sort of packet routine. */
     stream_forward_getp(ibuf, EIGRP_HEADER_LEN);
 
-
-    // neighbor must be valid, eigrp_nbr_get creates if none existed
-    nbr = eigrp_nbr_lookup(ei, eigrph, iph);
-    assert(nbr);
-
-    /* New testing block of code for handling Acks */
-    if (ntohl(eigrph->ack) != 0) {
-	struct eigrp_packet *ep = NULL;
-
-	ep = eigrp_packet_queue_next(nbr->retrans_queue);
-	if ((ep) && (ntohl(eigrph->ack) == ep->sequence_number)) {
-	    ep = eigrp_packet_dequeue(nbr->retrans_queue);
-	    eigrp_packet_free(ep);
-
-	    if ((nbr->state == EIGRP_NEIGHBOR_PENDING)
-		&& (ntohl(eigrph->ack) == nbr->init_sequence_number)) {
-		eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_UP);
-		zlog_info("Neighbor(%s) adjacency became full",
-			  inet_ntoa(nbr->src));
-		nbr->init_sequence_number = 0;
-		nbr->recv_sequence_number = ntohl(eigrph->sequence);
-		eigrp_update_send_EOT(nbr);
-	    } else
-		eigrp_packet_send_reliably(eigrp, nbr);
-	}
-	ep = eigrp_packet_queue_next(nbr->multicast_queue);
-	if (ep) {
-	    if (ntohl(eigrph->ack) == ep->sequence_number) {
-		ep = eigrp_packet_dequeue(nbr->multicast_queue);
-		eigrp_packet_free(ep);
-		if (nbr->multicast_queue->count > 0) {
-		    eigrp_packet_send_reliably(eigrp, nbr);
-		}
-	    }
-	}
+    /*
+     * handle case where neigbor is sending hello, could be first time we have seen
+     * this neghbor, if so create the need data structures
+     */
+    if (opcode == EIGRP_OPC_HELLO) {
+	eigrp_hello_receive(eigrp, iph, eigrph, ibuf, ei, length);
     }
 
+    /* neighbor must be valid, if not ignore this packet until/unless
+     * neigbor says hello frist.  mannors you know...
+     */
+    nbr = eigrp_nbr_lookup(ei, eigrph, iph);
+    if (!nbr) {
+	return 0;
+    }
+    
+    if (ntohl(eigrph->ack)) {
+	eigrp_packet_ack(eigrp, eigrph, nbr);
+    }
+    
     /* process all known opcodes */
     switch (opcode) {
-    case EIGRP_OPC_HELLO:
-	eigrp_hello_receive(eigrp, nbr, eigrph, ibuf, ei, length);
-	break;
     case EIGRP_OPC_PROBE:
 	// eigrp_probe_receive(eigrp, nbr, eigrph, ibuf, ei, length);
 	break;

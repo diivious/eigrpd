@@ -70,29 +70,12 @@ static inline uint16_t eigrp_tlv_encoder_safe(struct eigrp *eigrp,
 }
 
 
-eigrp_neighbor_t *eigrp_nbr_create(eigrp_interface_t *ei)
-{
-    eigrp_neighbor_t *nbr;
-
-    /* Allcate new neighbor. */
-    nbr = XCALLOC(MTYPE_EIGRP_NEIGHBOR, sizeof(eigrp_neighbor_t));
-
-    /* Relate neighbor to the interface. */
-    nbr->ei = ei;
-
-    /* Set default values. */
-    eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
-
-    return nbr;
-}
-
 /**
- * Create a new neighbor structure and initalize it.
+ * initalize neighbor
  */
 static void eigrp_nbr_init(eigrp_neighbor_t *nbr,
 			   struct in_addr src)
 {
-
     nbr->src = src;
 
     /* copy over the values passed in by the neighbor */
@@ -113,8 +96,31 @@ static void eigrp_nbr_init(eigrp_neighbor_t *nbr,
     //               inet_ntoa (nbr->router_id));
 }
 
+/**
+ * Create a new neighbor structure and initalize it.
+ */
+eigrp_neighbor_t *eigrp_nbr_create(eigrp_interface_t *ei,
+				   struct ip *iph)
+{
+    eigrp_neighbor_t *nbr;
+
+    /* Allcate new neighbor. */
+    nbr = XCALLOC(MTYPE_EIGRP_NEIGHBOR, sizeof(eigrp_neighbor_t));
+
+    /* Relate neighbor to the interface. */
+    nbr->ei = ei;
+
+    /* Set default values. */
+    eigrp_nbr_init(nbr, iph->ip_src);
+    eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
+    listnode_add(ei->nbrs, nbr);
+
+    return nbr;
+}
+
 eigrp_neighbor_t *eigrp_nbr_lookup(eigrp_interface_t *ei,
-				   struct eigrp_header *eigrph, struct ip *iph)
+				   struct eigrp_header *eigrph,
+				   struct ip *iph)
 {
     eigrp_neighbor_t *nbr;
     struct listnode *node, *nnode;
@@ -125,11 +131,7 @@ eigrp_neighbor_t *eigrp_nbr_lookup(eigrp_interface_t *ei,
 	}
     }
 
-    nbr = eigrp_nbr_create(ei);
-    eigrp_nbr_init(nbr, iph->ip_src);
-    listnode_add(ei->nbrs, nbr);
-
-    return nbr;
+    return NULL;
 }
 
 /**
