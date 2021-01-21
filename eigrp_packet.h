@@ -37,13 +37,13 @@
  */
 
 #define EIGRP_TLV_HDR                                                          \
-    uint16_t type;                                                             \
-    uint16_t length;
+	uint16_t type;                                                         \
+	uint16_t length;
 #define EIGRP_TLV_HDR_SIZE 4
 
 typedef struct eigrp_tlv_header {
-    uint16_t type;
-    uint16_t length;
+	uint16_t type;
+	uint16_t length;
 } eigrp_tlv_header_t;
 
 /*Prototypes*/
@@ -55,8 +55,8 @@ extern eigrp_packet_t *eigrp_packet_duplicate(eigrp_packet_t *,
 					      eigrp_neighbor_t *);
 extern void eigrp_packet_free(eigrp_packet_t *);
 extern void eigrp_packet_delete(eigrp_interface_t *);
-extern void eigrp_packet_header_init(int, struct eigrp *, struct stream *, uint32_t,
-				     uint32_t, uint32_t);
+extern void eigrp_packet_header_init(int, struct eigrp *, struct stream *,
+				     uint32_t, uint32_t, uint32_t);
 extern void eigrp_packet_checksum(eigrp_interface_t *, struct stream *,
 				  uint16_t);
 
@@ -98,8 +98,9 @@ extern int eigrp_hello_timer(struct thread *);
 /*
  * These externs are found in eigrp_update.c
  */
-extern bool eigrp_update_prefix_apply(struct eigrp *eigrp, eigrp_interface_t *ei,
-				      int in, struct prefix *prefix);
+extern bool eigrp_update_prefix_apply(struct eigrp *eigrp,
+				      eigrp_interface_t *ei, int in,
+				      struct prefix *prefix);
 extern void eigrp_update_send(struct eigrp *, eigrp_neighbor_t *,
 			      eigrp_interface_t *);
 extern void eigrp_update_receive(struct eigrp *, eigrp_neighbor_t *,
@@ -113,7 +114,8 @@ extern void eigrp_update_send_GR(eigrp_neighbor_t *, enum GR_type,
 				 struct vty *);
 extern void eigrp_update_send_interface_GR(eigrp_interface_t *, enum GR_type,
 					   struct vty *);
-extern void eigrp_update_send_process_GR(struct eigrp *, enum GR_type, struct vty *);
+extern void eigrp_update_send_process_GR(struct eigrp *, enum GR_type,
+					 struct vty *);
 
 /*
  * These externs are found in eigrp_query.c

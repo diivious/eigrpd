@@ -127,8 +127,8 @@ enum metric_change { METRIC_DECREASE, METRIC_SAME, METRIC_INCREASE };
 #define EIGRP_INTF_PASSIVE 1
 
 /* EIGRP TT destination type */
-#define EIGRP_TOPOLOGY_TYPE_CONNECTED 0       // Connected network
-#define EIGRP_TOPOLOGY_TYPE_REMOTE 1	  // Remote internal network
+#define EIGRP_TOPOLOGY_TYPE_CONNECTED 0	      // Connected network
+#define EIGRP_TOPOLOGY_TYPE_REMOTE 1	      // Remote internal network
 #define EIGRP_TOPOLOGY_TYPE_REMOTE_EXTERNAL 2 // Remote external network
 
 /*EIGRP TT entry flags*/
@@ -143,11 +143,11 @@ enum metric_change { METRIC_DECREASE, METRIC_SAME, METRIC_INCREASE };
 
 /*EEGRP FSM states*/
 enum eigrp_fsm_states {
-    EIGRP_FSM_STATE_PASSIVE,
-    EIGRP_FSM_STATE_ACTIVE_0,
-    EIGRP_FSM_STATE_ACTIVE_1,
-    EIGRP_FSM_STATE_ACTIVE_2,
-    EIGRP_FSM_STATE_ACTIVE_3,
+	EIGRP_FSM_STATE_PASSIVE,
+	EIGRP_FSM_STATE_ACTIVE_0,
+	EIGRP_FSM_STATE_ACTIVE_1,
+	EIGRP_FSM_STATE_ACTIVE_2,
+	EIGRP_FSM_STATE_ACTIVE_3,
 };
 
 /*EIGRP FSM events return values*/
@@ -156,52 +156,52 @@ enum eigrp_fsm_states {
 
 /*EIGRP FSM events*/
 enum eigrp_fsm_events {
-    /*
-     * Input event other than query from succ,
-     * FC is not satisfied
-     */
-    EIGRP_FSM_EVENT_NQ_FCN,
+	/*
+	 * Input event other than query from succ,
+	 * FC is not satisfied
+	 */
+	EIGRP_FSM_EVENT_NQ_FCN,
 
-    /* last reply, FD is reset */
-    EIGRP_FSM_EVENT_LR,
+	/* last reply, FD is reset */
+	EIGRP_FSM_EVENT_LR,
 
-    /* Query from succ, FC not satisfied */
-    EIGRP_FSM_EVENT_Q_FCN,
+	/* Query from succ, FC not satisfied */
+	EIGRP_FSM_EVENT_Q_FCN,
 
-    /* last reply, FC satisfied with current value of FDij */
-    EIGRP_FSM_EVENT_LR_FCS,
+	/* last reply, FC satisfied with current value of FDij */
+	EIGRP_FSM_EVENT_LR_FCS,
 
-    /* distance increase while in a active state */
-    EIGRP_FSM_EVENT_DINC,
+	/* distance increase while in a active state */
+	EIGRP_FSM_EVENT_DINC,
 
-    /* Query from succ while in active state */
-    EIGRP_FSM_EVENT_QACT,
+	/* Query from succ while in active state */
+	EIGRP_FSM_EVENT_QACT,
 
-    /* last reply, FC not satisfied */
-    EIGRP_FSM_EVENT_LR_FCN,
+	/* last reply, FC not satisfied */
+	EIGRP_FSM_EVENT_LR_FCN,
 
-    /*
-     * state not changed
-     * usually by receiving not last reply
-     */
-    EIGRP_FSM_KEEP_STATE,
+	/*
+	 * state not changed
+	 * usually by receiving not last reply
+	 */
+	EIGRP_FSM_KEEP_STATE,
 };
 
 /**
  * External routes originate from some other protocol - these are them
  */
-#define NULL_PROTID 0   /*!< unknown protocol */
-#define IGRP_PROTID 1   /*!< IGRP.. whos your daddy! */
-#define EIGRP_PROTID 2  /*!< EIGRP - Just flat out the best */
+#define NULL_PROTID 0	/*!< unknown protocol */
+#define IGRP_PROTID 1	/*!< IGRP.. whos your daddy! */
+#define EIGRP_PROTID 2	/*!< EIGRP - Just flat out the best */
 #define STATIC_PROTID 3 /*!< Statically configured source */
-#define RIP_PROTID 4    /*!< Routing Information Protocol */
-#define HELLO_PROTID 5  /*!< Hello? RFC-891 you there? */
-#define OSPF_PROTID 6   /*!< OSPF - Open Shortest Path First */
-#define ISIS_PROTID 7   /*!< Intermediate System To Intermediate System */
-#define EGP_PROTID 8    /*!< Exterior Gateway Protocol */
-#define BGP_PROTID 9    /*!< Border Gateway Protocol */
-#define IDRP_PROTID 10  /*!< InterDomain Routing Protocol */
-#define CONN_PROTID 11  /*!< Connected source */
+#define RIP_PROTID 4	/*!< Routing Information Protocol */
+#define HELLO_PROTID 5	/*!< Hello? RFC-891 you there? */
+#define OSPF_PROTID 6	/*!< OSPF - Open Shortest Path First */
+#define ISIS_PROTID 7	/*!< Intermediate System To Intermediate System */
+#define EGP_PROTID 8	/*!< Exterior Gateway Protocol */
+#define BGP_PROTID 9	/*!< Border Gateway Protocol */
+#define IDRP_PROTID 10	/*!< InterDomain Routing Protocol */
+#define CONN_PROTID 11	/*!< Connected source */
 
 /*
  * metric k-value defaults
@@ -231,10 +231,10 @@ enum eigrp_fsm_events {
 #define EIGRP_OPC_HELLO 5     /*!< sent to maintain a peering session */
 #define EIGRP_OPC_IPXSAP 6    /*!< IPX SAP information */
 #define EIGRP_OPC_PROBE 7     /*!< for test purposes   */
-#define EIGRP_OPC_ACK 8       /*!< acknowledge         */
+#define EIGRP_OPC_ACK 8	      /*!< acknowledge         */
 #define EIGRP_OPC_SIAQUERY 10 /*!< QUERY - with relaxed restrictions */
 #define EIGRP_OPC_SIAREPLY                                                     \
-    11 /*!< REPLY - may contain old routing information */
+	11 /*!< REPLY - may contain old routing information */
 
 /**
  * EIGRP TLV Range definitions
@@ -273,21 +273,21 @@ enum eigrp_fsm_events {
  * defined here.  Protocol-specific ones are defined elsewhere.
  */
 #define EIGRP_TLV_PARAMETER                                                    \
-    (EIGRP_TLV_GENERAL | 0x0001) /*!< eigrp parameters */
+	(EIGRP_TLV_GENERAL | 0x0001) /*!< eigrp parameters */
 #define EIGRP_TLV_PARAMETER_LEN (12U)
 #define EIGRP_TLV_AUTH (EIGRP_TLV_GENERAL | 0x0002) /*!< authentication */
 #define EIGRP_TLV_SEQ (EIGRP_TLV_GENERAL | 0x0003)  /*!< sequenced packet */
 #define EIGRP_TLV_SEQ_BASE_LEN (5U)
 #define EIGRP_TLV_SW_VERSION                                                   \
-    (EIGRP_TLV_GENERAL | 0x0004) /*!< software version */
+	(EIGRP_TLV_GENERAL | 0x0004) /*!< software version */
 #define EIGRP_TLV_SW_VERSION_LEN (8U)
 #define EIGRP_TLV_NEXT_MCAST_SEQ                                               \
-    (EIGRP_TLV_GENERAL | 0x0005) /*!< sequence number */
+	(EIGRP_TLV_GENERAL | 0x0005) /*!< sequence number */
 #define EIGRP_TLV_PEER_TERMINATION                                             \
-    (EIGRP_TLV_GENERAL | 0x0007) /*!< peer termination */
+	(EIGRP_TLV_GENERAL | 0x0007) /*!< peer termination */
 #define EIGRP_TLV_PEER_TERMINATION_LEN (9U)
 #define EIGRP_TLV_PEER_TIDLIST                                                 \
-    (EIGRP_TLV_GENERAL | 0x0008) /*!< peer sub-topology list */
+	(EIGRP_TLV_GENERAL | 0x0008) /*!< peer sub-topology list */
 
 /* Older cisco routers send TIDLIST value wrong, adding for backwards
  * compatibility */
@@ -339,9 +339,9 @@ enum eigrp_fsm_events {
  * to provide a standards based exchange of AFI information between
  * EIGRP routers.
  */
-#define EIGRP_AF_IPv4 1       /*!< IPv4 (IP version 4) */
-#define EIGRP_AF_IPv6 2       /*!< IPv6 (IP version 6) */
-#define EIGRP_AF_IPX 11       /*!< IPX */
+#define EIGRP_AF_IPv4 1	      /*!< IPv4 (IP version 4) */
+#define EIGRP_AF_IPv6 2	      /*!< IPv6 (IP version 6) */
+#define EIGRP_AF_IPX 11	      /*!< IPX */
 #define EIGRP_AF_ATALK 12     /*!< Appletalk */
 #define EIGRP_SF_COMMON 16384 /*!< Cisco Service Family */
 #define EIGRP_SF_IPv4 16385   /*!< Cisco IPv4 Service Family */
@@ -360,10 +360,10 @@ enum eigrp_fsm_events {
 /**
  * opaque flag field definitions
  */
-#define EIGRP_OPAQUE_SRCWD 0x01  /*!< Route Source Withdraw */
+#define EIGRP_OPAQUE_SRCWD 0x01	 /*!< Route Source Withdraw */
 #define EIGRP_OPAQUE_ACTIVE 0x04 /*!< Route is currently in active state */
 #define EIGRP_OPAQUE_REPL                                                      \
-    0x08 /*!< Route is replicated from different tableid */
+	0x08 /*!< Route is replicated from different tableid */
 
 /**
  * pak flag bit field definitions - 0 (none)-7 source priority
@@ -454,7 +454,7 @@ enum eigrp_fsm_events {
  */
 #define EIGRP_EXTCOMM_SOO_ASFMT 0x0003 /* Site-of-Origin, BGP AS format */
 #define EIGRP_EXTCOMM_SOO_ADRFMT                                               \
-    0x0103 /* Site-of-Origin, BGP/EIGRP addr format */
+	0x0103 /* Site-of-Origin, BGP/EIGRP addr format */
 
 /*
  * EIGRP Specific communities
@@ -466,8 +466,8 @@ enum eigrp_fsm_events {
 #define EIGRP_EXTCOMM_SAR 0x8804   /* EIGRP System: Remote AS + Remote ID  */
 #define EIGRP_EXTCOMM_RPM 0x8805   /* EIGRP Remote: Protocol + Metric    */
 #define EIGRP_EXTCOMM_VRR                                                      \
-    0x8806 /* EIGRP Vecmet: Rsvd + (internal) Routerid                         \
-	    */
+	0x8806 /* EIGRP Vecmet: Rsvd + (internal) Routerid                     \
+		*/
 
 /*
  * EIGRP Filter constants

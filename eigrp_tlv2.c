@@ -34,19 +34,19 @@ static eigrp_route_descriptor_t *eigrp_tlv2_decoder(struct eigrp *eigrp,
 						    eigrp_stream_t *pkt,
 						    uint16_t pktlen)
 {
-    return 0;
+	return 0;
 }
 
 static uint16_t eigrp_tlv2_encoder(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 				   eigrp_stream_t *pkt,
 				   eigrp_prefix_descriptor_t *prefix)
 {
-    return 0;
+	return 0;
 }
 
 void eigrp_tlv2_init(eigrp_neighbor_t *nbr)
 {
-    // setup vectors for processing Version 2 TLVs
-    nbr->tlv_decoder = &eigrp_tlv2_decoder;
-    nbr->tlv_encoder = &eigrp_tlv2_encoder;
+	// setup vectors for processing Version 2 TLVs
+	nbr->tlv_decoder = &eigrp_tlv2_decoder;
+	nbr->tlv_encoder = &eigrp_tlv2_encoder;
 }

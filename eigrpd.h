@@ -65,20 +65,20 @@
 
 /* EIGRP master for system wide configuration and variables. */
 typedef struct eigrp_master {
-    /* EIGRP instance. */
-    struct list *eigrp;
+	/* EIGRP instance. */
+	struct list *eigrp;
 
-    /* EIGRP thread master. */
-    struct thread_master *master;
+	/* EIGRP thread master. */
+	struct thread_master *master;
 
-    /* Zebra interface list. */
-    struct list *iflist;
+	/* Zebra interface list. */
+	struct list *iflist;
 
-    /* EIGRP start time. */
-    time_t start_time;
+	/* EIGRP start time. */
+	time_t start_time;
 
-    /* Various EIGRP global configuration. */
-    uint8_t options;
+	/* Various EIGRP global configuration. */
+	uint8_t options;
 
 #define EIGRP_MASTER_SHUTDOWN (1 << 0) /* deferred-shutdown */
 } eigrp_master_t;

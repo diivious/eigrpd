@@ -72,66 +72,66 @@ extern unsigned long term_debug_eigrp_zebra;
 #define TERM_DEBUG_NEI_ON(a, b) term_debug_eigrp_nei[a] |= (b)
 #define TERM_DEBUG_NEI_OFF(a, b) term_debug_eigrp_nei[a] &= ~(b)
 #define DEBUG_NEI_ON(a, b)                                                     \
-    do {                                                                       \
-	CONF_DEBUG_NEI_ON(a, b);                                               \
-	TERM_DEBUG_NEI_ON(a, b);                                               \
-    } while (0)
+	do {                                                                   \
+		CONF_DEBUG_NEI_ON(a, b);                                       \
+		TERM_DEBUG_NEI_ON(a, b);                                       \
+	} while (0)
 #define DEBUG_NEI_OFF(a, b)                                                    \
-    do {                                                                       \
-	CONF_DEBUG_NEI_OFF(a, b);                                              \
-	TERM_DEBUG_NEI_OFF(a, b);                                              \
-    } while (0)
+	do {                                                                   \
+		CONF_DEBUG_NEI_OFF(a, b);                                      \
+		TERM_DEBUG_NEI_OFF(a, b);                                      \
+	} while (0)
 
 #define CONF_DEBUG_PACKET_ON(a, b) conf_debug_eigrp_packet[a] |= (b)
 #define CONF_DEBUG_PACKET_OFF(a, b) conf_debug_eigrp_packet[a] &= ~(b)
 #define TERM_DEBUG_PACKET_ON(a, b) term_debug_eigrp_packet[a] |= (b)
 #define TERM_DEBUG_PACKET_OFF(a, b) term_debug_eigrp_packet[a] &= ~(b)
 #define DEBUG_PACKET_ON(a, b)                                                  \
-    do {                                                                       \
-	CONF_DEBUG_PACKET_ON(a, b);                                            \
-	TERM_DEBUG_PACKET_ON(a, b);                                            \
-    } while (0)
+	do {                                                                   \
+		CONF_DEBUG_PACKET_ON(a, b);                                    \
+		TERM_DEBUG_PACKET_ON(a, b);                                    \
+	} while (0)
 #define DEBUG_PACKET_OFF(a, b)                                                 \
-    do {                                                                       \
-	CONF_DEBUG_PACKET_OFF(a, b);                                           \
-	TERM_DEBUG_PACKET_OFF(a, b);                                           \
-    } while (0)
+	do {                                                                   \
+		CONF_DEBUG_PACKET_OFF(a, b);                                   \
+		TERM_DEBUG_PACKET_OFF(a, b);                                   \
+	} while (0)
 
 #define CONF_DEBUG_TRANSMIT_ON(a, b) conf_debug_eigrp_transmit |= (b)
 #define CONF_DEBUG_TRANSMIT_OFF(a, b) conf_debug_eigrp_transmit &= ~(b)
 #define TERM_DEBUG_TRANSMIT_ON(a, b) term_debug_eigrp_transmit |= (b)
 #define TERM_DEBUG_TRANSMIT_OFF(a, b) term_debug_eigrp_transmit &= ~(b)
 #define DEBUG_TRANSMIT_ON(a, b)                                                \
-    do {                                                                       \
-	CONF_DEBUG_TRANSMIT_ON(a, b);                                          \
-	TERM_DEBUG_TRANSMIT_ON(a, b);                                          \
-    } while (0)
+	do {                                                                   \
+		CONF_DEBUG_TRANSMIT_ON(a, b);                                  \
+		TERM_DEBUG_TRANSMIT_ON(a, b);                                  \
+	} while (0)
 #define DEBUG_TRANSMIT_OFF(a, b)                                               \
-    do {                                                                       \
-	CONF_DEBUG_TRANSMIT_OFF(a, b);                                         \
-	TERM_DEBUG_TRANSMIT_OFF(a, b);                                         \
-    } while (0)
+	do {                                                                   \
+		CONF_DEBUG_TRANSMIT_OFF(a, b);                                 \
+		TERM_DEBUG_TRANSMIT_OFF(a, b);                                 \
+	} while (0)
 
 #define CONF_DEBUG_ON(a, b) conf_debug_eigrp_##a |= (EIGRP_DEBUG_##b)
 #define CONF_DEBUG_OFF(a, b) conf_debug_eigrp_##a &= ~(EIGRP_DEBUG_##b)
 #define TERM_DEBUG_ON(a, b) term_debug_eigrp_##a |= (EIGRP_DEBUG_##b)
 #define TERM_DEBUG_OFF(a, b) term_debug_eigrp_##a &= ~(EIGRP_DEBUG_##b)
 #define DEBUG_ON(a, b)                                                         \
-    do {                                                                       \
-	CONF_DEBUG_ON(a, b);                                                   \
-	TERM_DEBUG_ON(a, b);                                                   \
-    } while (0)
+	do {                                                                   \
+		CONF_DEBUG_ON(a, b);                                           \
+		TERM_DEBUG_ON(a, b);                                           \
+	} while (0)
 #define DEBUG_OFF(a, b)                                                        \
-    do {                                                                       \
-	CONF_DEBUG_OFF(a, b);                                                  \
-	TERM_DEBUG_OFF(a, b);                                                  \
-    } while (0)
+	do {                                                                   \
+		CONF_DEBUG_OFF(a, b);                                          \
+		TERM_DEBUG_OFF(a, b);                                          \
+	} while (0)
 
 /* Macro for checking debug option. */
 #define IS_DEBUG_EIGRP_PACKET(a, b)                                            \
-    (term_debug_eigrp_packet[a] & EIGRP_DEBUG_##b)
+	(term_debug_eigrp_packet[a] & EIGRP_DEBUG_##b)
 #define IS_DEBUG_EIGRP_TRANSMIT(a, b)                                          \
-    (term_debug_eigrp_transmit & EIGRP_DEBUG_##b)
+	(term_debug_eigrp_transmit & EIGRP_DEBUG_##b)
 #define IS_DEBUG_EIGRP_NEI(a, b) (term_debug_eigrp_nei & EIGRP_DEBUG_##b)
 #define IS_DEBUG_EIGRP(a, b) (term_debug_eigrp & EIGRP_DEBUG_##b)
 #define IS_DEBUG_EIGRP_EVENT IS_DEBUG_EIGRP(event, EVENT)

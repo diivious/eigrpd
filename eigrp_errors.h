@@ -24,8 +24,8 @@
 #include "lib/ferr.h"
 
 enum eigrp_log_refs {
-    EC_EIGRP_PACKET = EIGRP_FERR_START,
-    EC_EIGRP_CONFIG,
+	EC_EIGRP_PACKET = EIGRP_FERR_START,
+	EC_EIGRP_CONFIG,
 };
 
 extern void eigrp_error_init(void);

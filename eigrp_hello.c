@@ -83,47 +83,47 @@ static const struct message eigrp_general_tlv_type_str[] = {
  */
 int eigrp_hello_timer(struct thread *thread)
 {
-    eigrp_interface_t *ei;
+	eigrp_interface_t *ei;
 
-    ei = THREAD_ARG(thread);
-    ei->t_hello = NULL;
+	ei = THREAD_ARG(thread);
+	ei->t_hello = NULL;
 
-    if (IS_DEBUG_EIGRP(0, TIMERS))
-	zlog_debug("Start Hello Timer (%s) Expire [%u]", EIGRP_INTF_NAME(ei),
-		   ei->params.v_hello);
+	if (IS_DEBUG_EIGRP(0, TIMERS))
+		zlog_debug("Start Hello Timer (%s) Expire [%u]",
+			   EIGRP_INTF_NAME(ei), ei->params.v_hello);
 
-    /* Sending hello packet. */
-    eigrp_hello_send(ei, EIGRP_HELLO_NORMAL, NULL);
+	/* Sending hello packet. */
+	eigrp_hello_send(ei, EIGRP_HELLO_NORMAL, NULL);
 
-    /* Hello timer set. */
-    ei->t_hello = NULL;
-    thread_add_timer(master, eigrp_hello_timer, ei, ei->params.v_hello,
-		     &ei->t_hello);
+	/* Hello timer set. */
+	ei->t_hello = NULL;
+	thread_add_timer(master, eigrp_hello_timer, ei, ei->params.v_hello,
+			 &ei->t_hello);
 
-    return 0;
+	return 0;
 }
 
-static bool eigrp_hello_k_same (struct eigrp *eigrp, eigrp_neighbor_t *nbr)
+static bool eigrp_hello_k_same(struct eigrp *eigrp, eigrp_neighbor_t *nbr)
 {
-    if ((eigrp->k_values[0] == nbr->K1) &&
-	(eigrp->k_values[1] == nbr->K2) &&
-	(eigrp->k_values[2] == nbr->K3) &&
-	(eigrp->k_values[3] == nbr->K4) &&
-	(eigrp->k_values[4] == nbr->K5)) {
-	return FALSE;
-    }
-    return TRUE;
+	if ((eigrp->k_values[0] == nbr->K1) && (eigrp->k_values[1] == nbr->K2)
+	    && (eigrp->k_values[2] == nbr->K3)
+	    && (eigrp->k_values[3] == nbr->K4)
+	    && (eigrp->k_values[4] == nbr->K5)) {
+		return FALSE;
+	}
+	return TRUE;
 }
 
-static void eigrp_hello_k_update (eigrp_neighbor_t *nbr, struct TLV_Parameter_Type *param)
+static void eigrp_hello_k_update(eigrp_neighbor_t *nbr,
+				 struct TLV_Parameter_Type *param)
 {
-    /* copy over the values passed in by the neighbor */
-    nbr->K1 = param->K1;
-    nbr->K2 = param->K2;
-    nbr->K3 = param->K3;
-    nbr->K4 = param->K4;
-    nbr->K5 = param->K5;
-    nbr->K6 = param->K6;
+	/* copy over the values passed in by the neighbor */
+	nbr->K1 = param->K1;
+	nbr->K2 = param->K2;
+	nbr->K3 = param->K3;
+	nbr->K4 = param->K4;
+	nbr->K5 = param->K5;
+	nbr->K6 = param->K6;
 }
 
 /**
@@ -146,53 +146,58 @@ static eigrp_neighbor_t *
 eigrp_hello_parameter_decode(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			     struct eigrp_tlv_hdr_type *tlv)
 {
-    struct TLV_Parameter_Type *param = (struct TLV_Parameter_Type *)tlv;
-    
-    /* update nbr k values */
-    eigrp_hello_k_update (nbr, param);
+	struct TLV_Parameter_Type *param = (struct TLV_Parameter_Type *)tlv;
 
-    /* upader holding param */
-    nbr->v_holddown = ntohs(param->hold_time);
+	/* update nbr k values */
+	eigrp_hello_k_update(nbr, param);
 
-    /*
-     * Check K1-K5 have the correct values to be able to become neighbors
-     * K6 does not have to match
-     */
-    if (eigrp_hello_k_same(eigrp, nbr)) {
-	if (eigrp_nbr_state_get(nbr) == EIGRP_NEIGHBOR_DOWN) {
-	    zlog_info("Neighbor %s (%s) is pending: new adjacency",
-		      inet_ntoa(nbr->src),
-		      ifindex2ifname(nbr->ei->ifp->ifindex, eigrp->vrf_id));
+	/* upader holding param */
+	nbr->v_holddown = ntohs(param->hold_time);
 
-	    /* Expedited hello sent */
-	    eigrp_hello_send(nbr->ei, EIGRP_HELLO_NORMAL, NULL);
+	/*
+	 * Check K1-K5 have the correct values to be able to become neighbors
+	 * K6 does not have to match
+	 */
+	if (eigrp_hello_k_same(eigrp, nbr)) {
+		if (eigrp_nbr_state_get(nbr) == EIGRP_NEIGHBOR_DOWN) {
+			zlog_info("Neighbor %s (%s) is pending: new adjacency",
+				  inet_ntoa(nbr->src),
+				  ifindex2ifname(nbr->ei->ifp->ifindex,
+						 eigrp->vrf_id));
 
-	    //     if(ntohl(nbr->ei->address->u.prefix4.s_addr) >
-	    //     ntohl(nbr->src.s_addr))
-	    eigrp_update_send_init(eigrp, nbr);
+			/* Expedited hello sent */
+			eigrp_hello_send(nbr->ei, EIGRP_HELLO_NORMAL, NULL);
 
-	    eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_PENDING);
+			//     if(ntohl(nbr->ei->address->u.prefix4.s_addr) >
+			//     ntohl(nbr->src.s_addr))
+			eigrp_update_send_init(eigrp, nbr);
+
+			eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_PENDING);
+		}
+	} else {
+		if (eigrp_nbr_state_get(nbr) != EIGRP_NEIGHBOR_DOWN) {
+			if ((param->K1 & param->K2 & param->K3 & param->K4
+			     & param->K5)
+			    == 255) {
+				zlog_info(
+					"Neighbor %s (%s) is down: Interface PEER-TERMINATION received",
+					inet_ntoa(nbr->src),
+					ifindex2ifname(nbr->ei->ifp->ifindex,
+						       eigrp->vrf_id));
+				eigrp_nbr_delete(nbr);
+				return NULL;
+			} else {
+				zlog_info(
+					"Neighbor %s (%s) going down: Kvalue mismatch",
+					inet_ntoa(nbr->src),
+					ifindex2ifname(nbr->ei->ifp->ifindex,
+						       eigrp->vrf_id));
+				eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
+			}
+		}
 	}
-    } else {
-	if (eigrp_nbr_state_get(nbr) != EIGRP_NEIGHBOR_DOWN) {
-	    if ((param->K1 & param->K2 & param->K3 & param->K4 & param->K5)
-		== 255) {
-		zlog_info(
-			"Neighbor %s (%s) is down: Interface PEER-TERMINATION received",
-			inet_ntoa(nbr->src),
-			ifindex2ifname(nbr->ei->ifp->ifindex, eigrp->vrf_id));
-		eigrp_nbr_delete(nbr);
-		return NULL;
-	    } else {
-		zlog_info("Neighbor %s (%s) going down: Kvalue mismatch",
-			  inet_ntoa(nbr->src),
-			  ifindex2ifname(nbr->ei->ifp->ifindex, eigrp->vrf_id));
-		eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
-	    }
-	}
-    }
 
-    return nbr;
+	return nbr;
 }
 
 static uint8_t
@@ -200,18 +205,19 @@ eigrp_hello_authentication_decode(struct stream *s,
 				  struct eigrp_tlv_hdr_type *tlv_header,
 				  eigrp_neighbor_t *nbr)
 {
-    struct TLV_MD5_Authentication_Type *md5;
+	struct TLV_MD5_Authentication_Type *md5;
 
-    md5 = (struct TLV_MD5_Authentication_Type *)tlv_header;
+	md5 = (struct TLV_MD5_Authentication_Type *)tlv_header;
 
-    if (md5->auth_type == EIGRP_AUTH_TYPE_MD5)
-	return eigrp_check_md5_digest(s, md5, nbr, EIGRP_AUTH_BASIC_HELLO_FLAG);
-    else if (md5->auth_type == EIGRP_AUTH_TYPE_SHA256)
-	return eigrp_check_sha256_digest(
-		s, (struct TLV_SHA256_Authentication_Type *)tlv_header, nbr,
-		EIGRP_AUTH_BASIC_HELLO_FLAG);
+	if (md5->auth_type == EIGRP_AUTH_TYPE_MD5)
+		return eigrp_check_md5_digest(s, md5, nbr,
+					      EIGRP_AUTH_BASIC_HELLO_FLAG);
+	else if (md5->auth_type == EIGRP_AUTH_TYPE_SHA256)
+		return eigrp_check_sha256_digest(
+			s, (struct TLV_SHA256_Authentication_Type *)tlv_header,
+			nbr, EIGRP_AUTH_BASIC_HELLO_FLAG);
 
-    return 0;
+	return 0;
 }
 
 /**
@@ -227,32 +233,34 @@ eigrp_hello_authentication_decode(struct stream *s,
  * This consists of two bytes of OS version, and two bytes of EIGRP
  * revision number.
  */
-static void eigrp_sw_version_decode(eigrp_neighbor_t *nbr, eigrp_interface_t *ei,
-				    struct eigrp_tlv_hdr_type *tlv,
-				    bool new)
+static void eigrp_sw_version_decode(eigrp_neighbor_t *nbr,
+				    eigrp_interface_t *ei,
+				    struct eigrp_tlv_hdr_type *tlv, bool new)
 {
-    struct TLV_Software_Type *version = (struct TLV_Software_Type *)tlv;
+	struct TLV_Software_Type *version = (struct TLV_Software_Type *)tlv;
 
-    nbr->os_rel_major = version->vender_major;
-    nbr->os_rel_minor = version->vender_minor;
-    nbr->tlv_rel_major = version->eigrp_major;
-    nbr->tlv_rel_minor = version->eigrp_minor;
+	nbr->os_rel_major = version->vender_major;
+	nbr->os_rel_minor = version->vender_minor;
+	nbr->tlv_rel_major = version->eigrp_major;
+	nbr->tlv_rel_minor = version->eigrp_minor;
 
-    /* ok, we know know the kind of neighbors we have. If not a double wide,
-     * then then you are classic - nonne other are supported
-     */
-    if (nbr->tlv_rel_major == EIGRP_TLV_64B_VERSION) {
-	eigrp_tlv2_init(nbr);
-	if (new) ei->version.v2++;
-    } else {
-	eigrp_tlv1_init(nbr);
-	if (new) ei->version.v1++;
-    }
+	/* ok, we know know the kind of neighbors we have. If not a double wide,
+	 * then then you are classic - nonne other are supported
+	 */
+	if (nbr->tlv_rel_major == EIGRP_TLV_64B_VERSION) {
+		eigrp_tlv2_init(nbr);
+		if (new)
+			ei->version.v2++;
+	} else {
+		eigrp_tlv1_init(nbr);
+		if (new)
+			ei->version.v1++;
+	}
 
-    /* quick check to see if we need to send V1 and V2 TLVs */
-    ei->version.mixed = (ei->version.v1 && ei->version.v2);
+	/* quick check to see if we need to send V1 and V2 TLVs */
+	ei->version.mixed = (ei->version.v1 && ei->version.v2);
 
-    return;
+	return;
 }
 
 /**
@@ -262,24 +270,25 @@ static void eigrp_sw_version_decode(eigrp_neighbor_t *nbr, eigrp_interface_t *ei
  * a match is found, move the sending neighbor to the down state. If
  * out address is not in the TLV, then ignore the peer termination
  */
-static void eigrp_peer_termination_decode(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
+static void eigrp_peer_termination_decode(struct eigrp *eigrp,
+					  eigrp_neighbor_t *nbr,
 					  struct eigrp_tlv_hdr_type *tlv)
 {
-    struct TLV_Peer_Termination_type *param =
-	    (struct TLV_Peer_Termination_type *)tlv;
+	struct TLV_Peer_Termination_type *param =
+		(struct TLV_Peer_Termination_type *)tlv;
 
-    uint32_t my_ip = nbr->ei->address.u.prefix4.s_addr;
-    uint32_t received_ip = param->neighbor_ip;
+	uint32_t my_ip = nbr->ei->address.u.prefix4.s_addr;
+	uint32_t received_ip = param->neighbor_ip;
 
-    if (my_ip == received_ip) {
-	zlog_info("Neighbor %s (%s) is down: Peer Termination received",
-		  inet_ntoa(nbr->src),
-		  ifindex2ifname(nbr->ei->ifp->ifindex, eigrp->vrf_id));
-	/* set neighbor to DOWN */
-	nbr->state = EIGRP_NEIGHBOR_DOWN;
-	/* delete neighbor */
-	eigrp_nbr_delete(nbr);
-    }
+	if (my_ip == received_ip) {
+		zlog_info("Neighbor %s (%s) is down: Peer Termination received",
+			  inet_ntoa(nbr->src),
+			  ifindex2ifname(nbr->ei->ifp->ifindex, eigrp->vrf_id));
+		/* set neighbor to DOWN */
+		nbr->state = EIGRP_NEIGHBOR_DOWN;
+		/* delete neighbor */
+		eigrp_nbr_delete(nbr);
+	}
 }
 
 /**
@@ -290,19 +299,19 @@ static void eigrp_peer_termination_decode(struct eigrp *eigrp, eigrp_neighbor_t 
 static uint16_t eigrp_peer_termination_encode(struct stream *s,
 					      struct in_addr *nbr_addr)
 {
-    uint16_t length = EIGRP_TLV_PEER_TERMINATION_LEN;
+	uint16_t length = EIGRP_TLV_PEER_TERMINATION_LEN;
 
-    /* fill in type and length */
-    stream_putw(s, EIGRP_TLV_PEER_TERMINATION);
-    stream_putw(s, length);
+	/* fill in type and length */
+	stream_putw(s, EIGRP_TLV_PEER_TERMINATION);
+	stream_putw(s, length);
 
-    /* fill in unknown field 0x04 */
-    stream_putc(s, 0x04);
+	/* fill in unknown field 0x04 */
+	stream_putc(s, 0x04);
 
-    /* finally neighbor IP address */
-    stream_put_ipv4(s, nbr_addr->s_addr);
+	/* finally neighbor IP address */
+	stream_put_ipv4(s, nbr_addr->s_addr);
 
-    return (length);
+	return (length);
 }
 
 /*
@@ -330,92 +339,101 @@ void eigrp_hello_receive(struct eigrp *eigrp, struct ip *iph,
 			 struct eigrp_header *eigrph, struct stream *s,
 			 eigrp_interface_t *ei, int size)
 {
-    eigrp_neighbor_t *nbr;
-    struct eigrp_tlv_hdr_type *tlv_header;
-    uint16_t type;
-    uint16_t length;
-    bool     new_nbr = FALSE;
-    
-    if (IS_DEBUG_EIGRP_PACKET(eigrph->opcode - 1, RECV)) {
-	zlog_debug("Processing Hello size[%u] int(%s) src(%s)", size,
-		   ifindex2ifname(ei->ifp->ifindex, eigrp->vrf_id),
-		   inet_ntoa(iph->ip_src));
-    }
+	eigrp_neighbor_t *nbr;
+	struct eigrp_tlv_hdr_type *tlv_header;
+	uint16_t type;
+	uint16_t length;
+	bool new_nbr = FALSE;
 
-    /* check for mall formed packet, if so abort now */
-    size -= EIGRP_HEADER_LEN;
-    if (size < 0)
-	return;
-
-    /* see if we know this neighbor, if not, then lets make friends */
-    nbr = eigrp_nbr_lookup(ei, eigrph, iph);
-    if (!nbr) {
-	nbr = eigrp_nbr_create(ei, iph);
-	new_nbr = TRUE;
-    }
-
-    /* humm... inti failed, this is bad it means we are out of memory.. */
-    if (!nbr) {
-	return;
-    }
-
-    tlv_header = (struct eigrp_tlv_hdr_type *)eigrph->tlv;
-    do {
-	type = ntohs(tlv_header->type);
-	length = ntohs(tlv_header->length);
-
-	if ((length > 0) && (length <= size)) {
-	    if (IS_DEBUG_EIGRP_PACKET(0, RECV))
-		zlog_debug("  General TLV(%s)",
-			   lookup_msg(eigrp_general_tlv_type_str, type, NULL));
-
-	    // determine what General TLV is being processed
-	    switch (type) {
-	    case EIGRP_TLV_PARAMETER:
-		nbr = eigrp_hello_parameter_decode(eigrp, nbr, tlv_header);
-		if (!nbr)
-		    return;
-		break;
-	    case EIGRP_TLV_AUTH: {
-		if (eigrp_hello_authentication_decode(s, tlv_header, nbr) == 0)
-		    return;
-		else
-		    break;
-		break;
-	    }
-	    case EIGRP_TLV_SEQ:
-		break;
-	    case EIGRP_TLV_SW_VERSION:
-		eigrp_sw_version_decode(nbr, ei, tlv_header, new_nbr);
-		break;
-	    case EIGRP_TLV_NEXT_MCAST_SEQ:
-		break;
-	    case EIGRP_TLV_PEER_TERMINATION:
-		eigrp_peer_termination_decode(eigrp, nbr, tlv_header);
-		return;
-		break;
-	    case EIGRP_TLV_PEER_MTRLIST:
-	    case EIGRP_TLV_PEER_TIDLIST:
-		break;
-	    default:
-		break;
-	    }
+	if (IS_DEBUG_EIGRP_PACKET(eigrph->opcode - 1, RECV)) {
+		zlog_debug("Processing Hello size[%u] int(%s) src(%s)", size,
+			   ifindex2ifname(ei->ifp->ifindex, eigrp->vrf_id),
+			   inet_ntoa(iph->ip_src));
 	}
 
-	tlv_header = (struct eigrp_tlv_hdr_type *)(((char *)tlv_header) + length);
-	size -= length;
-    } while (size > 0);
+	/* check for mall formed packet, if so abort now */
+	size -= EIGRP_HEADER_LEN;
+	if (size < 0)
+		return;
 
-    /*If received packet is hello with Parameter TLV*/
-    if (ntohl(eigrph->ack) == 0) {
-	/* increment statistics. */
-	ei->stats.rcvd.hello++;
-	if (nbr)
-	    eigrp_nbr_state_update(nbr);
-    }
+	/* see if we know this neighbor, if not, then lets make friends */
+	nbr = eigrp_nbr_lookup(ei, eigrph, iph);
+	if (!nbr) {
+		nbr = eigrp_nbr_create(ei, iph);
+		new_nbr = TRUE;
+	}
 
-    if (IS_DEBUG_EIGRP_PACKET(0, RECV))
-	zlog_debug("Hello Packet received from %s", inet_ntoa(nbr->src));
+	/* humm... inti failed, this is bad it means we are out of memory.. */
+	if (!nbr) {
+		return;
+	}
+
+	tlv_header = (struct eigrp_tlv_hdr_type *)eigrph->tlv;
+	do {
+		type = ntohs(tlv_header->type);
+		length = ntohs(tlv_header->length);
+
+		if ((length > 0) && (length <= size)) {
+			if (IS_DEBUG_EIGRP_PACKET(0, RECV))
+				zlog_debug(
+					"  General TLV(%s)",
+					lookup_msg(eigrp_general_tlv_type_str,
+						   type, NULL));
+
+			// determine what General TLV is being processed
+			switch (type) {
+			case EIGRP_TLV_PARAMETER:
+				nbr = eigrp_hello_parameter_decode(eigrp, nbr,
+								   tlv_header);
+				if (!nbr)
+					return;
+				break;
+			case EIGRP_TLV_AUTH: {
+				if (eigrp_hello_authentication_decode(
+					    s, tlv_header, nbr)
+				    == 0)
+					return;
+				else
+					break;
+				break;
+			}
+			case EIGRP_TLV_SEQ:
+				break;
+			case EIGRP_TLV_SW_VERSION:
+				eigrp_sw_version_decode(nbr, ei, tlv_header,
+							new_nbr);
+				break;
+			case EIGRP_TLV_NEXT_MCAST_SEQ:
+				break;
+			case EIGRP_TLV_PEER_TERMINATION:
+				eigrp_peer_termination_decode(eigrp, nbr,
+							      tlv_header);
+				return;
+				break;
+			case EIGRP_TLV_PEER_MTRLIST:
+			case EIGRP_TLV_PEER_TIDLIST:
+				break;
+			default:
+				break;
+			}
+		}
+
+		tlv_header = (struct eigrp_tlv_hdr_type *)(((char *)tlv_header)
+							   + length);
+		size -= length;
+	} while (size > 0);
+
+	/*If received packet is hello with Parameter TLV*/
+	if (ntohl(eigrph->ack) == 0) {
+		/* increment statistics. */
+		ei->stats.rcvd.hello++;
+		if (nbr)
+			eigrp_nbr_state_update(nbr);
+	}
+
+	if (IS_DEBUG_EIGRP_PACKET(0, RECV))
+		zlog_debug("Hello Packet received from %s",
+			   inet_ntoa(nbr->src));
 }
 
 uint32_t FRR_MAJOR;
@@ -423,18 +441,19 @@ uint32_t FRR_MINOR;
 
 void eigrp_sw_version_init(void)
 {
-    char ver_string[] = VERSION;
-    char *dash = strstr(ver_string, "-");
-    int ret;
+	char ver_string[] = VERSION;
+	char *dash = strstr(ver_string, "-");
+	int ret;
 
-    if (dash)
-	dash[0] = '\0';
+	if (dash)
+		dash[0] = '\0';
 
-    ret = sscanf(ver_string, "%" SCNu32 ".%" SCNu32, &FRR_MAJOR, &FRR_MINOR);
-    if (ret != 2)
-	flog_err(EC_EIGRP_PACKET,
-		 "Did not Properly parse %s, please fix VERSION string",
-		 VERSION);
+	ret = sscanf(ver_string, "%" SCNu32 ".%" SCNu32, &FRR_MAJOR,
+		     &FRR_MINOR);
+	if (ret != 2)
+		flog_err(EC_EIGRP_PACKET,
+			 "Did not Properly parse %s, please fix VERSION string",
+			 VERSION);
 }
 
 /**
@@ -451,20 +470,20 @@ void eigrp_sw_version_init(void)
  */
 static uint16_t eigrp_sw_version_encode(struct stream *s)
 {
-    uint16_t length = EIGRP_TLV_SW_VERSION_LEN;
+	uint16_t length = EIGRP_TLV_SW_VERSION_LEN;
 
-    // setup the tlv fields
-    stream_putw(s, EIGRP_TLV_SW_VERSION);
-    stream_putw(s, length);
+	// setup the tlv fields
+	stream_putw(s, EIGRP_TLV_SW_VERSION);
+	stream_putw(s, length);
 
-    stream_putc(s, FRR_MAJOR); //!< major os version
-    stream_putc(s, FRR_MINOR); //!< minor os version
+	stream_putc(s, FRR_MAJOR); //!< major os version
+	stream_putc(s, FRR_MINOR); //!< minor os version
 
-    /* and the core eigrp version */
-    stream_putc(s, EIGRP_MAJOR_VERSION);
-    stream_putc(s, EIGRP_MINOR_VERSION);
+	/* and the core eigrp version */
+	stream_putc(s, EIGRP_MAJOR_VERSION);
+	stream_putc(s, EIGRP_MINOR_VERSION);
 
-    return (length);
+	return (length);
 }
 
 /**
@@ -480,8 +499,8 @@ static uint16_t eigrp_sw_version_encode(struct stream *s)
  */
 static uint16_t eigrp_tidlist_encode(struct stream *s)
 {
-    // uint16_t length = EIGRP_TLV_SW_VERSION_LEN;
-    return 0;
+	// uint16_t length = EIGRP_TLV_SW_VERSION_LEN;
+	return 0;
 }
 
 /**
@@ -497,41 +516,42 @@ static uint16_t eigrp_tidlist_encode(struct stream *s)
  */
 static uint16_t eigrp_sequence_encode(struct eigrp *eigrp, struct stream *s)
 {
-    uint16_t length = EIGRP_TLV_SEQ_BASE_LEN;
-    eigrp_interface_t *ei;
-    struct listnode *node, *node2, *nnode2;
-    eigrp_neighbor_t *nbr;
-    size_t backup_end, size_end;
-    int found;
+	uint16_t length = EIGRP_TLV_SEQ_BASE_LEN;
+	eigrp_interface_t *ei;
+	struct listnode *node, *node2, *nnode2;
+	eigrp_neighbor_t *nbr;
+	size_t backup_end, size_end;
+	int found;
 
-    // add in the parameters TLV
-    backup_end = stream_get_endp(s);
-    stream_putw(s, EIGRP_TLV_SEQ);
-    size_end = s->endp;
-    stream_putw(s, 0x0000);
-    stream_putc(s, IPV4_MAX_BYTELEN);
+	// add in the parameters TLV
+	backup_end = stream_get_endp(s);
+	stream_putw(s, EIGRP_TLV_SEQ);
+	size_end = s->endp;
+	stream_putw(s, 0x0000);
+	stream_putc(s, IPV4_MAX_BYTELEN);
 
-    found = 0;
-    for (ALL_LIST_ELEMENTS_RO(eigrp->eiflist, node, ei)) {
-	for (ALL_LIST_ELEMENTS(ei->nbrs, node2, nnode2, nbr)) {
-	    if (nbr->multicast_queue->count > 0) {
-		length += (uint16_t)stream_put_ipv4(s, nbr->src.s_addr);
-		found = 1;
-	    }
+	found = 0;
+	for (ALL_LIST_ELEMENTS_RO(eigrp->eiflist, node, ei)) {
+		for (ALL_LIST_ELEMENTS(ei->nbrs, node2, nnode2, nbr)) {
+			if (nbr->multicast_queue->count > 0) {
+				length += (uint16_t)stream_put_ipv4(
+					s, nbr->src.s_addr);
+				found = 1;
+			}
+		}
 	}
-    }
 
-    if (found == 0) {
+	if (found == 0) {
+		stream_set_endp(s, backup_end);
+		return 0;
+	}
+
+	backup_end = stream_get_endp(s);
+	stream_set_endp(s, size_end);
+	stream_putw(s, length);
 	stream_set_endp(s, backup_end);
-	return 0;
-    }
 
-    backup_end = stream_get_endp(s);
-    stream_set_endp(s, size_end);
-    stream_putw(s, length);
-    stream_set_endp(s, backup_end);
-
-    return length;
+	return length;
 }
 
 /**
@@ -545,16 +565,17 @@ static uint16_t eigrp_sequence_encode(struct eigrp *eigrp, struct stream *s)
  * Part of conditional receive process
  *
  */
-static uint16_t eigrp_next_sequence_encode(struct eigrp *eigrp, struct stream *s)
+static uint16_t eigrp_next_sequence_encode(struct eigrp *eigrp,
+					   struct stream *s)
 {
-    uint16_t length = EIGRP_NEXT_SEQUENCE_TLV_SIZE;
+	uint16_t length = EIGRP_NEXT_SEQUENCE_TLV_SIZE;
 
-    // add in the parameters TLV
-    stream_putw(s, EIGRP_TLV_NEXT_MCAST_SEQ);
-    stream_putw(s, EIGRP_NEXT_SEQUENCE_TLV_SIZE);
-    stream_putl(s, eigrp->sequence_number + 1);
+	// add in the parameters TLV
+	stream_putw(s, EIGRP_TLV_NEXT_MCAST_SEQ);
+	stream_putw(s, EIGRP_NEXT_SEQUENCE_TLV_SIZE);
+	stream_putl(s, eigrp->sequence_number + 1);
 
-    return length;
+	return length;
 }
 
 /**
@@ -575,33 +596,33 @@ static uint16_t eigrp_next_sequence_encode(struct eigrp *eigrp, struct stream *s
 static uint16_t eigrp_hello_parameter_encode(eigrp_interface_t *ei,
 					     struct stream *s, uint8_t flags)
 {
-    // add in the parameters TLV
-    stream_putw(s, EIGRP_TLV_PARAMETER);
-    stream_putw(s, EIGRP_TLV_PARAMETER_LEN);
+	// add in the parameters TLV
+	stream_putw(s, EIGRP_TLV_PARAMETER);
+	stream_putw(s, EIGRP_TLV_PARAMETER_LEN);
 
-    // if graceful shutdown is needed to be announced, send all 255 in K
-    // values
-    if (flags & EIGRP_HELLO_GRACEFUL_SHUTDOWN) {
-	stream_putc(s, 0xff); /* K1 */
-	stream_putc(s, 0xff); /* K2 */
-	stream_putc(s, 0xff); /* K3 */
-	stream_putc(s, 0xff); /* K4 */
-	stream_putc(s, 0xff); /* K5 */
-	stream_putc(s, 0xff); /* K6 */
-    } else		      // set k values
-    {
-	stream_putc(s, ei->eigrp->k_values[0]); /* K1 */
-	stream_putc(s, ei->eigrp->k_values[1]); /* K2 */
-	stream_putc(s, ei->eigrp->k_values[2]); /* K3 */
-	stream_putc(s, ei->eigrp->k_values[3]); /* K4 */
-	stream_putc(s, ei->eigrp->k_values[4]); /* K5 */
-	stream_putc(s, ei->eigrp->k_values[5]); /* K6 */
-    }
+	// if graceful shutdown is needed to be announced, send all 255 in K
+	// values
+	if (flags & EIGRP_HELLO_GRACEFUL_SHUTDOWN) {
+		stream_putc(s, 0xff); /* K1 */
+		stream_putc(s, 0xff); /* K2 */
+		stream_putc(s, 0xff); /* K3 */
+		stream_putc(s, 0xff); /* K4 */
+		stream_putc(s, 0xff); /* K5 */
+		stream_putc(s, 0xff); /* K6 */
+	} else			      // set k values
+	{
+		stream_putc(s, ei->eigrp->k_values[0]); /* K1 */
+		stream_putc(s, ei->eigrp->k_values[1]); /* K2 */
+		stream_putc(s, ei->eigrp->k_values[2]); /* K3 */
+		stream_putc(s, ei->eigrp->k_values[3]); /* K4 */
+		stream_putc(s, ei->eigrp->k_values[4]); /* K5 */
+		stream_putc(s, ei->eigrp->k_values[5]); /* K6 */
+	}
 
-    // and set hold time value..
-    stream_putw(s, ei->params.v_wait);
+	// and set hold time value..
+	stream_putw(s, ei->params.v_wait);
 
-    return EIGRP_TLV_PARAMETER_LEN;
+	return EIGRP_TLV_PARAMETER_LEN;
 }
 
 /**
@@ -624,67 +645,71 @@ static eigrp_packet_t *eigrp_hello_encode(eigrp_interface_t *ei, in_addr_t addr,
 					  uint32_t ack, uint8_t flags,
 					  struct in_addr *nbr_addr)
 {
-    eigrp_packet_t *ep;
-    uint16_t length = EIGRP_HEADER_LEN;
+	eigrp_packet_t *ep;
+	uint16_t length = EIGRP_HEADER_LEN;
 
-    // allocate a new packet to be sent
-    ep = eigrp_packet_new(EIGRP_PACKET_MTU(ei->ifp->mtu), NULL);
+	// allocate a new packet to be sent
+	ep = eigrp_packet_new(EIGRP_PACKET_MTU(ei->ifp->mtu), NULL);
 
-    if (ep) {
-	// encode common header feilds
-	eigrp_packet_header_init(EIGRP_OPC_HELLO, ei->eigrp, ep->s, 0, 0, ack);
+	if (ep) {
+		// encode common header feilds
+		eigrp_packet_header_init(EIGRP_OPC_HELLO, ei->eigrp, ep->s, 0,
+					 0, ack);
 
-	// encode Authentication TLV
-	if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
-	    && (ei->params.auth_keychain != NULL)) {
-	    length += eigrp_add_authTLV_MD5_encode(ep->s, ei);
-	} else if ((ei->params.auth_type == EIGRP_AUTH_TYPE_SHA256)
-		   && (ei->params.auth_keychain != NULL)) {
-	    length += eigrp_add_authTLV_SHA256_encode(ep->s, ei);
+		// encode Authentication TLV
+		if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
+		    && (ei->params.auth_keychain != NULL)) {
+			length += eigrp_add_authTLV_MD5_encode(ep->s, ei);
+		} else if ((ei->params.auth_type == EIGRP_AUTH_TYPE_SHA256)
+			   && (ei->params.auth_keychain != NULL)) {
+			length += eigrp_add_authTLV_SHA256_encode(ep->s, ei);
+		}
+
+		/* encode appropriate parameters to Hello packet */
+		if (flags & EIGRP_HELLO_GRACEFUL_SHUTDOWN)
+			length += eigrp_hello_parameter_encode(
+				ei, ep->s, EIGRP_HELLO_GRACEFUL_SHUTDOWN);
+		else
+			length += eigrp_hello_parameter_encode(
+				ei, ep->s, EIGRP_HELLO_NORMAL);
+
+		// figure out the version of code we're running
+		length += eigrp_sw_version_encode(ep->s);
+
+		if (flags & EIGRP_HELLO_ADD_SEQUENCE) {
+			length += eigrp_sequence_encode(ei->eigrp, ep->s);
+			length += eigrp_next_sequence_encode(ei->eigrp, ep->s);
+		}
+
+		// add in the TID list if doing multi-topology
+		length += eigrp_tidlist_encode(ep->s);
+
+		/* encode Peer Termination TLV if needed */
+		if (flags & EIGRP_HELLO_GRACEFUL_SHUTDOWN_NBR)
+			length +=
+				eigrp_peer_termination_encode(ep->s, nbr_addr);
+
+		// Set packet length
+		ep->length = length;
+
+		// set soruce address for the hello packet
+		ep->dst.s_addr = addr;
+
+		if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
+		    && (ei->params.auth_keychain != NULL)) {
+			eigrp_make_md5_digest(ei, ep->s,
+					      EIGRP_AUTH_BASIC_HELLO_FLAG);
+		} else if ((ei->params.auth_type == EIGRP_AUTH_TYPE_SHA256)
+			   && (ei->params.auth_keychain != NULL)) {
+			eigrp_make_sha256_digest(ei, ep->s,
+						 EIGRP_AUTH_BASIC_HELLO_FLAG);
+		}
+
+		// EIGRP Checksum
+		eigrp_packet_checksum(ei, ep->s, length);
 	}
 
-	/* encode appropriate parameters to Hello packet */
-	if (flags & EIGRP_HELLO_GRACEFUL_SHUTDOWN)
-	    length += eigrp_hello_parameter_encode(
-		    ei, ep->s, EIGRP_HELLO_GRACEFUL_SHUTDOWN);
-	else
-	    length +=
-		    eigrp_hello_parameter_encode(ei, ep->s, EIGRP_HELLO_NORMAL);
-
-	// figure out the version of code we're running
-	length += eigrp_sw_version_encode(ep->s);
-
-	if (flags & EIGRP_HELLO_ADD_SEQUENCE) {
-	    length += eigrp_sequence_encode(ei->eigrp, ep->s);
-	    length += eigrp_next_sequence_encode(ei->eigrp, ep->s);
-	}
-
-	// add in the TID list if doing multi-topology
-	length += eigrp_tidlist_encode(ep->s);
-
-	/* encode Peer Termination TLV if needed */
-	if (flags & EIGRP_HELLO_GRACEFUL_SHUTDOWN_NBR)
-	    length += eigrp_peer_termination_encode(ep->s, nbr_addr);
-
-	// Set packet length
-	ep->length = length;
-
-	// set soruce address for the hello packet
-	ep->dst.s_addr = addr;
-
-	if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
-	    && (ei->params.auth_keychain != NULL)) {
-	    eigrp_make_md5_digest(ei, ep->s, EIGRP_AUTH_BASIC_HELLO_FLAG);
-	} else if ((ei->params.auth_type == EIGRP_AUTH_TYPE_SHA256)
-		   && (ei->params.auth_keychain != NULL)) {
-	    eigrp_make_sha256_digest(ei, ep->s, EIGRP_AUTH_BASIC_HELLO_FLAG);
-	}
-
-	// EIGRP Checksum
-	eigrp_packet_checksum(ei, ep->s, length);
-    }
-
-    return (ep);
+	return (ep);
 }
 
 /**
@@ -702,28 +727,30 @@ static eigrp_packet_t *eigrp_hello_encode(eigrp_interface_t *ei, in_addr_t addr,
  */
 void eigrp_hello_send_ack(eigrp_neighbor_t *nbr)
 {
-    eigrp_packet_t *ep;
+	eigrp_packet_t *ep;
 
-    /* if packet succesfully created, add it to the interface queue */
-    ep = eigrp_hello_encode(nbr->ei, nbr->src.s_addr, nbr->recv_sequence_number,
-			    EIGRP_HELLO_NORMAL, NULL);
+	/* if packet succesfully created, add it to the interface queue */
+	ep = eigrp_hello_encode(nbr->ei, nbr->src.s_addr,
+				nbr->recv_sequence_number, EIGRP_HELLO_NORMAL,
+				NULL);
 
-    if (ep) {
-	if (IS_DEBUG_EIGRP_PACKET(0, SEND))
-	    zlog_debug("Queueing [Hello] Ack Seq [%u] nbr [%s]",
-		       nbr->recv_sequence_number, inet_ntoa(nbr->src));
+	if (ep) {
+		if (IS_DEBUG_EIGRP_PACKET(0, SEND))
+			zlog_debug("Queueing [Hello] Ack Seq [%u] nbr [%s]",
+				   nbr->recv_sequence_number,
+				   inet_ntoa(nbr->src));
 
-	/* Add packet to the top of the interface output queue*/
-	eigrp_packet_enqueue(nbr->ei->obuf, ep);
+		/* Add packet to the top of the interface output queue*/
+		eigrp_packet_enqueue(nbr->ei->obuf, ep);
 
-	/* Hook thread to write packet. */
-	if (nbr->ei->on_write_q == 0) {
-	    listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
-	    nbr->ei->on_write_q = 1;
+		/* Hook thread to write packet. */
+		if (nbr->ei->on_write_q == 0) {
+			listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
+			nbr->ei->on_write_q = 1;
+		}
+		thread_add_write(master, eigrp_packet_write, nbr->ei->eigrp,
+				 nbr->ei->eigrp->fd, &nbr->ei->eigrp->t_write);
 	}
-	thread_add_write(master, eigrp_packet_write, nbr->ei->eigrp,
-			 nbr->ei->eigrp->fd, &nbr->ei->eigrp->t_write);
-    }
 }
 
 /**
@@ -744,40 +771,42 @@ void eigrp_hello_send_ack(eigrp_neighbor_t *nbr)
 void eigrp_hello_send(eigrp_interface_t *ei, uint8_t flags,
 		      struct in_addr *nbr_addr)
 {
-    eigrp_packet_t *ep = NULL;
+	eigrp_packet_t *ep = NULL;
 
-    /* If this is passive interface, do not send EIGRP Hello.
-       if ((EIGRP_INTF_PASSIVE_STATUS (ei) == EIGRP_INTF_PASSIVE) ||
-       (ei->type != EIGRP_IFTYPE_NBMA))
-       return;
-    */
+	/* If this is passive interface, do not send EIGRP Hello.
+	   if ((EIGRP_INTF_PASSIVE_STATUS (ei) == EIGRP_INTF_PASSIVE) ||
+	   (ei->type != EIGRP_IFTYPE_NBMA))
+	   return;
+	*/
 
-    if (IS_DEBUG_EIGRP_PACKET(0, SEND))
-	zlog_debug("Queueing [Hello] Interface(%s)", EIGRP_INTF_NAME(ei));
+	if (IS_DEBUG_EIGRP_PACKET(0, SEND))
+		zlog_debug("Queueing [Hello] Interface(%s)",
+			   EIGRP_INTF_NAME(ei));
 
-    /* if packet was succesfully created, then add it to the interface queue
-     */
-    ep = eigrp_hello_encode(ei, htonl(EIGRP_MULTICAST_ADDRESS), 0, flags,
-			    nbr_addr);
+	/* if packet was succesfully created, then add it to the interface queue
+	 */
+	ep = eigrp_hello_encode(ei, htonl(EIGRP_MULTICAST_ADDRESS), 0, flags,
+				nbr_addr);
 
-    if (ep) {
-	// Add packet to the top of the interface output queue
-	eigrp_packet_enqueue(ei->obuf, ep);
+	if (ep) {
+		// Add packet to the top of the interface output queue
+		eigrp_packet_enqueue(ei->obuf, ep);
 
-	/* Hook thread to write packet. */
-	if (ei->on_write_q == 0) {
-	    listnode_add(ei->eigrp->oi_write_q, ei);
-	    ei->on_write_q = 1;
+		/* Hook thread to write packet. */
+		if (ei->on_write_q == 0) {
+			listnode_add(ei->eigrp->oi_write_q, ei);
+			ei->on_write_q = 1;
+		}
+
+		if (ei->eigrp->t_write == NULL) {
+			if (flags & EIGRP_HELLO_GRACEFUL_SHUTDOWN) {
+				thread_execute(master, eigrp_packet_write,
+					       ei->eigrp, ei->eigrp->fd);
+			} else {
+				thread_add_write(master, eigrp_packet_write,
+						 ei->eigrp, ei->eigrp->fd,
+						 &ei->eigrp->t_write);
+			}
+		}
 	}
-
-	if (ei->eigrp->t_write == NULL) {
-	    if (flags & EIGRP_HELLO_GRACEFUL_SHUTDOWN) {
-		thread_execute(master, eigrp_packet_write, ei->eigrp,
-			       ei->eigrp->fd);
-	    } else {
-		thread_add_write(master, eigrp_packet_write, ei->eigrp,
-				 ei->eigrp->fd, &ei->eigrp->t_write);
-	    }
-	}
-    }
 }
