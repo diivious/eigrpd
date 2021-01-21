@@ -25,26 +25,26 @@
 
 static int eigrp_vrf_new(struct vrf *vrf)
 {
-    return 0;
+	return 0;
 }
 
 static int eigrp_vrf_enable(struct vrf *vrf)
 {
-    return 0;
+	return 0;
 }
 
 static int eigrp_vrf_disable(struct vrf *vrf)
 {
-    return 0;
+	return 0;
 }
 
 static int eigrp_vrf_delete(struct vrf *vrf)
 {
-    return 0;
+	return 0;
 }
 
 void eigrp_vrf_init(void)
 {
-    vrf_init(eigrp_vrf_new, eigrp_vrf_enable, eigrp_vrf_disable,
-	     eigrp_vrf_delete, NULL);
+	vrf_init(eigrp_vrf_new, eigrp_vrf_enable, eigrp_vrf_disable,
+		 eigrp_vrf_delete, NULL);
 }

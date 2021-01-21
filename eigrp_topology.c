@@ -64,7 +64,7 @@ static int eigrp_route_descriptor_cmp(eigrp_route_descriptor_t *,
  */
 struct route_table *eigrp_topology_new(void)
 {
-    return route_table_init();
+	return route_table_init();
 }
 
 /*
@@ -73,16 +73,16 @@ struct route_table *eigrp_topology_new(void)
  */
 eigrp_prefix_descriptor_t *eigrp_prefix_descriptor_new(void)
 {
-    eigrp_prefix_descriptor_t *new;
-    new = XCALLOC(MTYPE_EIGRP_PREFIX_DESCRIPTOR,
-		  sizeof(eigrp_prefix_descriptor_t));
-    new->entries = list_new();
-    new->rij = list_new();
-    new->entries->cmp = (int (*)(void *, void *))eigrp_route_descriptor_cmp;
-    new->distance = new->fdistance = new->rdistance = EIGRP_MAX_METRIC;
-    new->destination = NULL;
+	eigrp_prefix_descriptor_t *new;
+	new = XCALLOC(MTYPE_EIGRP_PREFIX_DESCRIPTOR,
+		      sizeof(eigrp_prefix_descriptor_t));
+	new->entries = list_new();
+	new->rij = list_new();
+	new->entries->cmp = (int (*)(void *, void *))eigrp_route_descriptor_cmp;
+	new->distance = new->fdistance = new->rdistance = EIGRP_MAX_METRIC;
+	new->destination = NULL;
 
-    return new;
+	return new;
 }
 
 /*
@@ -91,12 +91,12 @@ eigrp_prefix_descriptor_t *eigrp_prefix_descriptor_new(void)
 static int eigrp_route_descriptor_cmp(eigrp_route_descriptor_t *route1,
 				      eigrp_route_descriptor_t *route2)
 {
-    if (route1->distance < route2->distance)
-	return -1;
-    if (route1->distance > route2->distance)
-	return 1;
+	if (route1->distance < route2->distance)
+		return -1;
+	if (route1->distance > route2->distance)
+		return 1;
 
-    return 0;
+	return 0;
 }
 
 /*
@@ -105,14 +105,14 @@ static int eigrp_route_descriptor_cmp(eigrp_route_descriptor_t *route1,
 
 eigrp_route_descriptor_t *eigrp_route_descriptor_new(void)
 {
-    eigrp_route_descriptor_t *new;
+	eigrp_route_descriptor_t *new;
 
-    new = XCALLOC(MTYPE_EIGRP_ROUTE_DESCRIPTOR,
-		  sizeof(eigrp_route_descriptor_t));
-    new->reported_distance = EIGRP_MAX_METRIC;
-    new->distance = EIGRP_MAX_METRIC;
+	new = XCALLOC(MTYPE_EIGRP_ROUTE_DESCRIPTOR,
+		      sizeof(eigrp_route_descriptor_t));
+	new->reported_distance = EIGRP_MAX_METRIC;
+	new->distance = EIGRP_MAX_METRIC;
 
-    return new;
+	return new;
 }
 
 /*
@@ -120,8 +120,8 @@ eigrp_route_descriptor_t *eigrp_route_descriptor_new(void)
  */
 void eigrp_topology_free(struct eigrp *eigrp, struct route_table *table)
 {
-    eigrp_topology_delete_all(eigrp, table);
-    route_table_finish(table);
+	eigrp_topology_delete_all(eigrp, table);
+	route_table_finish(table);
 }
 
 /*
@@ -130,77 +130,81 @@ void eigrp_topology_free(struct eigrp *eigrp, struct route_table *table)
 void eigrp_prefix_descriptor_add(struct route_table *topology,
 				 eigrp_prefix_descriptor_t *pe)
 {
-    struct route_node *rn;
+	struct route_node *rn;
 
-    rn = route_node_get(topology, pe->destination);
-    if (rn->info) {
-	if (IS_DEBUG_EIGRP_EVENT) {
-	    char buf[PREFIX_STRLEN];
+	rn = route_node_get(topology, pe->destination);
+	if (rn->info) {
+		if (IS_DEBUG_EIGRP_EVENT) {
+			char buf[PREFIX_STRLEN];
 
-	    zlog_debug(
-		    "%s: %s Should we have found this prefix in the topo table?",
-		    __func__, prefix2str(pe->destination, buf, sizeof(buf)));
+			zlog_debug(
+				"%s: %s Should we have found this prefix in the topo table?",
+				__func__,
+				prefix2str(pe->destination, buf, sizeof(buf)));
+		}
+		route_unlock_node(rn);
 	}
-	route_unlock_node(rn);
-    }
 
-    rn->info = pe;
+	rn->info = pe;
 }
 
 /*
  * Adding topology entry to topology node
  */
-void eigrp_route_descriptor_add(struct eigrp *eigrp, eigrp_prefix_descriptor_t *node,
+void eigrp_route_descriptor_add(struct eigrp *eigrp,
+				eigrp_prefix_descriptor_t *node,
 				eigrp_route_descriptor_t *route)
 {
-    struct list *l = list_new();
+	struct list *l = list_new();
 
-    listnode_add(l, route);
+	listnode_add(l, route);
 
-    if (listnode_lookup(node->entries, route) == NULL) {
-	listnode_add_sort(node->entries, route);
-	route->prefix = node;
+	if (listnode_lookup(node->entries, route) == NULL) {
+		listnode_add_sort(node->entries, route);
+		route->prefix = node;
 
-	eigrp_zebra_route_add(eigrp, node->destination, l, node->fdistance);
-    }
+		eigrp_zebra_route_add(eigrp, node->destination, l,
+				      node->fdistance);
+	}
 
-    list_delete(&l);
+	list_delete(&l);
 }
 
 /*
  * Deleting topology node from topology table
  */
-void eigrp_prefix_descriptor_delete(struct eigrp *eigrp, struct route_table *table,
+void eigrp_prefix_descriptor_delete(struct eigrp *eigrp,
+				    struct route_table *table,
 				    eigrp_prefix_descriptor_t *pe)
 {
-    eigrp_route_descriptor_t *ne;
-    struct listnode *node, *nnode;
-    struct route_node *rn;
+	eigrp_route_descriptor_t *ne;
+	struct listnode *node, *nnode;
+	struct route_node *rn;
 
-    if (!eigrp)
-	return;
+	if (!eigrp)
+		return;
 
-    rn = route_node_lookup(table, pe->destination);
-    if (!rn)
-	return;
+	rn = route_node_lookup(table, pe->destination);
+	if (!rn)
+		return;
 
-    /*
-     * Emergency removal of the node from this list.
-     * Whatever it is.
-     */
-    listnode_delete(eigrp->topology_changes, pe);
+	/*
+	 * Emergency removal of the node from this list.
+	 * Whatever it is.
+	 */
+	listnode_delete(eigrp->topology_changes, pe);
 
-    for (ALL_LIST_ELEMENTS(pe->entries, node, nnode, ne))
-	eigrp_route_descriptor_delete(eigrp, pe, ne);
-    list_delete(&pe->entries);
-    list_delete(&pe->rij);
-    eigrp_zebra_route_delete(eigrp, pe->destination);
-    prefix_free(&pe->destination);
+	for (ALL_LIST_ELEMENTS(pe->entries, node, nnode, ne))
+		eigrp_route_descriptor_delete(eigrp, pe, ne);
+	list_delete(&pe->entries);
+	list_delete(&pe->rij);
+	eigrp_zebra_route_delete(eigrp, pe->destination);
+	prefix_free(&pe->destination);
 
-    rn->info = NULL;
-    route_unlock_node(rn); // Lookup above
-    route_unlock_node(rn); // Initial creation
-    XFREE(MTYPE_EIGRP_PREFIX_DESCRIPTOR, pe);
+	rn->info = NULL;
+	route_unlock_node(rn); // Lookup above
+	route_unlock_node(rn); // Initial creation
+	XFREE(MTYPE_EIGRP_PREFIX_DESCRIPTOR, pe);
 }
 
 /*
@@ -210,47 +214,48 @@ void eigrp_route_descriptor_delete(struct eigrp *eigrp,
 				   eigrp_prefix_descriptor_t *node,
 				   eigrp_route_descriptor_t *route)
 {
-    if (listnode_lookup(node->entries, route) != NULL) {
-	listnode_delete(node->entries, route);
-	eigrp_zebra_route_delete(eigrp, node->destination);
-	XFREE(MTYPE_EIGRP_ROUTE_DESCRIPTOR, route);
-    }
+	if (listnode_lookup(node->entries, route) != NULL) {
+		listnode_delete(node->entries, route);
+		eigrp_zebra_route_delete(eigrp, node->destination);
+		XFREE(MTYPE_EIGRP_ROUTE_DESCRIPTOR, route);
+	}
 }
 
 /*
  * Deleting all nodes from topology table
  */
-void eigrp_topology_delete_all(struct eigrp *eigrp, struct route_table *topology)
+void eigrp_topology_delete_all(struct eigrp *eigrp,
+			       struct route_table *topology)
 {
-    struct route_node *rn;
-    eigrp_prefix_descriptor_t *pe;
+	struct route_node *rn;
+	eigrp_prefix_descriptor_t *pe;
 
-    for (rn = route_top(topology); rn; rn = route_next(rn)) {
-	pe = rn->info;
+	for (rn = route_top(topology); rn; rn = route_next(rn)) {
+		pe = rn->info;
 
-	if (!pe)
-	    continue;
+		if (!pe)
+			continue;
 
-	eigrp_prefix_descriptor_delete(eigrp, topology, pe);
-    }
+		eigrp_prefix_descriptor_delete(eigrp, topology, pe);
+	}
 }
 
 eigrp_prefix_descriptor_t *
 eigrp_topology_table_lookup_ipv4(struct route_table *table,
 				 struct prefix *address)
 {
-    eigrp_prefix_descriptor_t *pe;
-    struct route_node *rn;
+	eigrp_prefix_descriptor_t *pe;
+	struct route_node *rn;
 
-    rn = route_node_lookup(table, address);
-    if (!rn)
-	return NULL;
+	rn = route_node_lookup(table, address);
+	if (!rn)
+		return NULL;
 
-    pe = rn->info;
+	pe = rn->info;
 
-    route_unlock_node(rn);
+	route_unlock_node(rn);
 
-    return pe;
+	return pe;
 }
 
 /*
@@ -262,268 +267,277 @@ eigrp_topology_table_lookup_ipv4(struct route_table *table,
  */
 struct list *eigrp_topology_get_successor(eigrp_prefix_descriptor_t *table_node)
 {
-    struct list *successors = list_new();
-    eigrp_route_descriptor_t *data;
-    struct listnode *node1, *node2;
+	struct list *successors = list_new();
+	eigrp_route_descriptor_t *data;
+	struct listnode *node1, *node2;
 
-    for (ALL_LIST_ELEMENTS(table_node->entries, node1, node2, data)) {
-	if (data->flags & EIGRP_ROUTE_DESCRIPTOR_SUCCESSOR_FLAG) {
-	    listnode_add(successors, data);
+	for (ALL_LIST_ELEMENTS(table_node->entries, node1, node2, data)) {
+		if (data->flags & EIGRP_ROUTE_DESCRIPTOR_SUCCESSOR_FLAG) {
+			listnode_add(successors, data);
+		}
 	}
-    }
 
-    /*
-     * If we have no successors return NULL
-     */
-    if (!successors->count) {
-	list_delete(&successors);
-	successors = NULL;
-    }
+	/*
+	 * If we have no successors return NULL
+	 */
+	if (!successors->count) {
+		list_delete(&successors);
+		successors = NULL;
+	}
 
-    return successors;
+	return successors;
 }
 
 struct list *
 eigrp_topology_get_successor_max(eigrp_prefix_descriptor_t *table_node,
 				 unsigned int maxpaths)
 {
-    struct list *successors = eigrp_topology_get_successor(table_node);
+	struct list *successors = eigrp_topology_get_successor(table_node);
 
-    if (successors && successors->count > maxpaths) {
-	do {
-	    struct listnode *node = listtail(successors);
+	if (successors && successors->count > maxpaths) {
+		do {
+			struct listnode *node = listtail(successors);
 
-	    list_delete_node(successors, node);
+			list_delete_node(successors, node);
 
-	} while (successors->count > maxpaths);
-    }
+		} while (successors->count > maxpaths);
+	}
 
-    return successors;
+	return successors;
 }
 
 eigrp_route_descriptor_t *eigrp_prefix_descriptor_lookup(struct list *entries,
 							 eigrp_neighbor_t *nbr)
 {
-    eigrp_route_descriptor_t *data;
-    struct listnode *node, *nnode;
-    for (ALL_LIST_ELEMENTS(entries, node, nnode, data)) {
-	if (data->adv_router == nbr) {
-	    return data;
+	eigrp_route_descriptor_t *data;
+	struct listnode *node, *nnode;
+	for (ALL_LIST_ELEMENTS(entries, node, nnode, data)) {
+		if (data->adv_router == nbr) {
+			return data;
+		}
 	}
-    }
 
-    return NULL;
+	return NULL;
 }
 
 /* Lookup all prefixes from specified neighbor */
 struct list *eigrp_neighbor_prefixes_lookup(struct eigrp *eigrp,
 					    eigrp_neighbor_t *nbr)
 {
-    struct listnode *node2, *node22;
-    eigrp_route_descriptor_t *route;
-    eigrp_prefix_descriptor_t *pe;
-    struct route_node *rn;
+	struct listnode *node2, *node22;
+	eigrp_route_descriptor_t *route;
+	eigrp_prefix_descriptor_t *pe;
+	struct route_node *rn;
 
-    /* create new empty list for prefixes storage */
-    struct list *prefixes = list_new();
+	/* create new empty list for prefixes storage */
+	struct list *prefixes = list_new();
 
-    /* iterate over all prefixes in topology table */
-    for (rn = route_top(eigrp->topology_table); rn; rn = route_next(rn)) {
-	if (!rn->info)
-	    continue;
-	pe = rn->info;
-	/* iterate over all neighbor route in prefix */
-	for (ALL_LIST_ELEMENTS(pe->entries, node2, node22, route)) {
-	    /* if route is from specified neighbor, add to list */
-	    if (route->adv_router == nbr) {
-		listnode_add(prefixes, pe);
-	    }
+	/* iterate over all prefixes in topology table */
+	for (rn = route_top(eigrp->topology_table); rn; rn = route_next(rn)) {
+		if (!rn->info)
+			continue;
+		pe = rn->info;
+		/* iterate over all neighbor route in prefix */
+		for (ALL_LIST_ELEMENTS(pe->entries, node2, node22, route)) {
+			/* if route is from specified neighbor, add to list */
+			if (route->adv_router == nbr) {
+				listnode_add(prefixes, pe);
+			}
+		}
 	}
-    }
 
-    /* return list of prefixes from specified neighbor */
-    return prefixes;
+	/* return list of prefixes from specified neighbor */
+	return prefixes;
 }
 
 enum metric_change
 eigrp_topology_update_distance(eigrp_fsm_action_message_t *msg)
 {
-    struct eigrp *eigrp = msg->eigrp;
-    eigrp_prefix_descriptor_t *prefix = msg->prefix;
-    eigrp_route_descriptor_t *route = msg->route;
-    enum metric_change change = METRIC_SAME;
-    uint32_t new_reported_distance;
+	struct eigrp *eigrp = msg->eigrp;
+	eigrp_prefix_descriptor_t *prefix = msg->prefix;
+	eigrp_route_descriptor_t *route = msg->route;
+	enum metric_change change = METRIC_SAME;
+	uint32_t new_reported_distance;
 
-    assert(route);
+	assert(route);
 
-    switch (msg->data_type) {
-    case EIGRP_CONNECTED:
-	if (prefix->nt == EIGRP_TOPOLOGY_TYPE_CONNECTED)
-	    return change;
+	switch (msg->data_type) {
+	case EIGRP_CONNECTED:
+		if (prefix->nt == EIGRP_TOPOLOGY_TYPE_CONNECTED)
+			return change;
 
-	change = METRIC_DECREASE;
-	break;
-    case EIGRP_INT:
-	if (prefix->nt == EIGRP_TOPOLOGY_TYPE_CONNECTED) {
-	    change = METRIC_INCREASE;
-	    goto distance_done;
+		change = METRIC_DECREASE;
+		break;
+	case EIGRP_INT:
+		if (prefix->nt == EIGRP_TOPOLOGY_TYPE_CONNECTED) {
+			change = METRIC_INCREASE;
+			goto distance_done;
+		}
+		if (eigrp_metrics_is_same(msg->metrics,
+					  route->reported_metric)) {
+			return change; // No change
+		}
+
+		new_reported_distance =
+			eigrp_calculate_metrics(eigrp, msg->metrics);
+
+		if (route->reported_distance < new_reported_distance) {
+			change = METRIC_INCREASE;
+			goto distance_done;
+		} else
+			change = METRIC_DECREASE;
+
+		route->reported_metric = msg->metrics;
+		route->reported_distance = new_reported_distance;
+		eigrp_calculate_metrics(eigrp, msg->metrics);
+		route->distance = eigrp_calculate_total_metrics(eigrp, route);
+		break;
+	case EIGRP_EXT:
+		if (prefix->nt == EIGRP_TOPOLOGY_TYPE_REMOTE_EXTERNAL) {
+			if (eigrp_metrics_is_same(msg->metrics,
+						  route->reported_metric))
+				return change;
+		} else {
+			change = METRIC_INCREASE;
+			goto distance_done;
+		}
+		break;
+	default:
+		flog_err(EC_LIB_DEVELOPMENT, "%s: Please implement handler",
+			 __func__);
+		break;
 	}
-	if (eigrp_metrics_is_same(msg->metrics, route->reported_metric)) {
-	    return change; // No change
-	}
-
-	new_reported_distance = eigrp_calculate_metrics(eigrp, msg->metrics);
-
-	if (route->reported_distance < new_reported_distance) {
-	    change = METRIC_INCREASE;
-	    goto distance_done;
-	} else
-	    change = METRIC_DECREASE;
-
-	route->reported_metric = msg->metrics;
-	route->reported_distance = new_reported_distance;
-	eigrp_calculate_metrics(eigrp, msg->metrics);
-	route->distance = eigrp_calculate_total_metrics(eigrp, route);
-	break;
-    case EIGRP_EXT:
-	if (prefix->nt == EIGRP_TOPOLOGY_TYPE_REMOTE_EXTERNAL) {
-	    if (eigrp_metrics_is_same(msg->metrics, route->reported_metric))
-		return change;
-	} else {
-	    change = METRIC_INCREASE;
-	    goto distance_done;
-	}
-	break;
-    default:
-	flog_err(EC_LIB_DEVELOPMENT, "%s: Please implement handler", __func__);
-	break;
-    }
 distance_done:
-    /*
-     * Move to correct position in list according to new distance
-     */
-    listnode_delete(prefix->entries, route);
-    listnode_add_sort(prefix->entries, route);
+	/*
+	 * Move to correct position in list according to new distance
+	 */
+	listnode_delete(prefix->entries, route);
+	listnode_add_sort(prefix->entries, route);
 
-    return change;
+	return change;
 }
 
 void eigrp_topology_update_all_node_flags(struct eigrp *eigrp)
 {
-    eigrp_prefix_descriptor_t *pe;
-    struct route_node *rn;
+	eigrp_prefix_descriptor_t *pe;
+	struct route_node *rn;
 
-    if (!eigrp)
-	return;
+	if (!eigrp)
+		return;
 
-    for (rn = route_top(eigrp->topology_table); rn; rn = route_next(rn)) {
-	pe = rn->info;
+	for (rn = route_top(eigrp->topology_table); rn; rn = route_next(rn)) {
+		pe = rn->info;
 
-	if (!pe)
-	    continue;
+		if (!pe)
+			continue;
 
-	eigrp_topology_update_node_flags(eigrp, pe);
-    }
+		eigrp_topology_update_node_flags(eigrp, pe);
+	}
 }
 
 void eigrp_topology_update_node_flags(struct eigrp *eigrp,
 				      eigrp_prefix_descriptor_t *dest)
 {
-    struct listnode *node;
-    eigrp_route_descriptor_t *route;
+	struct listnode *node;
+	eigrp_route_descriptor_t *route;
 
-    for (ALL_LIST_ELEMENTS_RO(dest->entries, node, route)) {
-	if (route->reported_distance < dest->fdistance) {
-	    // is feasible successor, can be successor
-	    if (((uint64_t)route->distance
-		 <= (uint64_t)dest->distance * (uint64_t)eigrp->variance)
-		&& route->distance != EIGRP_MAX_METRIC) {
-		// is successor
-		route->flags |= EIGRP_ROUTE_DESCRIPTOR_SUCCESSOR_FLAG;
-		route->flags &= ~EIGRP_ROUTE_DESCRIPTOR_FSUCCESSOR_FLAG;
-	    } else {
-		// is feasible successor only
-		route->flags |= EIGRP_ROUTE_DESCRIPTOR_FSUCCESSOR_FLAG;
-		route->flags &= ~EIGRP_ROUTE_DESCRIPTOR_SUCCESSOR_FLAG;
-	    }
-	} else {
-	    route->flags &= ~EIGRP_ROUTE_DESCRIPTOR_FSUCCESSOR_FLAG;
-	    route->flags &= ~EIGRP_ROUTE_DESCRIPTOR_SUCCESSOR_FLAG;
+	for (ALL_LIST_ELEMENTS_RO(dest->entries, node, route)) {
+		if (route->reported_distance < dest->fdistance) {
+			// is feasible successor, can be successor
+			if (((uint64_t)route->distance
+			     <= (uint64_t)dest->distance
+					* (uint64_t)eigrp->variance)
+			    && route->distance != EIGRP_MAX_METRIC) {
+				// is successor
+				route->flags |=
+					EIGRP_ROUTE_DESCRIPTOR_SUCCESSOR_FLAG;
+				route->flags &=
+					~EIGRP_ROUTE_DESCRIPTOR_FSUCCESSOR_FLAG;
+			} else {
+				// is feasible successor only
+				route->flags |=
+					EIGRP_ROUTE_DESCRIPTOR_FSUCCESSOR_FLAG;
+				route->flags &=
+					~EIGRP_ROUTE_DESCRIPTOR_SUCCESSOR_FLAG;
+			}
+		} else {
+			route->flags &= ~EIGRP_ROUTE_DESCRIPTOR_FSUCCESSOR_FLAG;
+			route->flags &= ~EIGRP_ROUTE_DESCRIPTOR_SUCCESSOR_FLAG;
+		}
 	}
-    }
 }
 
 void eigrp_update_routing_table(struct eigrp *eigrp,
 				eigrp_prefix_descriptor_t *prefix)
 {
-    struct list *successors;
-    struct listnode *node;
-    eigrp_route_descriptor_t *route;
+	struct list *successors;
+	struct listnode *node;
+	eigrp_route_descriptor_t *route;
 
-    successors = eigrp_topology_get_successor_max(prefix, eigrp->max_paths);
+	successors = eigrp_topology_get_successor_max(prefix, eigrp->max_paths);
 
-    if (successors) {
-	eigrp_zebra_route_add(eigrp, prefix->destination, successors,
-			      prefix->fdistance);
-	for (ALL_LIST_ELEMENTS_RO(successors, node, route))
-	    route->flags |= EIGRP_ROUTE_DESCRIPTOR_INTABLE_FLAG;
+	if (successors) {
+		eigrp_zebra_route_add(eigrp, prefix->destination, successors,
+				      prefix->fdistance);
+		for (ALL_LIST_ELEMENTS_RO(successors, node, route))
+			route->flags |= EIGRP_ROUTE_DESCRIPTOR_INTABLE_FLAG;
 
-	list_delete(&successors);
-    } else {
-	eigrp_zebra_route_delete(eigrp, prefix->destination);
-	for (ALL_LIST_ELEMENTS_RO(prefix->entries, node, route))
-	    route->flags &= ~EIGRP_ROUTE_DESCRIPTOR_INTABLE_FLAG;
-    }
+		list_delete(&successors);
+	} else {
+		eigrp_zebra_route_delete(eigrp, prefix->destination);
+		for (ALL_LIST_ELEMENTS_RO(prefix->entries, node, route))
+			route->flags &= ~EIGRP_ROUTE_DESCRIPTOR_INTABLE_FLAG;
+	}
 }
 
 void eigrp_topology_neighbor_down(struct eigrp *eigrp, eigrp_neighbor_t *nbr)
 {
-    eigrp_prefix_descriptor_t *pe;
-    eigrp_route_descriptor_t *route;
-    struct listnode *node2, *node22;
-    struct route_node *rn;
+	eigrp_prefix_descriptor_t *pe;
+	eigrp_route_descriptor_t *route;
+	struct listnode *node2, *node22;
+	struct route_node *rn;
 
-    for (rn = route_top(eigrp->topology_table); rn; rn = route_next(rn)) {
-	pe = rn->info;
+	for (rn = route_top(eigrp->topology_table); rn; rn = route_next(rn)) {
+		pe = rn->info;
 
-	if (!pe)
-	    continue;
+		if (!pe)
+			continue;
 
-	for (ALL_LIST_ELEMENTS(pe->entries, node2, node22, route)) {
-	    eigrp_fsm_action_message_t msg;
+		for (ALL_LIST_ELEMENTS(pe->entries, node2, node22, route)) {
+			eigrp_fsm_action_message_t msg;
 
-	    if (route->adv_router != nbr)
-		continue;
+			if (route->adv_router != nbr)
+				continue;
 
-	    msg.metrics.delay = EIGRP_MAX_METRIC;
-	    msg.packet_type = EIGRP_OPC_UPDATE;
-	    msg.eigrp = eigrp;
-	    msg.data_type = EIGRP_INT;
-	    msg.adv_router = nbr;
-	    msg.route = route;
-	    msg.prefix = pe;
-	    eigrp_fsm_event(&msg);
+			msg.metrics.delay = EIGRP_MAX_METRIC;
+			msg.packet_type = EIGRP_OPC_UPDATE;
+			msg.eigrp = eigrp;
+			msg.data_type = EIGRP_INT;
+			msg.adv_router = nbr;
+			msg.route = route;
+			msg.prefix = pe;
+			eigrp_fsm_event(&msg);
+		}
 	}
-    }
 
-    eigrp_query_send_all(eigrp);
-    eigrp_update_send_all(eigrp, nbr->ei);
+	eigrp_query_send_all(eigrp);
+	eigrp_update_send_all(eigrp, nbr->ei);
 }
 
 void eigrp_update_topology_table_prefix(struct eigrp *eigrp,
 					struct route_table *table,
 					eigrp_prefix_descriptor_t *prefix)
 {
-    struct listnode *node1, *node2;
+	struct listnode *node1, *node2;
 
-    eigrp_route_descriptor_t *route;
-    for (ALL_LIST_ELEMENTS(prefix->entries, node1, node2, route)) {
-	if (route->distance == EIGRP_MAX_METRIC) {
-	    eigrp_route_descriptor_delete(eigrp, prefix, route);
+	eigrp_route_descriptor_t *route;
+	for (ALL_LIST_ELEMENTS(prefix->entries, node1, node2, route)) {
+		if (route->distance == EIGRP_MAX_METRIC) {
+			eigrp_route_descriptor_delete(eigrp, prefix, route);
+		}
 	}
-    }
-    if (prefix->distance == EIGRP_MAX_METRIC
-	&& prefix->nt != EIGRP_TOPOLOGY_TYPE_CONNECTED) {
-	eigrp_prefix_descriptor_delete(eigrp, table, prefix);
-    }
+	if (prefix->distance == EIGRP_MAX_METRIC
+	    && prefix->nt != EIGRP_TOPOLOGY_TYPE_CONNECTED) {
+		eigrp_prefix_descriptor_delete(eigrp, table, prefix);
+	}
 }

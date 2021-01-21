@@ -99,25 +99,25 @@ static struct frr_daemon_info eigrpd_di;
 /* SIGHUP handler. */
 static void sighup(void)
 {
-    zlog_info("SIGHUP received");
+	zlog_info("SIGHUP received");
 
-    /* Reload config file. */
-    vty_read_config(NULL, eigrpd_di.config_file, config_default);
+	/* Reload config file. */
+	vty_read_config(NULL, eigrpd_di.config_file, config_default);
 }
 
 /* SIGINT / SIGTERM handler. */
 static void sigint(void)
 {
-    zlog_notice("Terminating on signal");
-    eigrp_terminate();
+	zlog_notice("Terminating on signal");
+	eigrp_terminate();
 
-    exit(0);
+	exit(0);
 }
 
 /* SIGUSR1 handler. */
 static void sigusr1(void)
 {
-    zlog_rotate();
+	zlog_rotate();
 }
 
 struct quagga_signal_t eigrp_signals[] = {
@@ -158,78 +158,78 @@ FRR_DAEMON_INFO(eigrpd, EIGRP, .vty_port = EIGRP_VTY_PORT,
 /* EIGRPd main routine. */
 int main(int argc, char **argv, char **envp)
 {
-    frr_preinit(&eigrpd_di, argc, argv);
-    frr_opt_add("", longopts, "");
+	frr_preinit(&eigrpd_di, argc, argv);
+	frr_opt_add("", longopts, "");
 
-    while (1) {
-	int opt;
+	while (1) {
+		int opt;
 
-	opt = frr_getopt(argc, argv, NULL);
+		opt = frr_getopt(argc, argv, NULL);
 
-	if (opt == EOF)
-	    break;
+		if (opt == EOF)
+			break;
 
-	switch (opt) {
-	case 0:
-	    break;
-	default:
-	    frr_help_exit(1);
-	    break;
+		switch (opt) {
+		case 0:
+			break;
+		default:
+			frr_help_exit(1);
+			break;
+		}
 	}
-    }
 
-    eigrp_sw_version_init();
+	eigrp_sw_version_init();
 
-    /* EIGRP master init. */
-    eigrp_master_init();
-    eigrp_om->master = frr_init();
-    master = eigrp_om->master;
+	/* EIGRP master init. */
+	eigrp_master_init();
+	eigrp_om->master = frr_init();
+	master = eigrp_om->master;
 
-    eigrp_error_init();
-    eigrp_vrf_init();
-    vrf_init(NULL, NULL, NULL, NULL, NULL);
+	eigrp_error_init();
+	eigrp_vrf_init();
+	vrf_init(NULL, NULL, NULL, NULL, NULL);
 
-    /*EIGRPd init*/
-    eigrp_intf_init();
-    eigrp_zebra_init();
-    eigrp_debug_init();
+	/*EIGRPd init*/
+	eigrp_intf_init();
+	eigrp_zebra_init();
+	eigrp_debug_init();
 
-    /* Get configuration file. */
-    /* EIGRP VTY inits */
-    eigrp_vty_init();
-    keychain_init();
-    eigrp_vty_show_init();
-    eigrp_cli_init();
+	/* Get configuration file. */
+	/* EIGRP VTY inits */
+	eigrp_vty_init();
+	keychain_init();
+	eigrp_vty_show_init();
+	eigrp_cli_init();
 
 #ifdef HAVE_SNMP
-    eigrp_snmp_init();
+	eigrp_snmp_init();
 #endif /* HAVE_SNMP */
 
-    /* Access list install. */
-    access_list_init();
-    access_list_add_hook(eigrp_distribute_update_all_wrapper);
-    access_list_delete_hook(eigrp_distribute_update_all_wrapper);
+	/* Access list install. */
+	access_list_init();
+	access_list_add_hook(eigrp_distribute_update_all_wrapper);
+	access_list_delete_hook(eigrp_distribute_update_all_wrapper);
 
-    /* Prefix list initialize.*/
-    prefix_list_init();
-    prefix_list_add_hook(eigrp_distribute_update_all);
-    prefix_list_delete_hook(eigrp_distribute_update_all);
+	/* Prefix list initialize.*/
+	prefix_list_init();
+	prefix_list_add_hook(eigrp_distribute_update_all);
+	prefix_list_delete_hook(eigrp_distribute_update_all);
 
-    /*
-     * XXX: This is just to get the CLI installed to suppress VTYSH errors.
-     * Routemaps in EIGRP are not yet functional.
-     */
-    route_map_init();
-    /*eigrp_route_map_init();
-      route_map_add_hook (eigrp_rmap_update);
-      route_map_delete_hook (eigrp_rmap_update);*/
-    /*if_rmap_init (EIGRP_NODE); */
-    /* Distribute list install. */
-    distribute_list_init(EIGRP_NODE);
+	/*
+	 * XXX: This is just to get the CLI installed to suppress VTYSH errors.
+	 * Routemaps in EIGRP are not yet functional.
+	 */
+	route_map_init();
+	/*eigrp_route_map_init();
+	  route_map_add_hook (eigrp_rmap_update);
+	  route_map_delete_hook (eigrp_rmap_update);*/
+	/*if_rmap_init (EIGRP_NODE); */
+	/* Distribute list install. */
+	distribute_list_init(EIGRP_NODE);
 
-    frr_config_fork();
-    frr_run(master);
+	frr_config_fork();
+	frr_run(master);
 
-    /* Not reached. */
-    return 0;
+	/* Not reached. */
+	return 0;
 }

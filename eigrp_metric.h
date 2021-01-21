@@ -26,7 +26,7 @@
 
 /* Constants */
 #define EIGRP_BANDWIDTH_MIN 0x1ull		  // 1
-#define EIGRP_BANDWIDTH_SCALER 10000000ull	// Inversion value
+#define EIGRP_BANDWIDTH_SCALER 10000000ull	  // Inversion value
 #define EIGRP_BANDWIDTH_MAX 0xffffffffffffffffull // 1.84467441x10^19
 
 #define EIGRP_DELAY_MIN 0x1ull // 1
@@ -39,7 +39,7 @@
 #define EIGRP_INACCESSIBLE 0xFFFFFFFFFFFFFFFFull
 
 #define EIGRP_METRIC_MAX 0xffffffffffffffffull // 1.84467441x10^19
-#define EIGRP_METRIC_SCALER 65536	      // CLASSIC to WIDE conversion
+#define EIGRP_METRIC_SCALER 65536	       // CLASSIC to WIDE conversion
 
 #define EIGRP_CLASSIC_MAX 0xffffffff // 4294967295
 #define EIGRP_CLASSIC_SCALER 256     // IGRP to EIGRP conversion

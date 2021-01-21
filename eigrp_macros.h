@@ -42,6 +42,6 @@
 
 /* FSM macros*/
 #define EIGRP_FSM_EVENT_SCHEDULE(I, E)                                         \
-    thread_add_event(master, eigrp_fsm_event, (I), (E))
+	thread_add_event(master, eigrp_fsm_event, (I), (E))
 
 #endif /* _ZEBRA_EIGRP_MACROS_H_ */

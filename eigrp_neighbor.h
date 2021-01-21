@@ -35,65 +35,65 @@
 /* Neighbor Data Structure */
 typedef struct eigrp_neighbor {
 
-    uint8_t os_rel_major; // system version - just for show
-    uint8_t os_rel_minor; // system version - just for show
+	uint8_t os_rel_major; // system version - just for show
+	uint8_t os_rel_minor; // system version - just for show
 
-    /* TLV decoders for this peer - version dependent */
-    uint8_t tlv_rel_major; // eigrp version - tells us what TLV format to
-			   // use
-    uint8_t tlv_rel_minor; // eigrp version - tells us what TLV format to
-			   // use
+	/* TLV decoders for this peer - version dependent */
+	uint8_t tlv_rel_major; // eigrp version - tells us what TLV format to
+			       // use
+	uint8_t tlv_rel_minor; // eigrp version - tells us what TLV format to
+			       // use
 
-    eigrp_tlv_decoder_t tlv_decoder;
-    eigrp_tlv_encoder_t tlv_encoder;
+	eigrp_tlv_decoder_t tlv_decoder;
+	eigrp_tlv_encoder_t tlv_encoder;
 
-    uint8_t K1;
-    uint8_t K2;
-    uint8_t K3;
-    uint8_t K4;
-    uint8_t K5;
-    uint8_t K6;
+	uint8_t K1;
+	uint8_t K2;
+	uint8_t K3;
+	uint8_t K4;
+	uint8_t K5;
+	uint8_t K6;
 
-    /* This neighbor's parent eigrp interface. */
-    eigrp_interface_t *ei;
+	/* This neighbor's parent eigrp interface. */
+	eigrp_interface_t *ei;
 
-    /* EIGRP neighbor Information */
-    uint8_t state; /* neigbor status. */
+	/* EIGRP neighbor Information */
+	uint8_t state; /* neigbor status. */
 
-    uint32_t recv_sequence_number; /* Last received sequence Number. */
-    uint32_t init_sequence_number;
+	uint32_t recv_sequence_number; /* Last received sequence Number. */
+	uint32_t init_sequence_number;
 
-    /*If packet is unacknowledged, we try to send it again 16 times*/
-    uint8_t retrans_counter;
+	/*If packet is unacknowledged, we try to send it again 16 times*/
+	uint8_t retrans_counter;
 
-    struct in_addr src; /* Neighbor Src address. */
+	struct in_addr src; /* Neighbor Src address. */
 
-    /* Timer values. */
-    uint16_t v_holddown;
+	/* Timer values. */
+	uint16_t v_holddown;
 
-    /* Threads. */
-    struct thread *t_holddown;
-    struct thread *t_nbr_send_gr; /* thread for sending multiple GR packet
-				     chunks */
+	/* Threads. */
+	struct thread *t_holddown;
+	struct thread *t_nbr_send_gr; /* thread for sending multiple GR packet
+					 chunks */
 
-    eigrp_packet_queue_t *retrans_queue;
-    eigrp_packet_queue_t *multicast_queue;
+	eigrp_packet_queue_t *retrans_queue;
+	eigrp_packet_queue_t *multicast_queue;
 
-    uint32_t crypt_seqnum; /* Cryptographic Sequence Number. */
+	uint32_t crypt_seqnum; /* Cryptographic Sequence Number. */
 
-    /* prefixes not received from neighbor during Graceful restart */
-    struct list *nbr_gr_prefixes;
-    /* prefixes not yet send to neighbor during Graceful restart */
-    struct list *nbr_gr_prefixes_send;
-    /* if packet is first or last during Graceful restart */
-    enum Packet_part_type nbr_gr_packet_type;
+	/* prefixes not received from neighbor during Graceful restart */
+	struct list *nbr_gr_prefixes;
+	/* prefixes not yet send to neighbor during Graceful restart */
+	struct list *nbr_gr_prefixes_send;
+	/* if packet is first or last during Graceful restart */
+	enum Packet_part_type nbr_gr_packet_type;
 
 } eigrp_neighbor_t;
 
 
 /* Prototypes */
 extern eigrp_neighbor_t *eigrp_nbr_lookup(eigrp_interface_t *,
-				       struct eigrp_header *, struct ip *);
+					  struct eigrp_header *, struct ip *);
 extern eigrp_neighbor_t *eigrp_nbr_create(eigrp_interface_t *, struct ip *);
 extern void eigrp_nbr_delete(eigrp_neighbor_t *neigh);
 
@@ -110,7 +110,8 @@ extern eigrp_neighbor_t *eigrp_nbr_lookup_by_addr(eigrp_interface_t *,
 						  struct in_addr *);
 extern eigrp_neighbor_t *eigrp_nbr_lookup_by_addr_process(struct eigrp *,
 							  struct in_addr addr);
-extern void eigrp_nbr_hard_restart(struct eigrp *, eigrp_neighbor_t *, struct vty *);
+extern void eigrp_nbr_hard_restart(struct eigrp *, eigrp_neighbor_t *,
+				   struct vty *);
 
 extern int eigrp_nbr_split_horizon_check(eigrp_route_descriptor_t *,
 					 eigrp_interface_t *);
@@ -118,7 +119,7 @@ extern int eigrp_nbr_split_horizon_check(eigrp_route_descriptor_t *,
 /* Static inline functions */
 static inline const char *eigrp_neigh_ip_string(eigrp_neighbor_t *nbr)
 {
-    return inet_ntoa(nbr->src);
+	return inet_ntoa(nbr->src);
 }
 
 #endif /* _ZEBRA_EIGRP_NEIGHBOR_H */

@@ -80,7 +80,7 @@ extern void eigrp_update_topology_table_prefix(struct eigrp *eigrp,
 static inline const char *
 eigrp_topology_ip_string(eigrp_prefix_descriptor_t *tn)
 {
-    return inet_ntoa(tn->destination->u.prefix4);
+	return inet_ntoa(tn->destination->u.prefix4);
 }
 
 #endif
