@@ -49,6 +49,8 @@
 #include "filter.h"
 #include "log.h"
 
+DECLARE_MGROUP(EIGRPD);
+
 // everyone needs these - include then here once and for all
 #include "eigrpd/eigrp_const.h"
 #include "eigrpd/eigrp_types.h"

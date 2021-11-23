@@ -52,10 +52,13 @@
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
-#include "eigrpd/eigrp_memory.h"
 #include "eigrpd/eigrp_fsm.h"
 #include "eigrpd/eigrp_dump.h"
+#include "eigrpd/eigrp_types.h"
 #include "eigrpd/eigrp_metric.h"
+
+DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_INTF,      "EIGRP interface");
+DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_INTF_INFO, "EIGRP Interface Information");
 
 static void eigrp_intf_stream_set(eigrp_interface_t *ei)
 {
@@ -103,7 +106,7 @@ eigrp_interface_t *eigrp_intf_new(struct eigrp *eigrp, struct interface *ifp,
 	if (ei)
 		return ei;
 
-	ei = XCALLOC(MTYPE_EIGRP_IF, sizeof(eigrp_interface_t));
+	ei = XCALLOC(MTYPE_EIGRP_INTF, sizeof(eigrp_interface_t));
 
 	/* Set zebra interface pointer. */
 	ei->ifp = ifp;

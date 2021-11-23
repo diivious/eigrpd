@@ -58,7 +58,6 @@
 #include "eigrpd/eigrp_macros.h"
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
-#include "eigrpd/eigrp_memory.h"
 #include "eigrpd/eigrp_errors.h"
 
 void eigrp_reply_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,

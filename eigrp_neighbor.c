@@ -52,8 +52,9 @@
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
-#include "eigrpd/eigrp_memory.h"
 #include "eigrpd/eigrp_errors.h"
+
+DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_NEIGHBOR, "EIGRP neighbor");
 
 static inline eigrp_route_descriptor_t *
 eigrp_tlv_decoder_safe(struct eigrp *eigrp, eigrp_neighbor_t *nbr,

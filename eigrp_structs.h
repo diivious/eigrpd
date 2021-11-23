@@ -132,9 +132,9 @@ struct eigrp {
 	/* distribute_ctx */
 	struct distribute_ctx *distribute_ctx;
 
-	QOBJ_FIELDS
+	QOBJ_FIELDS;
 };
-DECLARE_QOBJ_TYPE(eigrp)
+DECLARE_QOBJ_TYPE(eigrp);
 
 typedef struct eigrp_packet_queue {
 	eigrp_packet_t *head;

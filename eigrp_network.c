@@ -228,7 +228,7 @@ int eigrp_network_set(struct eigrp *eigrp, struct prefix *p)
 	}
 
 	struct prefix *pref = prefix_new();
-	PREFIX_COPY_IPV4(pref, p);
+	prefix_copy(pref, p);
 	rn->info = (void *)pref;
 
 	/* Schedule Router ID Update. */
@@ -296,7 +296,7 @@ void eigrp_intf_update(struct eigrp *eigrp, struct interface *ifp)
 	 * we need to check eac one and add the interface as approperate
 	 */
 	for (ALL_LIST_ELEMENTS(eigrp_om->eigrp, node, nnode, eigrp)) {
-		if (ifp->vrf_id != eigrp->vrf_id)
+		if (ifp->vrf->vrf_id != eigrp->vrf_id)
 			continue;
 
 		/* EIGRP must be on and Router-ID must be configured. */

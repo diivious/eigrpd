@@ -61,7 +61,6 @@
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
 #include "eigrpd/eigrp_network.h"
-#include "eigrpd/eigrp_memory.h"
 #include "eigrpd/eigrp_metric.h"
 
 bool eigrp_update_prefix_apply(struct eigrp *eigrp, eigrp_interface_t *ei,

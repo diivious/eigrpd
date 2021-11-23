@@ -57,7 +57,6 @@
 #include "eigrpd/eigrp_const.h"
 #include "eigrpd/eigrp_filter.h"
 #include "eigrpd/eigrp_packet.h"
-#include "eigrpd/eigrp_memory.h"
 
 /*
  * Distribute-list update functions.
@@ -301,9 +300,9 @@ void eigrp_distribute_update_all(struct prefix_list *notused)
 	struct interface *ifp;
 
 	RB_FOREACH (vrf, vrf_name_head, &vrfs_by_name) {
-		FOR_ALL_INTERFACES (vrf, ifp) {
-			eigrp = eigrp_lookup(ifp->vrf_id);
-			if (eigrp) {
+		eigrp = eigrp_lookup(vrf->vrf_id);
+		if (eigrp) {
+			FOR_ALL_INTERFACES (vrf, ifp) {
 				eigrp_distribute_update_interface(eigrp, ifp);
 			}
 		}
