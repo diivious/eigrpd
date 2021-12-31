@@ -25,30 +25,16 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <zebra.h>
-
-#include "linklist.h"
-#include "thread.h"
-#include "prefix.h"
-#include "command.h"
-#include "stream.h"
-#include "log.h"
-#include "sockopt.h"
-#include "table.h"
-#include "keychain.h"
-
-#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
+#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
-#include "eigrpd/eigrp_zebra.h"
-#include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_topology.h"
-#include "eigrpd/eigrp_topology.h"
-#include "eigrpd/eigrp_topology.h"
+
+#include "command.h"
 
 /* Enable debug option variables -- valid only session. */
 unsigned long term_debug_eigrp = 0;
@@ -63,7 +49,6 @@ unsigned long conf_debug_eigrp_nei = 0;
 unsigned long conf_debug_eigrp_packet[11] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 unsigned long conf_debug_eigrp_zebra = 0;
 unsigned long conf_debug_eigrp_transmit = 0;
-
 
 static int config_write_debug(struct vty *vty)
 {

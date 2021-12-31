@@ -42,12 +42,10 @@
 #include "stream.h"
 #include "log.h"
 #include "sockopt.h"
-//#include "checksum.h"
 #include "md5.h"
 #include "sha256.h"
 #include "lib_errors.h"
 #include "filter.h"
-#include "log.h"
 
 DECLARE_MGROUP(EIGRPD);
 
