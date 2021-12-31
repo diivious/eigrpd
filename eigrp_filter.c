@@ -30,33 +30,15 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <zebra.h>
-
-#include "if.h"
-#include "command.h"
-#include "prefix.h"
-#include "table.h"
-#include "thread.h"
-#include "memory.h"
-#include "log.h"
-#include "stream.h"
-#include "filter.h"
-#include "sockunion.h"
-#include "sockopt.h"
-#include "routemap.h"
-#include "if_rmap.h"
-#include "plist.h"
-#include "distribute.h"
-#include "md5.h"
-#include "keychain.h"
-#include "privs.h"
-#include "vrf.h"
-
-#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
+#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_const.h"
 #include "eigrpd/eigrp_filter.h"
 #include "eigrpd/eigrp_packet.h"
+
+#include "plist.h"
+#include "privs.h"
+#include "vrf.h"
 
 /*
  * Distribute-list update functions.

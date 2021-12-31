@@ -32,6 +32,8 @@
 #ifndef _ZEBRA_EIGRP_TOPOLOGY_H
 #define _ZEBRA_EIGRP_TOPOLOGY_H
 
+#include "lib/table.h"
+
 /* EIGRP Topology table related functions. */
 extern struct route_table *eigrp_topology_new(void);
 extern void eigrp_topology_init(struct route_table *table);

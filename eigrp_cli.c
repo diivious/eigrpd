@@ -24,10 +24,12 @@
 #include "eigrp_structs.h"
 #include "eigrp_zebra.h"
 #include "eigrp_cli.h"
+#include "eigrp_yang.h"
 
+#include "lib/keychain.h"
 #include "lib/command.h"
-#include "lib/log.h"
 #include "lib/northbound_cli.h"
+#include "lib_errors.h"
 
 #ifndef VTYSH_EXTRACT_PL
 #include "eigrpd/eigrp_cli_clippy.c"

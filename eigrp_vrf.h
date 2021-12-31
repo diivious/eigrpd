@@ -19,5 +19,7 @@
  */
 #ifndef __EIGRP_VRF_H__
 
+#include "lib/vrf.h"
+
 extern void eigrp_vrf_init(void);
 #endif

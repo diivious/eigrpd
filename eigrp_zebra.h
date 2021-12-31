@@ -28,8 +28,9 @@
 #ifndef _ZEBRA_EIGRP_ZEBRA_H_
 #define _ZEBRA_EIGRP_ZEBRA_H_
 
-#include "vty.h"
-#include "vrf.h"
+#include <zebra.h>
+#include "lib/zclient.h"
+#include "lib/libfrr.h"
 
 extern void eigrp_zebra_init(void);
 

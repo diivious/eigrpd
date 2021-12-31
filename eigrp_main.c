@@ -28,33 +28,8 @@
  * with this program; see the file COPYING; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
-#include <zebra.h>
-
-#include <lib/version.h>
-#include "getopt.h"
-#include "thread.h"
-#include "prefix.h"
-#include "linklist.h"
-#include "if.h"
-#include "vector.h"
-#include "vty.h"
-#include "command.h"
-#include "filter.h"
-#include "plist.h"
-#include "stream.h"
-#include "log.h"
-#include "memory.h"
-#include "privs.h"
-#include "sigevent.h"
-#include "zclient.h"
-#include "keychain.h"
-#include "distribute.h"
-#include "libfrr.h"
-#include "routemap.h"
-//#include "if_rmap.h"
-
-#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
+#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
@@ -68,7 +43,13 @@
 #include "eigrpd/eigrp_vrf.h"
 #include "eigrpd/eigrp_cli.h"
 #include "eigrpd/eigrp_yang.h"
-//#include "eigrpd/eigrp_routemap.h"
+
+#include "zclient.h"
+#include "routemap.h"
+#include "libfrr.h"
+
+#include <lib/version.h>
+#include "lib/keychain.h"
 
 /* eigprd privileges */
 zebra_capabilities_t _caps_p[] = {

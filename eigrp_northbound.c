@@ -20,20 +20,16 @@
  * 02110-1301 USA.
  */
 
-#include <zebra.h>
-
-#include "lib/keychain.h"
-#include "lib/log.h"
-#include "lib/northbound.h"
-#include "lib/table.h"
-#include "lib/vrf.h"
-#include "lib/zclient.h"
-
-#include "eigrp_structs.h"
 #include "eigrpd.h"
+#include "eigrp_structs.h"
 #include "eigrp_interface.h"
 #include "eigrp_network.h"
 #include "eigrp_zebra.h"
+#include "eigrp_cli.h"
+
+#include "lib/keychain.h"
+#include "lib/northbound.h"
+#include "lib/zclient.h"
 
 /* Helper functions. */
 static void redistribute_get_metrics(const struct lyd_node *dnode,

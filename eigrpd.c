@@ -33,21 +33,18 @@
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_filter.h"
-
-#include "zclient.h"
-#include "libfrr.h"
+#include "eigrpd/eigrp_errors.h"
+#include "eigrpd/eigrp_zebra.h"
 
 DEFINE_MGROUP(EIGRPD, "eigrpd");
 DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_TOP, "EIGRP structure");
 DEFINE_QOBJ_TYPE(eigrp);
 
 static struct eigrp_master eigrp_master;
-
 struct eigrp_master *eigrp_om;
 
 extern struct zclient *zclient;
 extern struct in_addr router_id_zebra;
-
 
 /*
  * void eigrp_router_id_update(struct eigrp *eigrp)

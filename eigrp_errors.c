@@ -18,9 +18,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <zebra.h>
-
-#include "lib/ferr.h"
+#include "eigrpd/eigrpd.h"
 #include "eigrp_errors.h"
 
 /* clang-format off */

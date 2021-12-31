@@ -25,22 +25,6 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <zebra.h>
-
-#include "thread.h"
-#include "command.h"
-#include "network.h"
-#include "prefix.h"
-#include "routemap.h"
-#include "table.h"
-#include "stream.h"
-#include "memory.h"
-#include "zclient.h"
-#include "filter.h"
-#include "plist.h"
-#include "log.h"
-#include "nexthop.h"
-
 #include "eigrpd/eigrpd.h"
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_interface.h"

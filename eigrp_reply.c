@@ -29,36 +29,11 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <zebra.h>
-
-#include "thread.h"
-#include "memory.h"
-#include "linklist.h"
-#include "prefix.h"
-#include "if.h"
-#include "table.h"
-#include "sockunion.h"
-#include "stream.h"
-#include "log.h"
-#include "sockopt.h"
-#include "checksum.h"
-#include "md5.h"
-#include "vty.h"
-#include "keychain.h"
-#include "plist.h"
-
-#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
-#include "eigrpd/eigrp_interface.h"
+#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
-#include "eigrpd/eigrp_zebra.h"
-#include "eigrpd/eigrp_vty.h"
-#include "eigrpd/eigrp_dump.h"
-#include "eigrpd/eigrp_macros.h"
-#include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
-#include "eigrpd/eigrp_errors.h"
 
 void eigrp_reply_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 		      eigrp_prefix_descriptor_t *prefix)

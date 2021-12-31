@@ -32,6 +32,10 @@
 #ifndef _ZEBRA_EIGRP_PACKET_H
 #define _ZEBRA_EIGRP_PACKET_H
 
+#include "lib/stream.h"
+#include "lib/sockunion.h"
+#include "lib/sockopt.h"
+
 /**
  * every TLV has a header - might as well define it here
  */

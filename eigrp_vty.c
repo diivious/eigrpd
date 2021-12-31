@@ -29,31 +29,16 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <zebra.h>
-
-#include "memory.h"
-#include "thread.h"
-#include "prefix.h"
-#include "table.h"
-#include "vty.h"
-#include "command.h"
-#include "plist.h"
-#include "log.h"
-#include "zclient.h"
-#include "keychain.h"
-#include "linklist.h"
-#include "distribute.h"
-
-#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
+#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
-#include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_dump.h"
-#include "eigrpd/eigrp_const.h"
+
+#include "zclient.h"
 
 #ifndef VTYSH_EXTRACT_PL
 #include "eigrpd/eigrp_vty_clippy.c"

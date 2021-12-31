@@ -28,8 +28,10 @@
 #ifndef _ZEBRA_EIGRP_NETWORK_H
 #define _ZEBRA_EIGRP_NETWORK_H
 
-/* Prototypes */
+#include "lib/table.h"
+#include "lib/sockopt.h"
 
+/* Prototypes */
 extern int eigrp_sock_init(struct vrf *vrf);
 extern int eigrp_network_set(struct eigrp *eigrp, struct prefix *p);
 extern int eigrp_network_unset(struct eigrp *eigrp, struct prefix *p);

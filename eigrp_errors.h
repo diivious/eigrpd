@@ -21,6 +21,7 @@
 #ifndef __EIGRP_ERRORS_H__
 #define __EIGRP_ERRORS_H__
 
+#include "lib_errors.h"
 #include "lib/ferr.h"
 
 enum eigrp_log_refs {

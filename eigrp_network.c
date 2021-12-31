@@ -25,29 +25,11 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <zebra.h>
-
-#include "thread.h"
-#include "linklist.h"
-#include "prefix.h"
-#include "if.h"
-#include "sockunion.h"
-#include "log.h"
-#include "sockopt.h"
-#include "privs.h"
-#include "table.h"
-#include "vty.h"
-#include "lib_errors.h"
-
-#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
+#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_interface.h"
-#include "eigrpd/eigrp_neighbor.h"
-#include "eigrpd/eigrp_packet.h"
 #include "eigrpd/eigrp_zebra.h"
-#include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
-#include "eigrpd/eigrp_metric.h"
 
 static int eigrp_network_match_iface(const struct prefix *connected_prefix,
 				     const struct prefix *prefix);

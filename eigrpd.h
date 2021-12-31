@@ -28,24 +28,8 @@
 #ifndef _ZEBRA_EIGRPD_H
 #define _ZEBRA_EIGRPD_H
 
-#include <zebra.h>
-
-#include "thread.h"
-#include "memory.h"
-#include "linklist.h"
-#include "vty.h"
-#include "keychain.h"
-#include "prefix.h"
-#include "if.h"
-#include "table.h"
-#include "sockunion.h"
-#include "stream.h"
-#include "log.h"
-#include "sockopt.h"
-#include "md5.h"
-#include "sha256.h"
-#include "lib_errors.h"
-#include "filter.h"
+#include "lib/thread.h"
+#include "lib/memory.h"
 
 DECLARE_MGROUP(EIGRPD);
 
@@ -99,9 +83,5 @@ extern struct eigrp *eigrp_get(uint16_t as, vrf_id_t vrf_id);
 extern struct eigrp *eigrp_lookup(vrf_id_t vrf_id);
 
 extern void eigrp_router_id_update(struct eigrp *);
-
-// DVS: fix this
-#include "eigrp_cli.h"
-#include "eigrp_yang.h"
 
 #endif /* _ZEBRA_EIGRPD_H */

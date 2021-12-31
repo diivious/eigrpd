@@ -67,26 +67,11 @@
  * 7- state not changed, usually by receiving not last reply
  */
 
-#include <zebra.h>
-#include <thread.h>
-
-#include "prefix.h"
-#include "table.h"
-#include "memory.h"
-#include "log.h"
-#include "linklist.h"
-#include "vty.h"
-
-#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
-#include "eigrpd/eigrp_interface.h"
+#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
-#include "eigrpd/eigrp_zebra.h"
-#include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_metric.h"
-#include "eigrpd/eigrp_network.h"
-#include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
 

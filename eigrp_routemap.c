@@ -36,18 +36,6 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <zebra.h>
-
-#include "memory.h"
-#include "prefix.h"
-#include "if_rmap.h"
-#include "routemap.h"
-#include "command.h"
-#include "filter.h"
-#include "log.h"
-#include "sockunion.h" /* for inet_aton () */
-#include "plist.h"
-
 #include "eigrpd/eigrpd.h"
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_const.h"

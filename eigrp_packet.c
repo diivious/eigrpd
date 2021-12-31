@@ -25,38 +25,19 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <zebra.h>
-
-#include "thread.h"
-#include "memory.h"
-#include "linklist.h"
-#include "vty.h"
-#include "keychain.h"
-#include "prefix.h"
-#include "if.h"
-#include "table.h"
-#include "sockunion.h"
-#include "stream.h"
-#include "log.h"
-#include "sockopt.h"
-#include "checksum.h"
-#include "md5.h"
-#include "sha256.h"
-#include "lib_errors.h"
-
-#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrpd.h"
+#include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
-#include "eigrpd/eigrp_zebra.h"
-#include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_dump.h"
-#include "eigrpd/eigrp_macros.h"
-#include "eigrpd/eigrp_network.h"
-#include "eigrpd/eigrp_topology.h"
-#include "eigrpd/eigrp_fsm.h"
 #include "eigrpd/eigrp_errors.h"
+
+#include "lib_errors.h"
+#include "lib/keychain.h"
+#include "lib/checksum.h"
+#include "lib/md5.h"
+#include "lib/sha256.h"
 
 DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_PACKET,          "EIGRP Packet");
 DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_PACKET_QUEUE,    "EIGRP Packet Queue");
