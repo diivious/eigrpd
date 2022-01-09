@@ -66,10 +66,4 @@ extern eigrp_interface_t *eigrp_intf_lookup_by_name(struct eigrp *,
 /* Simulate down/up on the interface. */
 extern void eigrp_intf_reset(struct interface *);
 
-/* Static inline functions */
-static inline const char *eigrp_intf_ip_string(eigrp_interface_t *ei)
-{
-	return ei ? inet_ntoa(ei->address.u.prefix4) : "inactive";
-}
-
 #endif /* ZEBRA_EIGRP_INTERFACE_H_ */

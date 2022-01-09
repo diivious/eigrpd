@@ -56,9 +56,9 @@ static inline uint16_t eigrp_tlv_encoder_safe(struct eigrp *eigrp,
 /**
  * initalize neighbor
  */
-static void eigrp_nbr_init(eigrp_neighbor_t *nbr, struct in_addr src)
+static void eigrp_nbr_init(eigrp_neighbor_t *nbr, eigrp_addr_t *src)
 {
-	nbr->src = src;
+	eigrp_addr_copy(&nbr->src, src);
 
 	/* copy over the values passed in by the neighbor */
 	nbr->K1 = EIGRP_K1_DEFAULT;
@@ -75,13 +75,13 @@ static void eigrp_nbr_init(eigrp_neighbor_t *nbr, struct in_addr src)
 
 	//  if (IS_DEBUG_EIGRP_EVENT)
 	//    zlog_debug("NSM[%s:%s]: start", EIGRP_INTF_NAME (nbr->oi),
-	//               inet_ntoa (nbr->router_id));
+	//               eigrp_routerid2string(nbr->router_id));
 }
 
 /**
  * Create a new neighbor structure and initalize it.
  */
-eigrp_neighbor_t *eigrp_nbr_create(eigrp_interface_t *ei, struct ip *iph)
+eigrp_neighbor_t *eigrp_nbr_create(eigrp_interface_t *ei, eigrp_addr_t *src)
 {
 	eigrp_neighbor_t *nbr;
 
@@ -92,22 +92,25 @@ eigrp_neighbor_t *eigrp_nbr_create(eigrp_interface_t *ei, struct ip *iph)
 	nbr->ei = ei;
 
 	/* Set default values. */
-	eigrp_nbr_init(nbr, iph->ip_src);
+	eigrp_nbr_init(nbr, src);
 	eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
-	listnode_add(ei->nbrs, nbr);
 
+	// If this is the 'self' neighbor, then you dont have an interface
+	if (ei) {
+		listnode_add(ei->nbrs, nbr);
+	}
 	return nbr;
 }
 
-eigrp_neighbor_t *eigrp_nbr_lookup(eigrp_interface_t *ei,
-				   struct eigrp_header *eigrph, struct ip *iph)
+eigrp_neighbor_t *eigrp_nbr_lookup(eigrp_interface_t *ei, eigrp_header_t *eigrph,
+				   eigrp_addr_t *src)
 {
 	eigrp_neighbor_t *nbr;
 	struct listnode *node, *nnode;
 
 	for (ALL_LIST_ELEMENTS(ei->nbrs, node, nnode, nbr)) {
-		if (iph->ip_src.s_addr == nbr->src.s_addr) {
-			return nbr;
+	    if (eigrp_addr_same(src, &nbr->src)) {
+		    return nbr;
 		}
 	}
 
@@ -133,7 +136,7 @@ eigrp_neighbor_t *eigrp_nbr_lookup_by_addr(eigrp_interface_t *ei,
 	struct listnode *node, *nnode;
 
 	for (ALL_LIST_ELEMENTS(ei->nbrs, node, nnode, nbr)) {
-		if (addr->s_addr == nbr->src.s_addr) {
+		if (addr->s_addr == nbr->src.ip.v4.s_addr) {
 			return nbr;
 		}
 	}
@@ -165,7 +168,7 @@ eigrp_neighbor_t *eigrp_nbr_lookup_by_addr_process(struct eigrp *eigrp,
 		/* iterate over all neighbors on eigrp interface */
 		for (ALL_LIST_ELEMENTS(ei->nbrs, node2, nnode2, nbr)) {
 			/* compare if neighbor address is same as arg address */
-			if (nbr->src.s_addr == nbr_addr.s_addr) {
+			if (nbr->src.ip.v4.s_addr == nbr_addr.s_addr) {
 				return nbr;
 			}
 		}
@@ -199,7 +202,7 @@ int holddown_timer_expired(struct thread *thread)
 	struct eigrp *eigrp = nbr->ei->eigrp;
 
 	zlog_info("Neighbor %s (%s) is down: holding time expired",
-		  inet_ntoa(nbr->src),
+		  eigrp_topo_addr2string(&nbr->src),
 		  ifindex2ifname(nbr->ei->ifp->ifindex, eigrp->vrf_id));
 	nbr->state = EIGRP_NEIGHBOR_DOWN;
 	eigrp_nbr_delete(nbr);
@@ -331,20 +334,21 @@ void eigrp_nbr_hard_restart(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			    struct vty *vty)
 {
 	zlog_debug("Neighbor %s (%s) is down: manually cleared",
-		   inet_ntoa(nbr->src),
+		   eigrp_topo_addr2string(&nbr->src),
 		   ifindex2ifname(nbr->ei->ifp->ifindex, eigrp->vrf_id));
 	if (vty != NULL) {
 		vty_time_print(vty, 0);
 		vty_out(vty, "Neighbor %s (%s) is down: manually cleared\n",
-			inet_ntoa(nbr->src),
+			eigrp_topo_addr2string(&nbr->src),
 			ifindex2ifname(nbr->ei->ifp->ifindex, eigrp->vrf_id));
 	}
 
 	/* send Hello with Peer Termination TLV */
-	eigrp_hello_send(nbr->ei, EIGRP_HELLO_GRACEFUL_SHUTDOWN_NBR,
-			 &(nbr->src));
+	eigrp_hello_send(nbr->ei, EIGRP_HELLO_GRACEFUL_SHUTDOWN_NBR, &nbr->src);
+
 	/* set neighbor to DOWN */
 	nbr->state = EIGRP_NEIGHBOR_DOWN;
+
 	/* delete neighbor */
 	eigrp_nbr_delete(nbr);
 }

@@ -39,10 +39,8 @@ typedef struct eigrp_neighbor {
 	uint8_t os_rel_minor; // system version - just for show
 
 	/* TLV decoders for this peer - version dependent */
-	uint8_t tlv_rel_major; // eigrp version - tells us what TLV format to
-			       // use
-	uint8_t tlv_rel_minor; // eigrp version - tells us what TLV format to
-			       // use
+	uint8_t tlv_rel_major; // eigrp version - tells us what TLV format to use
+	uint8_t tlv_rel_minor; // eigrp version - tells us what TLV format to use
 
 	eigrp_tlv_decoder_t tlv_decoder;
 	eigrp_tlv_encoder_t tlv_encoder;
@@ -66,7 +64,7 @@ typedef struct eigrp_neighbor {
 	/*If packet is unacknowledged, we try to send it again 16 times*/
 	uint8_t retrans_counter;
 
-	struct in_addr src; /* Neighbor Src address. */
+	eigrp_addr_t src;		/* Neighbor Src address. */
 
 	/* Timer values. */
 	uint16_t v_holddown;
@@ -92,9 +90,9 @@ typedef struct eigrp_neighbor {
 
 
 /* Prototypes */
-extern eigrp_neighbor_t *eigrp_nbr_lookup(eigrp_interface_t *,
-					  struct eigrp_header *, struct ip *);
-extern eigrp_neighbor_t *eigrp_nbr_create(eigrp_interface_t *, struct ip *);
+extern eigrp_neighbor_t *eigrp_nbr_lookup(eigrp_interface_t *, struct eigrp_header *,
+					  eigrp_addr_t *);
+extern eigrp_neighbor_t *eigrp_nbr_create(eigrp_interface_t *, eigrp_addr_t *);
 extern void eigrp_nbr_delete(eigrp_neighbor_t *neigh);
 
 extern int holddown_timer_expired(struct thread *thread);
@@ -115,11 +113,5 @@ extern void eigrp_nbr_hard_restart(struct eigrp *, eigrp_neighbor_t *,
 
 extern int eigrp_nbr_split_horizon_check(eigrp_route_descriptor_t *,
 					 eigrp_interface_t *);
-
-/* Static inline functions */
-static inline const char *eigrp_neigh_ip_string(eigrp_neighbor_t *nbr)
-{
-	return inet_ntoa(nbr->src);
-}
 
 #endif /* _ZEBRA_EIGRP_NEIGHBOR_H */

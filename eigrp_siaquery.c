@@ -29,6 +29,7 @@
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
 
 /* EIGRP SIA-QUERY read function */
@@ -72,44 +73,44 @@ void eigrp_siaquery_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 void eigrp_siaquery_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			 eigrp_prefix_descriptor_t *prefix)
 {
-	eigrp_packet_t *ep;
+	eigrp_packet_t *packet;
 	uint16_t length = EIGRP_HEADER_LEN;
 
-	ep = eigrp_packet_new(EIGRP_PACKET_MTU(nbr->ei->ifp->mtu), nbr);
+	packet = eigrp_packet_new(EIGRP_PACKET_MTU(nbr->ei->ifp->mtu), nbr);
 
 	/* Prepare EIGRP INIT UPDATE header */
-	eigrp_packet_header_init(EIGRP_OPC_SIAQUERY, nbr->ei->eigrp, ep->s, 0,
+	eigrp_packet_header_init(EIGRP_OPC_SIAQUERY, nbr->ei->eigrp, packet->s, 0,
 				 nbr->ei->eigrp->sequence_number, 0);
 
 	// encode Authentication TLV, if needed
 	if ((nbr->ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 	    && (nbr->ei->params.auth_keychain != NULL)) {
-		length += eigrp_add_authTLV_MD5_encode(ep->s, nbr->ei);
+		length += eigrp_add_authTLV_MD5_encode(packet->s, nbr->ei);
 	}
 
-	length += (nbr->tlv_encoder)(eigrp, nbr, ep->s, prefix);
+	length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, prefix);
 
 	if ((nbr->ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 	    && (nbr->ei->params.auth_keychain != NULL)) {
-		eigrp_make_md5_digest(nbr->ei, ep->s, EIGRP_AUTH_UPDATE_FLAG);
+		eigrp_make_md5_digest(nbr->ei, packet->s, EIGRP_AUTH_UPDATE_FLAG);
 	}
 
 	/* EIGRP Checksum */
-	eigrp_packet_checksum(nbr->ei, ep->s, length);
+	eigrp_packet_checksum(nbr->ei, packet->s, length);
 
-	ep->length = length;
-	ep->dst.s_addr = nbr->src.s_addr;
+	packet->length = length;
+	eigrp_addr_copy(&packet->dst, &nbr->src);
 
 	/*This ack number we await from neighbor*/
-	ep->sequence_number = nbr->ei->eigrp->sequence_number;
+	packet->sequence_number = nbr->ei->eigrp->sequence_number;
 
 	if (nbr->state == EIGRP_NEIGHBOR_UP) {
 		/*Put packet to retransmission queue*/
-		eigrp_packet_enqueue(nbr->retrans_queue, ep);
+		eigrp_packet_enqueue(nbr->retrans_queue, packet);
 
 		if (nbr->retrans_queue->count == 1) {
 			eigrp_packet_send_reliably(eigrp, nbr);
 		}
 	} else
-		eigrp_packet_free(ep);
+		eigrp_packet_free(packet);
 }

@@ -30,7 +30,6 @@
 /**
  * Nice type modifers to make code more readable (and maybe portable)
  */
-typedef struct in_addr eigrp_addr_t;
 typedef struct stream eigrp_stream_t;
 
 typedef uint64_t eigrp_bandwidth_t;

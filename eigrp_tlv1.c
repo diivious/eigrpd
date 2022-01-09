@@ -37,6 +37,7 @@
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
 #include "eigrpd/eigrp_topology.h"
+#include "eigrpd/eigrp_fsm.h"
 #include "eigrpd/eigrp_metric.h"
 #include "eigrpd/eigrp_dump.h"
 
@@ -284,9 +285,9 @@ static uint16_t eigrp_tlv1_nexthop_decode(struct eigrp *eigrp,
 
 	// if doing no-nexthop-self, then use the of the source peer
 	if (/*eigrp->no_nextop_self == */ FALSE) {
-		route->nexthop.s_addr = stream_getl(pkt);
+		route->nexthop.ip.v4.s_addr = stream_getl(pkt);
 	} else {
-		route->nexthop.s_addr = 0L;
+		route->nexthop.ip.v4.s_addr = 0L;
 	}
 	return (EIGRP_TLV1_IPV4_NEXTHOP_SIZE);
 }
@@ -294,7 +295,7 @@ static uint16_t eigrp_tlv1_nexthop_decode(struct eigrp *eigrp,
 static uint16_t eigrp_tlv1_nexthop_encode(eigrp_stream_t *pkt,
 					  eigrp_route_descriptor_t *route)
 {
-	stream_putl(pkt, route->nexthop.s_addr);
+	stream_putl(pkt, route->nexthop.ip.v4.s_addr);
 	return (EIGRP_TLV1_IPV4_NEXTHOP_SIZE);
 }
 
@@ -319,7 +320,7 @@ static eigrp_route_descriptor_t *eigrp_tlv1_decoder(struct eigrp *eigrp,
 	if ((length > pktlen) || (length < EIGRP_IPV4_MIN_TLV)) {
 		if (IS_DEBUG_EIGRP_PACKET(0, RECV)) {
 			zlog_debug("EIGRP TLV: Neighbor(%s) corrupt packet",
-				   eigrp_neigh_ip_string(nbr));
+				   eigrp_topo_addr2string(&nbr->src));
 		}
 
 	} else {
@@ -328,8 +329,7 @@ static eigrp_route_descriptor_t *eigrp_tlv1_decoder(struct eigrp *eigrp,
 	}
 
 	if (route) {
-		route->type =
-			(type == EIGRP_TLV_IPv4_EXT) ? EIGRP_EXT : EIGRP_INT;
+		route->type = (type == EIGRP_TLV_IPv4_EXT) ? EIGRP_EXT : EIGRP_INT;
 		route->afi = AF_INET;
 
 		/* decode nexthop */
@@ -369,7 +369,7 @@ static eigrp_route_descriptor_t *eigrp_tlv1_decoder(struct eigrp *eigrp,
 			if (IS_DEBUG_EIGRP_PACKET(0, RECV)) {
 				zlog_debug(
 					"EIGRP TLV: Neighbor(%s): invalid TLV_type(%u)",
-					eigrp_neigh_ip_string(nbr), type);
+					eigrp_topo_addr2string(&nbr->src), type);
 			}
 			break;
 		}
@@ -415,7 +415,7 @@ static uint16_t eigrp_tlv1_encoder(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 	default:
 		if (IS_DEBUG_EIGRP_PACKET(0, RECV)) {
 			zlog_debug("Neighbor(%s): invalid TLV_type(%u)",
-				   eigrp_neigh_ip_string(nbr), type);
+				   eigrp_topo_addr2string(&nbr->src), type);
 		}
 		break;
 	}

@@ -98,7 +98,7 @@ void eigrp_query_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 
 void eigrp_query_send(struct eigrp *eigrp, eigrp_interface_t *ei)
 {
-	eigrp_packet_t *ep = NULL;
+	eigrp_packet_t *packet = NULL;
 	eigrp_neighbor_t *nbr;
 
 	uint16_t length = EIGRP_HEADER_LEN;
@@ -114,23 +114,23 @@ void eigrp_query_send(struct eigrp *eigrp, eigrp_interface_t *ei)
 			continue;
 
 		if (new_packet) {
-			ep = eigrp_packet_new(eigrp_mtu, NULL);
+			packet = eigrp_packet_new(eigrp_mtu, NULL);
 
 			/* Prepare EIGRP INIT UPDATE header */
 			eigrp_packet_header_init(EIGRP_OPC_QUERY, ei->eigrp,
-						 ep->s, 0,
+						 packet->s, 0,
 						 ei->eigrp->sequence_number, 0);
 
 			// encode Authentication TLV, if needed
 			if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 			    && (ei->params.auth_keychain != NULL)) {
 				length +=
-					eigrp_add_authTLV_MD5_encode(ep->s, ei);
+					eigrp_add_authTLV_MD5_encode(packet->s, ei);
 			}
 			new_packet = false;
 		}
 
-		length += (nbr->tlv_encoder)(eigrp, nbr, ep->s, prefix);
+		length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, prefix);
 		has_tlv = true;
 		for (ALL_LIST_ELEMENTS(ei->nbrs, node2, nnode2, nbr)) {
 			if (nbr->state == EIGRP_NEIGHBOR_UP)
@@ -140,16 +140,16 @@ void eigrp_query_send(struct eigrp *eigrp, eigrp_interface_t *ei)
 		if (length + EIGRP_TLV_MAX_IPV4_BYTE > eigrp_mtu) {
 			if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 			    && ei->params.auth_keychain != NULL) {
-				eigrp_make_md5_digest(ei, ep->s,
+				eigrp_make_md5_digest(ei, packet->s,
 						      EIGRP_AUTH_UPDATE_FLAG);
 			}
 
-			eigrp_packet_checksum(ei, ep->s, length);
-			ep->length = length;
+			eigrp_packet_checksum(ei, packet->s, length);
+			packet->length = length;
 
-			ep->dst.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
+			packet->dst.ip.v4.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
 
-			ep->sequence_number = ei->eigrp->sequence_number;
+			packet->sequence_number = ei->eigrp->sequence_number;
 			ei->eigrp->sequence_number++;
 
 			for (ALL_LIST_ELEMENTS(ei->nbrs, node2, nnode2, nbr)) {
@@ -158,7 +158,7 @@ void eigrp_query_send(struct eigrp *eigrp, eigrp_interface_t *ei)
 				if (nbr->state != EIGRP_NEIGHBOR_UP)
 					continue;
 
-				dup = eigrp_packet_duplicate(ep, nbr);
+				dup = eigrp_packet_duplicate(packet, nbr);
 				/*Put packet to retransmission queue*/
 				eigrp_packet_enqueue(nbr->retrans_queue, dup);
 
@@ -168,8 +168,8 @@ void eigrp_query_send(struct eigrp *eigrp, eigrp_interface_t *ei)
 
 			has_tlv = false;
 			length = 0;
-			eigrp_packet_free(ep);
-			ep = NULL;
+			eigrp_packet_free(packet);
+			packet = NULL;
 			new_packet = true;
 		}
 	}
@@ -179,17 +179,17 @@ void eigrp_query_send(struct eigrp *eigrp, eigrp_interface_t *ei)
 
 	if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 	    && ei->params.auth_keychain != NULL)
-		eigrp_make_md5_digest(ei, ep->s, EIGRP_AUTH_UPDATE_FLAG);
+		eigrp_make_md5_digest(ei, packet->s, EIGRP_AUTH_UPDATE_FLAG);
 
 
 	/* EIGRP Checksum */
-	eigrp_packet_checksum(ei, ep->s, length);
+	eigrp_packet_checksum(ei, packet->s, length);
 
-	ep->length = length;
-	ep->dst.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
+	packet->length = length;
+	packet->dst.ip.v4.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
 
 	/*This ack number we await from neighbor*/
-	ep->sequence_number = ei->eigrp->sequence_number;
+	packet->sequence_number = ei->eigrp->sequence_number;
 	ei->eigrp->sequence_number++;
 
 	for (ALL_LIST_ELEMENTS(ei->nbrs, node2, nnode2, nbr)) {
@@ -198,7 +198,7 @@ void eigrp_query_send(struct eigrp *eigrp, eigrp_interface_t *ei)
 		if (nbr->state != EIGRP_NEIGHBOR_UP)
 			continue;
 
-		dup = eigrp_packet_duplicate(ep, nbr);
+		dup = eigrp_packet_duplicate(packet, nbr);
 		/*Put packet to retransmission queue*/
 		eigrp_packet_enqueue(nbr->retrans_queue, dup);
 
@@ -206,5 +206,5 @@ void eigrp_query_send(struct eigrp *eigrp, eigrp_interface_t *ei)
 			eigrp_packet_send_reliably(eigrp, nbr);
 	}
 
-	eigrp_packet_free(ep);
+	eigrp_packet_free(packet);
 }

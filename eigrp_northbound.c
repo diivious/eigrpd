@@ -90,8 +90,7 @@ static int eigrpd_instance_create(struct nb_cb_create_args *args)
 		else
 			vrfid = VRF_DEFAULT;
 
-		eigrp = eigrp_get(yang_dnode_get_uint16(args->dnode, "./asn"),
-				  vrfid);
+		eigrp = eigrp_get(yang_dnode_get_uint16(args->dnode, "./asn"), vrfid);
 		args->resource->ptr = eigrp;
 		break;
 	case NB_EV_ABORT:

@@ -38,6 +38,14 @@
 #include "eigrpd/eigrp_types.h"
 #include "eigrpd/eigrp_macros.h"
 
+typedef struct eigrp_addr {
+    uint8_t family;
+    union {
+	struct in_addr  v4;
+	struct in6_addr v6;
+    } ip;
+} eigrp_addr_t;
+    
 typedef struct eigrp_metrics {
 	eigrp_delay_t delay;
 	eigrp_bandwidth_t bandwidth;
@@ -257,7 +265,7 @@ typedef struct eigrp_packet {
 	struct stream *s;
 
 	/* IP destination address. */
-	struct in_addr dst;
+	eigrp_addr_t dst;
 
 	/*Packet retransmission thread*/
 	struct thread *t_retrans_timer;
@@ -286,6 +294,7 @@ struct eigrp_header {
 
 } __attribute__((packed));
 
+typedef struct eigrp_header eigrp_header_t;
 
 /**
  * Generic TLV type used for packet decoding.
@@ -453,23 +462,5 @@ typedef struct eigrp_route_descriptor {
 } eigrp_route_descriptor_t;
 
 //---------------------------------------------------------------------------------------------------------------------------------------------
-typedef enum {
-	EIGRP_CONNECTED,
-	EIGRP_INT,
-	EIGRP_EXT,
-} msg_data_t;
-
-/* EIGRP Finite State Machine */
-
-typedef struct eigrp_fsm_action_message {
-	uint8_t packet_type;	      // UPDATE, QUERY, SIAQUERY, SIAREPLY
-	struct eigrp *eigrp;	      // which thread sent mesg
-	eigrp_neighbor_t *adv_router; // advertising neighbor
-	eigrp_route_descriptor_t *route;
-	eigrp_prefix_descriptor_t *prefix;
-	msg_data_t data_type; // internal or external tlv type
-	eigrp_metrics_t metrics;
-	enum metric_change change;
-} eigrp_fsm_action_message_t;
 
 #endif /* _ZEBRA_EIGRP_STRUCTURES_H_ */

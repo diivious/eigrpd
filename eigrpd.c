@@ -90,7 +90,7 @@ void eigrp_router_id_update(struct eigrp *eigrp)
 	if (router_id_old.s_addr != router_id.s_addr) {
 		//      if (IS_DEBUG_EIGRP_EVENT)
 		//        zlog_debug("Router-ID[NEW:%s]: Update",
-		//        inet_ntoa(eigrp->router_id));
+		//        eigrp_topo_addr2string(eigrp->router_id));
 
 		/* update eigrp_interface's */
 		FOR_ALL_INTERFACES (vrf, ifp)
@@ -155,7 +155,13 @@ static struct eigrp *eigrp_new(uint16_t as, vrf_id_t vrf_id)
 			&eigrp->t_read);
 	eigrp->oi_write_q = list_new();
 
-	eigrp->neighbor_self = eigrp_nbr_create(NULL, INADDR_ANY);
+	// DVS: get it into a workable form, but this is an ugly hack
+	//      cleaning these up as I get ipv6 fixed
+	eigrp_addr_t src;
+	src.family = AF_INET;
+	src.ip.v4.s_addr = INADDR_ANY;
+
+	eigrp->neighbor_self = eigrp_nbr_create(NULL, &src);
 	eigrp->topology_table = route_table_init();
 	eigrp->variance = EIGRP_VARIANCE_DEFAULT;
 	eigrp->max_paths = EIGRP_MAX_PATHS_DEFAULT;

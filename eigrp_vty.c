@@ -34,6 +34,7 @@
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_dump.h"
@@ -253,13 +254,13 @@ DEFPY(clear_ip_eigrp_neighbors, clear_ip_eigrp_neighbors_cmd,
 			if (nbr->state != EIGRP_NEIGHBOR_DOWN) {
 				zlog_debug(
 					"Neighbor %s (%s) is down: manually cleared",
-					inet_ntoa(nbr->src),
+					eigrp_topo_addr2string(&nbr->src),
 					ifindex2ifname(nbr->ei->ifp->ifindex,
 						       eigrp->vrf_id));
 				vty_time_print(vty, 0);
 				vty_out(vty,
 					"Neighbor %s (%s) is down: manually cleared\n",
-					inet_ntoa(nbr->src),
+					eigrp_topo_addr2string(&nbr->src),
 					ifindex2ifname(nbr->ei->ifp->ifindex,
 						       eigrp->vrf_id));
 
@@ -309,13 +310,13 @@ DEFPY(clear_ip_eigrp_neighbors_int, clear_ip_eigrp_neighbors_int_cmd,
 	for (ALL_LIST_ELEMENTS(ei->nbrs, node2, nnode2, nbr)) {
 		if (nbr->state != EIGRP_NEIGHBOR_DOWN) {
 			zlog_debug("Neighbor %s (%s) is down: manually cleared",
-				   inet_ntoa(nbr->src),
+				   eigrp_topo_addr2string(&nbr->src),
 				   ifindex2ifname(nbr->ei->ifp->ifindex,
 						  eigrp->vrf_id));
 			vty_time_print(vty, 0);
 			vty_out(vty,
 				"Neighbor %s (%s) is down: manually cleared\n",
-				inet_ntoa(nbr->src),
+				eigrp_topo_addr2string(&nbr->src),
 				ifindex2ifname(nbr->ei->ifp->ifindex,
 					       eigrp->vrf_id));
 

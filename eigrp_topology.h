@@ -79,10 +79,39 @@ extern void eigrp_update_topology_table_prefix(struct eigrp *eigrp,
 					       eigrp_prefix_descriptor_t *pe);
 
 /* Static inline functions */
+/* IPv4/IPv6 prefix and address management functions
+ * might move to eigrp_addr.h if this grows
+ */
 static inline const char *
-eigrp_topology_ip_string(eigrp_prefix_descriptor_t *tn)
+eigrp_topo_prefix2string(struct prefix *network)
 {
-	return inet_ntoa(tn->destination->u.prefix4);
+    return inet_ntoa(network->u.prefix4);
+}
+
+static inline const char *
+eigrp_topo_addr2string(eigrp_addr_t *addr)
+{
+    return inet_ntoa(addr->ip.v4);
+}
+
+static inline const char *
+eigrp_routerid2string(struct in_addr ipv4)
+{
+    return inet_ntoa(ipv4);
+}
+
+static inline
+void eigrp_addr_copy (eigrp_addr_t *dst, eigrp_addr_t *src)
+{
+    memcpy(dst, src, sizeof(eigrp_addr_t));
+}
+
+static inline
+int eigrp_addr_same (eigrp_addr_t *dst, eigrp_addr_t *src)
+{
+    if (memcmp(dst, src, sizeof(eigrp_addr_t)) == 0)
+	return TRUE;
+    return FALSE;
 }
 
 #endif

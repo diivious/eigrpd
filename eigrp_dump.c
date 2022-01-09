@@ -98,7 +98,7 @@ static int eigrp_neighbor_packet_queue_sum(eigrp_interface_t *ei)
  */
 void eigrp_ip_header_dump(struct ip *iph)
 {
-	/* IP Header dump. */
+	/* IPv4 Header dump. */
 	zlog_debug("ip_v %u", iph->ip_v);
 	zlog_debug("ip_hl %u", iph->ip_hl);
 	zlog_debug("ip_tos %u", iph->ip_tos);
@@ -182,7 +182,7 @@ void show_ip_eigrp_neighbor_sub(struct vty *vty, eigrp_neighbor_t *nbr,
 				int detail)
 {
 
-	vty_out(vty, "%-3u %-17s %-21s", 0, eigrp_neigh_ip_string(nbr),
+	vty_out(vty, "%-3u %-17s %-21s", 0, eigrp_topo_addr2string(&nbr->src),
 		EIGRP_INTF_NAME(nbr->ei));
 	if (nbr->t_holddown)
 		vty_out(vty, "%-7lu",
@@ -210,7 +210,7 @@ void show_ip_eigrp_neighbor_sub(struct vty *vty, eigrp_neighbor_t *nbr,
 void show_ip_eigrp_topology_header(struct vty *vty, struct eigrp *eigrp)
 {
 	vty_out(vty, "\nEIGRP Topology Table for AS(%d)/ID(%s)\n\n", eigrp->AS,
-		inet_ntoa(eigrp->router_id));
+		eigrp_routerid2string(eigrp->router_id));
 	vty_out(vty,
 		"Codes: P - Passive, A - Active, U - Update, Q - Query, "
 		"R - Reply\n       r - reply Status, s - sia Status\n\n");
@@ -250,7 +250,7 @@ void show_ip_eigrp_route_descriptor(struct vty *vty, struct eigrp *eigrp,
 			EIGRP_INTF_NAME(te->ei));
 	else {
 		vty_out(vty, "%-7s%s%s (%u/%u), %s\n", " ", "via ",
-			inet_ntoa(te->adv_router->src), te->distance,
+			eigrp_topo_addr2string(&te->adv_router->src), te->distance,
 			te->reported_distance, EIGRP_INTF_NAME(te->ei));
 	}
 }

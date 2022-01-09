@@ -38,6 +38,23 @@
 /* Zebra structure to hold current status. */
 struct zclient *zclient = NULL;
 
+/* eigrpd privileges */
+zebra_capabilities_t _caps_p[] = {
+	ZCAP_NET_RAW, ZCAP_BIND, ZCAP_NET_ADMIN,
+};
+
+struct zebra_privs_t eigrpd_privs = {
+#if defined(FRR_USER) && defined(FRR_GROUP)
+	.user = FRR_USER,
+	.group = FRR_GROUP,
+#endif
+#if defined(VTY_GROUP)
+	.vty_group = VTY_GROUP,
+#endif
+	.caps_p = _caps_p,
+	.cap_num_p = array_size(_caps_p),
+	.cap_num_i = 0};
+
 /* For registering threads. */
 extern struct thread_master *master;
 struct in_addr router_id_zebra;
@@ -187,8 +204,8 @@ void eigrp_zebra_route_add(struct eigrp *eigrp, struct prefix *p,
 			break;
 		api_nh = &api.nexthops[count];
 		api_nh->vrf_id = eigrp->vrf_id;
-		if (te->adv_router->src.s_addr) {
-			api_nh->gate.ipv4 = te->adv_router->src;
+		if (te->adv_router->src.ip.v4.s_addr) {
+			api_nh->gate.ipv4 = te->adv_router->src.ip.v4;
 			api_nh->type = NEXTHOP_TYPE_IPV4_IFINDEX;
 		} else
 			api_nh->type = NEXTHOP_TYPE_IFINDEX;

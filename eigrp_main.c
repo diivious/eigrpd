@@ -51,23 +51,6 @@
 #include <lib/version.h>
 #include "lib/keychain.h"
 
-/* eigprd privileges */
-zebra_capabilities_t _caps_p[] = {
-	ZCAP_NET_RAW, ZCAP_BIND, ZCAP_NET_ADMIN,
-};
-
-struct zebra_privs_t eigrpd_privs = {
-#if defined(FRR_USER) && defined(FRR_GROUP)
-	.user = FRR_USER,
-	.group = FRR_GROUP,
-#endif
-#if defined(VTY_GROUP)
-	.vty_group = VTY_GROUP,
-#endif
-	.caps_p = _caps_p,
-	.cap_num_p = array_size(_caps_p),
-	.cap_num_i = 0};
-
 /* EIGRPd options. */
 struct option longopts[] = {{0}};
 

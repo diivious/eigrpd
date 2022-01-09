@@ -33,44 +33,45 @@
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
 
 void eigrp_reply_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 		      eigrp_prefix_descriptor_t *prefix)
 {
 	eigrp_interface_t *ei = nbr->ei;
-	eigrp_packet_t *ep = NULL;
+	eigrp_packet_t *packet = NULL;
 	uint16_t length = EIGRP_HEADER_LEN;
 
 	/* Prepare EIGRP INIT UPDATE header */
-	ep = eigrp_packet_new(EIGRP_PACKET_MTU(ei->ifp->mtu), nbr);
-	eigrp_packet_header_init(EIGRP_OPC_REPLY, eigrp, ep->s, 0,
+	packet = eigrp_packet_new(EIGRP_PACKET_MTU(ei->ifp->mtu), nbr);
+	eigrp_packet_header_init(EIGRP_OPC_REPLY, eigrp, packet->s, 0,
 				 eigrp->sequence_number, 0);
 
 	// encode Authentication TLV, if needed
 	if (ei->params.auth_type == EIGRP_AUTH_TYPE_MD5
 	    && (ei->params.auth_keychain != NULL)) {
-		length += eigrp_add_authTLV_MD5_encode(ep->s, ei);
+		length += eigrp_add_authTLV_MD5_encode(packet->s, ei);
 	}
 
-	length += (nbr->tlv_encoder)(eigrp, nbr, ep->s, prefix);
+	length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, prefix);
 
 	if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 	    && (ei->params.auth_keychain != NULL)) {
-		eigrp_make_md5_digest(ei, ep->s, EIGRP_AUTH_UPDATE_FLAG);
+		eigrp_make_md5_digest(ei, packet->s, EIGRP_AUTH_UPDATE_FLAG);
 	}
 
 	/* EIGRP Checksum */
-	eigrp_packet_checksum(ei, ep->s, length);
+	eigrp_packet_checksum(ei, packet->s, length);
 
-	ep->length = length;
-	ep->dst.s_addr = nbr->src.s_addr;
+	packet->length = length;
+	eigrp_addr_copy(&packet->dst, &nbr->src);
 
 	/*This ack number we await from neighbor*/
-	ep->sequence_number = eigrp->sequence_number;
+	packet->sequence_number = eigrp->sequence_number;
 
 	/*Put packet to retransmission queue*/
-	eigrp_packet_enqueue(nbr->retrans_queue, ep);
+	eigrp_packet_enqueue(nbr->retrans_queue, packet);
 
 	if (nbr->retrans_queue->count == 1) {
 		eigrp_packet_send_reliably(eigrp, nbr);
