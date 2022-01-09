@@ -240,6 +240,9 @@ static void eigrp_sw_version_decode(eigrp_neighbor_t *nbr,
 	/* quick check to see if we need to send V1 and V2 TLVs */
 	ei->version.mixed = (ei->version.v1 && ei->version.v2);
 
+	// DVS: Temp until I code V2 packet processor
+	eigrp_tlv1_init(nbr);
+
 	return;
 }
 

@@ -193,33 +193,28 @@ typedef struct eigrp_intf_stats {
 
 /*EIGRP interface structure*/
 typedef struct eigrp_interface {
-	eigrp_intf_params_t params;
-
-	/*multicast group refcnts */
-	bool member_allrouters;
 
 	/* This interface's parent eigrp instance. */
 	struct eigrp *eigrp;
 
-	/* Interface data from zebra. */
-	struct interface *ifp;
-
-	/* Packet send buffer. */
-	eigrp_packet_queue_t *obuf; /* Output queue */
-
-	/* To which multicast groups do we currently belong? */
+	/* Zebra Interface Properties */
+	struct interface *ifp;	//Interface data from zebra
+	uint8_t type;		// P2P, LOOP, BCAST
+	struct prefix address;	// Interface prefix
 	uint32_t curr_bandwidth;
 	uint32_t curr_mtu;
 
-	uint8_t multicast_memberships;
+	/* Multicat Properties */
+	bool    member_allrouters;	// multicast group refcnts
+	uint8_t multicast_memberships;	//  multicast groups we belong
+
+	/* EIGRP Interface Properties */
+	eigrp_intf_params_t params;
 	struct {
 		bool mixed;
 		uint8_t v1;
 		uint8_t v2;
 	} version;
-
-	/* EIGRP Network Type. */
-	uint8_t type;
 
 	/* Neighbor information. */
 	struct list *nbrs; /* EIGRP Neighbor List */
@@ -228,14 +223,13 @@ typedef struct eigrp_interface {
 	struct thread *t_hello;	     /* timer */
 	struct thread *t_distribute; /* timer for distribute list */
 
+	/* Packet send buffer. */
+	eigrp_packet_queue_t *obuf; /* Output queue */
 	int on_write_q;
+	uint32_t crypt_seqnum; /* Cryptographic Sequence Number */
 
 	/* Statistics fields. */
 	eigrp_intf_stats_t stats; // Statistics fields
-
-	uint32_t crypt_seqnum; /* Cryptographic Sequence Number */
-
-	struct prefix address; /* Interface prefix */
 
 	/* Access-list. */
 	struct access_list *list[EIGRP_FILTER_MAX];

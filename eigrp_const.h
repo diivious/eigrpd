@@ -272,26 +272,25 @@ enum eigrp_fsm_events {
  * TLV type definitions.  Generic (protocol-independent) TLV types are
  * defined here.  Protocol-specific ones are defined elsewhere.
  */
-#define EIGRP_TLV_PARAMETER                                                    \
-	(EIGRP_TLV_GENERAL | 0x0001) /*!< eigrp parameters */
-#define EIGRP_TLV_PARAMETER_LEN (12U)
-#define EIGRP_TLV_AUTH (EIGRP_TLV_GENERAL | 0x0002) /*!< authentication */
-#define EIGRP_TLV_SEQ (EIGRP_TLV_GENERAL | 0x0003)  /*!< sequenced packet */
-#define EIGRP_TLV_SEQ_BASE_LEN (5U)
-#define EIGRP_TLV_SW_VERSION                                                   \
-	(EIGRP_TLV_GENERAL | 0x0004) /*!< software version */
-#define EIGRP_TLV_SW_VERSION_LEN (8U)
-#define EIGRP_TLV_NEXT_MCAST_SEQ                                               \
-	(EIGRP_TLV_GENERAL | 0x0005) /*!< sequence number */
-#define EIGRP_TLV_PEER_TERMINATION                                             \
-	(EIGRP_TLV_GENERAL | 0x0007) /*!< peer termination */
-#define EIGRP_TLV_PEER_TERMINATION_LEN (9U)
-#define EIGRP_TLV_PEER_TIDLIST                                                 \
-	(EIGRP_TLV_GENERAL | 0x0008) /*!< peer sub-topology list */
+#define EIGRP_TLV_PARAMETER		(EIGRP_TLV_GENERAL | 0x0001) /*!< eigrp parameters */
+#define EIGRP_TLV_PARAMETER_LEN		(12U)
 
-/* Older cisco routers send TIDLIST value wrong, adding for backwards
- * compatibility */
-#define EIGRP_TLV_PEER_MTRLIST (EIGRP_TLV_GENERAL | 0x00f5)
+#define EIGRP_TLV_AUTH			(EIGRP_TLV_GENERAL | 0x0002) /*!< authentication */
+#define EIGRP_TLV_SEQ			(EIGRP_TLV_GENERAL | 0x0003)  /*!< sequenced packet */
+#define EIGRP_TLV_SEQ_BASE_LEN		(5U)
+
+#define EIGRP_TLV_SW_VERSION		(EIGRP_TLV_GENERAL | 0x0004) /*!< software version */
+#define EIGRP_TLV_SW_VERSION_LEN	(8U)
+
+#define EIGRP_TLV_NEXT_MCAST_SEQ	(EIGRP_TLV_GENERAL | 0x0005) /*!< sequence number */
+#define EIGRP_TLV_PEER_TERMINATION	(EIGRP_TLV_GENERAL | 0x0007) /*!< peer termination */
+#define EIGRP_TLV_PEER_TERMINATION_LEN	(9U)
+
+#define EIGRP_TLV_PEER_TIDLIST		(EIGRP_TLV_GENERAL | 0x0008) /*!< peer sub-topology list */
+
+/* Older cisco routers send TIDLIST value wrong,
+ * adding for backwards compatibility */
+#define EIGRP_TLV_PEER_MTRLIST		(EIGRP_TLV_GENERAL | 0x00f5)
 
 /**
  * Route Based TLVs
