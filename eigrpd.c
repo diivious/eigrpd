@@ -158,7 +158,7 @@ static struct eigrp *eigrp_new(uint16_t as, vrf_id_t vrf_id)
 	// DVS: get it into a workable form, but this is an ugly hack
 	//      cleaning these up as I get ipv6 fixed
 	eigrp_addr_t src;
-	src.family = AF_INET;
+	src.afi = AF_INET;
 	src.ip.v4.s_addr = INADDR_ANY;
 
 	eigrp->neighbor_self = eigrp_nbr_create(NULL, &src);

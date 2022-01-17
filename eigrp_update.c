@@ -155,7 +155,6 @@ void eigrp_update_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 	eigrp_route_descriptor_t *route;
 	uint32_t flags;
 	uint8_t same;
-	struct prefix dest_addr;
 	uint8_t graceful_restart;
 	uint8_t graceful_restart_final;
 	struct list *nbr_prefixes = NULL;
@@ -183,8 +182,7 @@ void eigrp_update_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			eigrp_topo_addr2string(&nbr->src), nbr->recv_sequence_number, flags);
 
 
-	if ((flags == (EIGRP_INIT_FLAG + EIGRP_RS_FLAG + EIGRP_EOT_FLAG))
-	    && (!same)) {
+	if ((flags == (EIGRP_INIT_FLAG + EIGRP_RS_FLAG + EIGRP_EOT_FLAG)) && (!same)) {
 		/* Graceful restart Update received with all routes */
 		zlog_info("Neighbor %s (%s) is resync: peer graceful-restart",
 			  eigrp_topo_addr2string(&nbr->src),
@@ -263,23 +261,19 @@ void eigrp_update_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 	while (pkt->endp > pkt->getp) {
 		route = (nbr->tlv_decoder)(eigrp, nbr, pkt, length);
 
-		// should hsve got route off the packet, but one never knows
+		// should have got route off the packet, but one never knows
 		if (route) {
-
-			eigrp_prefix_descriptor_t *dest =
-				eigrp_topology_table_lookup_ipv4(
-					eigrp->topology_table, &dest_addr);
+			prefix = eigrp_topology_table_lookup_ipv4(eigrp->topology_table,
+								&route->dest);
 			/*if exists it comes to DUAL*/
-			if (dest != NULL) {
+			if (prefix != NULL) {
 				/* remove received prefix from neighbor prefix
 				 * list if in GR */
 				if (graceful_restart)
-					remove_received_prefix_gr(nbr_prefixes,
-								  dest);
+					remove_received_prefix_gr(nbr_prefixes, prefix);
 
 				struct eigrp_fsm_action_message msg;
-				ne = eigrp_prefix_descriptor_lookup(
-					dest->entries, nbr);
+				ne = eigrp_prefix_descriptor_lookup(prefix->entries, nbr);
 
 				msg.packet_type = EIGRP_OPC_UPDATE;
 				msg.eigrp = eigrp;
@@ -287,7 +281,7 @@ void eigrp_update_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 				msg.adv_router = nbr;
 				msg.metrics = route->metric;
 				msg.route = ne;
-				msg.prefix = dest;
+				msg.prefix = prefix;
 				eigrp_fsm_event(&msg);
 
 			} else {
@@ -296,7 +290,7 @@ void eigrp_update_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 				prefix->serno = eigrp->serno;
 				prefix->destination =
 					(struct prefix *)prefix_ipv4_new();
-				prefix_copy(prefix->destination, &dest_addr);
+				prefix_copy(prefix->destination, &route->dest);
 				prefix->af = AF_INET;
 				prefix->state = EIGRP_FSM_STATE_PASSIVE;
 				prefix->nt = EIGRP_TOPOLOGY_TYPE_REMOTE;
@@ -305,21 +299,16 @@ void eigrp_update_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 				ne->ei = ei;
 				ne->adv_router = nbr;
 				ne->reported_metric = prefix->reported_metric;
-				ne->reported_distance = eigrp_calculate_metrics(
-					eigrp, prefix->reported_metric);
+				ne->reported_distance = eigrp_calculate_metrics(eigrp, prefix->reported_metric);
 				/*
 				 * Filtering
 				 */
-				if (eigrp_update_prefix_apply(eigrp, ei,
-							      EIGRP_FILTER_IN,
-							      &dest_addr))
-					ne->reported_metric.delay =
-						EIGRP_MAX_METRIC;
+				if (eigrp_update_prefix_apply(eigrp, ei, EIGRP_FILTER_IN,
+							      &route->dest))
+					ne->reported_metric.delay = EIGRP_MAX_METRIC;
 
-				ne->distance = eigrp_calculate_total_metrics(
-					eigrp, ne);
-				prefix->fdistance = prefix->distance =
-					prefix->rdistance = ne->distance;
+				ne->distance = eigrp_calculate_total_metrics(eigrp, ne);
+				prefix->fdistance = prefix->distance = prefix->rdistance = ne->distance;
 				ne->prefix = prefix;
 				ne->flags =
 					EIGRP_ROUTE_DESCRIPTOR_SUCCESSOR_FLAG;

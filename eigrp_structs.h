@@ -39,7 +39,7 @@
 #include "eigrpd/eigrp_macros.h"
 
 typedef struct eigrp_addr {
-    uint8_t family;
+    uint8_t afi;		// ipv4 or ipv6
     union {
 	struct in_addr  v4;
 	struct in6_addr v6;
@@ -435,17 +435,17 @@ typedef struct eigrp_prefix_descriptor {
 /* EIGRP Topology table record structure */
 typedef struct eigrp_route_descriptor {
 	uint16_t type;
-	uint16_t afi; // ipv4 or ipv6
+	struct prefix dest;			// destination address
+	eigrp_addr_t nexthop;			// address of advertised by peer
 
-	eigrp_prefix_descriptor_t *prefix; // prefix this route is part of
-	eigrp_neighbor_t *adv_router;	   // peer who sent me the route
-	eigrp_addr_t nexthop;		   // ip address as advertised by peer
+	eigrp_prefix_descriptor_t *prefix;	// prefix this route is part of
+	eigrp_neighbor_t *adv_router;		// peer who sent me the route
 
-	uint32_t reported_distance; // distance reported by neighbor
-	uint32_t distance;	    // reported distance + link cost to neighbor
+	eigrp_metrics_t reported_metric;	// neighbors vector metrics
+	uint32_t reported_distance;		// neighbors distance (RD)
 
-	eigrp_metrics_t reported_metric;
-	eigrp_metrics_t total_metric;
+	eigrp_metrics_t total_metric;		// calculated vector metrics
+	uint32_t distance;		// calculatd distance (RD + link cost)
 
 	eigrp_metrics_t metric;
 	eigrp_extdata_t extdata;

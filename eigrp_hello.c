@@ -87,13 +87,14 @@ int eigrp_hello_timer(struct thread *thread)
 
 static bool eigrp_hello_k_same(struct eigrp *eigrp, eigrp_neighbor_t *nbr)
 {
-	if ((eigrp->k_values[0] == nbr->K1) && (eigrp->k_values[1] == nbr->K2)
-	    && (eigrp->k_values[2] == nbr->K3)
-	    && (eigrp->k_values[3] == nbr->K4)
-	    && (eigrp->k_values[4] == nbr->K5)) {
-		return FALSE;
+	if ((eigrp->k_values[0] == nbr->K1) &&
+	    (eigrp->k_values[1] == nbr->K2) &&
+	    (eigrp->k_values[2] == nbr->K3) &&
+	    (eigrp->k_values[3] == nbr->K4) &&
+	    (eigrp->k_values[4] == nbr->K5)) {
+		return TRUE;
 	}
-	return TRUE;
+	return FALSE;
 }
 
 static void eigrp_hello_k_update(eigrp_neighbor_t *nbr,
@@ -153,7 +154,6 @@ eigrp_hello_parameter_decode(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			//     if(ntohl(nbr->ei->address->u.prefix4.s_addr) >
 			//     ntohl(nbr->src.s_addr))
 			eigrp_update_send_init(eigrp, nbr);
-
 			eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_PENDING);
 		}
 	} else {

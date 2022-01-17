@@ -543,11 +543,11 @@ int eigrp_packet_read(struct thread *thread)
 		length = (iph->ip_len) - 20U;
 		// DVS: get it into a workable form, but this is an ugly hack
 		//      cleaning these up as I get ipv6 fixed
-		src.family = AF_INET;
+		src.afi = AF_INET;
 		src.ip.v4 = iph->ip_src;
 	} else {
 	    // DVS: your now broken...
-	    src.family = AF_INET6;
+	    src.afi = AF_INET6;
 	    zlog_debug("IPv6: Neighbor not supported");
 	    return -1;
 	}

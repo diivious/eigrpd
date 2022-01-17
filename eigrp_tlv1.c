@@ -184,16 +184,17 @@ static uint16_t eigrp_tlv1_metric_encode(eigrp_stream_t *pkt,
 }
 
 static uint16_t eigrp_tlv1_addr_decode(eigrp_stream_t *pkt,
-				       eigrp_route_descriptor_t *route)
+				       struct prefix *dest)
 {
-	eigrp_prefix_descriptor_t *prefix = route->prefix;
-	struct prefix *dest = prefix->destination;
-	uint16_t prefixlen;
 	unsigned char prefixpart[4];
 
+
+	// DVS: wont work for v6
+	dest->family = AF_INET;
 	dest->prefixlen = stream_getc(pkt);
-	prefixlen = (dest->prefixlen + 7) / 8;
-	switch (prefixlen) {
+
+	dest->prefixlen = (dest->prefixlen + 7) / 8;
+	switch (dest->prefixlen) {
 	case 1:
 		prefixpart[0] = stream_getc(pkt);
 		prefixpart[1] = 0;
@@ -224,14 +225,14 @@ static uint16_t eigrp_tlv1_addr_decode(eigrp_stream_t *pkt,
 
 	default:
 		zlog_err("%s: Unexpected prefix length: %d",
-			 __PRETTY_FUNCTION__, prefixlen);
+			 __PRETTY_FUNCTION__, dest->prefixlen);
 		return 0;
 	}
 
 	dest->u.prefix4.s_addr = ((prefixpart[3] << 24) | (prefixpart[2] << 16)
 				  | (prefixpart[1] << 8) | (prefixpart[0]));
 
-	return (prefixlen + 1);
+	return (dest->prefixlen + 1);
 }
 
 static uint16_t eigrp_tlv1_addr_encode(eigrp_stream_t *pkt,
@@ -322,57 +323,55 @@ static eigrp_route_descriptor_t *eigrp_tlv1_decoder(struct eigrp *eigrp,
 			zlog_debug("EIGRP TLV: Neighbor(%s) corrupt packet",
 				   eigrp_topo_addr2string(&nbr->src));
 		}
-
-	} else {
-		/* allocate buffer */
-		route = eigrp_route_descriptor_new();
+		return NULL;
 	}
 
-	if (route) {
-		route->type = (type == EIGRP_TLV_IPv4_EXT) ? EIGRP_EXT : EIGRP_INT;
-		route->afi = AF_INET;
+	/* allocate buffer */
+	route = eigrp_route_descriptor_new();
+	if (!route) {
+		return NULL;
+	}
 
-		/* decode nexthop */
-		bytes += eigrp_tlv1_nexthop_decode(eigrp, pkt, route);
+	route->type = (type == EIGRP_TLV_IPv4_EXT) ? EIGRP_EXT : EIGRP_INT;
 
-		/* figure out what type of TLV we are processing */
-		switch (type) {
-		case EIGRP_TLV_IPv4_EXT:
-			bytes += eigrp_tlv1_external_decode(pkt,
-							    &route->extdata);
+	/* decode nexthop */
+	bytes += eigrp_tlv1_nexthop_decode(eigrp, pkt, route);
 
-			// fall though to internal processing to get metric and
-			// route
-			__attribute__((fallthrough));
+	/* figure out what type of TLV we are processing */
+	switch (type) {
+	case EIGRP_TLV_IPv4_EXT:
+		bytes += eigrp_tlv1_external_decode(pkt, &route->extdata);
 
-		case EIGRP_TLV_IPv4_INT:
-			bytes += eigrp_tlv1_metric_decode(pkt, &route->metric);
+		// fall though to internal processing to get metric and
+		// route
+		__attribute__((fallthrough));
 
-			/* metric and (optional) external info has been
-			 * processed, now lets collect all the destination(s).
-			 *
-			 * NOTE:
-			 *    While the RFC calls out for the ability to send
-			 * multiple destinations in one TLV, its never been
-			 * implemented.
-			 *
-			 * BOGO: we should consider adding this at some pooint,
-			 * but this is classic metrics, so its likely to never
-			 * get implemented. For now, I am going to ignore the
-			 * additional any additional destintations afer the
-			 * first one.
-			 */
-			bytes += eigrp_tlv1_addr_decode(pkt, route);
-			break;
+	case EIGRP_TLV_IPv4_INT:
+		bytes += eigrp_tlv1_metric_decode(pkt, &route->metric);
 
-		default:
-			if (IS_DEBUG_EIGRP_PACKET(0, RECV)) {
-				zlog_debug(
-					"EIGRP TLV: Neighbor(%s): invalid TLV_type(%u)",
-					eigrp_topo_addr2string(&nbr->src), type);
-			}
-			break;
+		/* metric and (optional) external info has been
+		 * processed, now lets collect all the destination(s).
+		 *
+		 * NOTE:
+		 *    While the RFC calls out for the ability to send
+		 * multiple destinations in one TLV, its never been
+		 * implemented.
+		 *
+		 * BOGO: we should consider adding this at some pooint,
+		 * but this is classic metrics, so its likely to never
+		 * get implemented. For now, I am going to ignore any
+		 * additional destintations afer the first one.
+		 */
+		bytes += eigrp_tlv1_addr_decode(pkt, &route->dest);
+		break;
+
+	default:
+		if (IS_DEBUG_EIGRP_PACKET(0, RECV)) {
+			zlog_debug(
+				"EIGRP TLV: Neighbor(%s): invalid TLV_type(%u)",
+				eigrp_topo_addr2string(&nbr->src), type);
 		}
+		break;
 	}
 
 	return (route);
@@ -384,12 +383,14 @@ static uint16_t eigrp_tlv1_encoder(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 {
 	eigrp_route_descriptor_t *route;
 	eigrp_interface_t *ei = nbr->ei;
+	struct list *successors = eigrp_topology_get_successor(prefix);
 	size_t tlv_start = stream_get_getp(pkt);
 	size_t tlv_end;
 	uint16_t type, length = 0;
 
 	// grab the route from the prefix so we can get the metrics we need
-	route = eigrp_prefix_descriptor_lookup(prefix->entries, nbr);
+	assert(successors); // If this is NULL somebody poked us in the eye.
+	route = listnode_head(successors);
 	type = route->type;
 
 	// need to fix these up when we know the answer...

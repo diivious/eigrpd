@@ -40,39 +40,51 @@
 #include "eigrpd/eigrp_errors.h"
 #include "eigrpd/eigrp_zebra.h"
 
-DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_ROUTE_DESCRIPTOR, "EIGRP Nexthop Entry");
-DEFINE_MTYPE(EIGRPD, EIGRP_PREFIX_DESCRIPTOR,       "EIGRP Prefix");
+DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_ROUTE_DESCRIPTOR, "EIGRP Route Entry");
+DEFINE_MTYPE(EIGRPD, EIGRP_PREFIX_DESCRIPTOR,       "EIGRP Prefix Entry");
 
 static int eigrp_route_descriptor_cmp(eigrp_route_descriptor_t *,
 				      eigrp_route_descriptor_t *);
 
-/*
- * Returns linkedlist used as topology table
- * cmp - assigned function for comparing topology nodes
- * del - assigned function executed before deleting topology node by list
- * function
+/**
+ * Various fuctions for handling eigrp route descriptors
  */
-struct route_table *eigrp_topology_new(void)
+
+/*
+ * Returns new topology route
+ */
+eigrp_route_descriptor_t *eigrp_route_descriptor_new(void)
 {
-	return route_table_init();
+	eigrp_route_descriptor_t *new;
+
+	new = XCALLOC(MTYPE_EIGRP_ROUTE_DESCRIPTOR,
+		      sizeof(eigrp_route_descriptor_t));
+	new->reported_distance = EIGRP_MAX_METRIC;
+	new->distance = EIGRP_MAX_METRIC;
+
+	return new;
 }
 
 /*
- * Returns new created toplogy node
- * cmp - assigned function for comparing topology entry
+ * Adding topology entry to topology node
  */
-eigrp_prefix_descriptor_t *eigrp_prefix_descriptor_new(void)
+void eigrp_route_descriptor_add(struct eigrp *eigrp,
+				eigrp_prefix_descriptor_t *node,
+				eigrp_route_descriptor_t *route)
 {
-	eigrp_prefix_descriptor_t *new;
-	new = XCALLOC(MTYPE_EIGRP_PREFIX_DESCRIPTOR,
-		      sizeof(eigrp_prefix_descriptor_t));
-	new->entries = list_new();
-	new->rij = list_new();
-	new->entries->cmp = (int (*)(void *, void *))eigrp_route_descriptor_cmp;
-	new->distance = new->fdistance = new->rdistance = EIGRP_MAX_METRIC;
-	new->destination = NULL;
+	struct list *l = list_new();
 
-	return new;
+	listnode_add(l, route);
+
+	if (listnode_lookup(node->entries, route) == NULL) {
+		listnode_add_sort(node->entries, route);
+		route->prefix = node;
+
+		eigrp_zebra_route_add(eigrp, node->destination, l,
+				      node->fdistance);
+	}
+
+	list_delete(&l);
 }
 
 /*
@@ -90,28 +102,33 @@ static int eigrp_route_descriptor_cmp(eigrp_route_descriptor_t *route1,
 }
 
 /*
- * Returns new topology route
+ * Frees topology route
  */
-
-eigrp_route_descriptor_t *eigrp_route_descriptor_new(void)
+void eigrp_route_descriptor_free(eigrp_route_descriptor_t *route)
 {
-	eigrp_route_descriptor_t *new;
-
-	new = XCALLOC(MTYPE_EIGRP_ROUTE_DESCRIPTOR,
-		      sizeof(eigrp_route_descriptor_t));
-	new->reported_distance = EIGRP_MAX_METRIC;
-	new->distance = EIGRP_MAX_METRIC;
-
-	return new;
+	XFREE(MTYPE_EIGRP_ROUTE_DESCRIPTOR, route);
 }
 
-/*
- * Freeing topology table list
+/**
+ * Various fuctions for handling eigrp prefix descriptors
  */
-void eigrp_topology_free(struct eigrp *eigrp, struct route_table *table)
+
+/*
+ * Returns new created toplogy node
+ * cmp - assigned function for comparing topology entry
+ */
+eigrp_prefix_descriptor_t *eigrp_prefix_descriptor_new(void)
 {
-	eigrp_topology_delete_all(eigrp, table);
-	route_table_finish(table);
+	eigrp_prefix_descriptor_t *new;
+	new = XCALLOC(MTYPE_EIGRP_PREFIX_DESCRIPTOR,
+		      sizeof(eigrp_prefix_descriptor_t));
+	new->entries = list_new();
+	new->rij = list_new();
+	new->entries->cmp = (int (*)(void *, void *))eigrp_route_descriptor_cmp;
+	new->distance = new->fdistance = new->rdistance = EIGRP_MAX_METRIC;
+	new->destination = NULL;
+
+	return new;
 }
 
 /*
@@ -139,25 +156,20 @@ void eigrp_prefix_descriptor_add(struct route_table *topology,
 }
 
 /*
- * Adding topology entry to topology node
+ * Find topology node in topology table
  */
-void eigrp_route_descriptor_add(struct eigrp *eigrp,
-				eigrp_prefix_descriptor_t *node,
-				eigrp_route_descriptor_t *route)
+eigrp_route_descriptor_t *eigrp_prefix_descriptor_lookup(struct list *entries,
+							 eigrp_neighbor_t *nbr)
 {
-	struct list *l = list_new();
-
-	listnode_add(l, route);
-
-	if (listnode_lookup(node->entries, route) == NULL) {
-		listnode_add_sort(node->entries, route);
-		route->prefix = node;
-
-		eigrp_zebra_route_add(eigrp, node->destination, l,
-				      node->fdistance);
+	eigrp_route_descriptor_t *data;
+	struct listnode *node, *nnode;
+	for (ALL_LIST_ELEMENTS(entries, node, nnode, data)) {
+		if (data->adv_router == nbr) {
+			return data;
+		}
 	}
 
-	list_delete(&l);
+	return NULL;
 }
 
 /*
@@ -212,6 +224,17 @@ void eigrp_route_descriptor_delete(struct eigrp *eigrp,
 }
 
 /*
+ * Returns linkedlist used as topology table
+ * cmp - assigned function for comparing topology nodes
+ * del - assigned function executed before deleting topology node by list
+ * function
+ */
+struct route_table *eigrp_topology_new(void)
+{
+       return route_table_init();
+}
+
+/*
  * Deleting all nodes from topology table
  */
 void eigrp_topology_delete_all(struct eigrp *eigrp,
@@ -228,6 +251,15 @@ void eigrp_topology_delete_all(struct eigrp *eigrp,
 
 		eigrp_prefix_descriptor_delete(eigrp, topology, pe);
 	}
+}
+
+/*
+ * Freeing topology table list
+ */
+void eigrp_topology_free(struct eigrp *eigrp, struct route_table *table)
+{
+	eigrp_topology_delete_all(eigrp, table);
+	route_table_finish(table);
 }
 
 eigrp_prefix_descriptor_t *
@@ -294,20 +326,6 @@ eigrp_topology_get_successor_max(eigrp_prefix_descriptor_t *table_node,
 	}
 
 	return successors;
-}
-
-eigrp_route_descriptor_t *eigrp_prefix_descriptor_lookup(struct list *entries,
-							 eigrp_neighbor_t *nbr)
-{
-	eigrp_route_descriptor_t *data;
-	struct listnode *node, *nnode;
-	for (ALL_LIST_ELEMENTS(entries, node, nnode, data)) {
-		if (data->adv_router == nbr) {
-			return data;
-		}
-	}
-
-	return NULL;
 }
 
 /* Lookup all prefixes from specified neighbor */

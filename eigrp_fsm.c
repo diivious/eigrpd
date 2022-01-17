@@ -427,8 +427,7 @@ int eigrp_fsm_event_nq_fcn(eigrp_fsm_action_message_t *msg)
 
 	route = listnode_head(successors);
 	prefix->state = EIGRP_FSM_STATE_ACTIVE_1;
-	prefix->rdistance = prefix->distance = prefix->fdistance =
-		route->distance;
+	prefix->rdistance = prefix->distance = prefix->fdistance = route->distance;
 	prefix->reported_metric = route->total_metric;
 
 	if (eigrp_nbr_count_get(eigrp)) {

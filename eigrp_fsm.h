@@ -36,14 +36,14 @@ typedef enum {
 } msg_data_t;
 
 typedef struct eigrp_fsm_action_message {
-	uint8_t packet_type;	      // UPDATE, QUERY, SIAQUERY, SIAREPLY
-	struct eigrp *eigrp;	      // which thread sent mesg
-	eigrp_neighbor_t *adv_router; // advertising neighbor
-	eigrp_route_descriptor_t *route;
-	eigrp_prefix_descriptor_t *prefix;
-	msg_data_t data_type; // internal or external tlv type
-	eigrp_metrics_t metrics;
-	enum metric_change change;
+	uint8_t packet_type;			// UPDATE, QUERY, SIAQUERY, SIAREPLY
+	struct eigrp *eigrp;			// which thread sent mesg
+	eigrp_neighbor_t *adv_router;		// advertising neighbor
+	eigrp_route_descriptor_t *route;	//
+	eigrp_prefix_descriptor_t *prefix;	//
+	msg_data_t data_type;			// internal or external tlv type
+	eigrp_metrics_t metrics;		//
+	enum metric_change change;		//
 } eigrp_fsm_action_message_t;
 
 extern int eigrp_fsm_event(eigrp_fsm_action_message_t *msg);
