@@ -50,8 +50,8 @@ typedef struct eigrp_tlv_header {
 } eigrp_tlv_header_t;
 
 /*Prototypes*/
-extern int eigrp_packet_read(struct thread *);
-extern int eigrp_packet_write(struct thread *);
+extern void eigrp_packet_read(struct thread *);
+extern void eigrp_packet_write(struct thread *);
 
 extern eigrp_packet_t *eigrp_packet_new(size_t, eigrp_neighbor_t *);
 extern eigrp_packet_t *eigrp_packet_duplicate(eigrp_packet_t *,
@@ -77,8 +77,8 @@ extern uint16_t eigrp_add_authTLV_MD5_encode(struct stream *,
 extern uint16_t eigrp_add_authTLV_SHA256_encode(struct stream *,
 						eigrp_interface_t *);
 
-extern int eigrp_packet_unack_retrans(struct thread *);
-extern int eigrp_packet_unack_multicast_retrans(struct thread *);
+extern void eigrp_packet_unack_retrans(struct thread *);
+extern void eigrp_packet_unack_multicast_retrans(struct thread *);
 
 /**
  * Found in eigrp-tlv*.c for peer versioning of TLV decoding
@@ -96,7 +96,7 @@ extern void eigrp_hello_send_ack(eigrp_neighbor_t *);
 extern void eigrp_hello_receive(struct eigrp *, eigrp_header_t *,
 			 eigrp_addr_t *, eigrp_interface_t *,
 			 struct stream *, int);
-extern int eigrp_hello_timer(struct thread *);
+extern void eigrp_hello_timer(struct thread *);
 
 /*
  * These externs are found in eigrp_update.c
@@ -112,7 +112,7 @@ extern void eigrp_update_receive(struct eigrp *, eigrp_neighbor_t *,
 extern void eigrp_update_send_all(struct eigrp *, eigrp_interface_t *);
 extern void eigrp_update_send_init(struct eigrp *, eigrp_neighbor_t *);
 extern void eigrp_update_send_EOT(eigrp_neighbor_t *);
-extern int eigrp_update_send_GR_thread(struct thread *);
+extern void eigrp_update_send_GR_thread(struct thread *);
 extern void eigrp_update_send_GR(eigrp_neighbor_t *, enum GR_type,
 				 struct vty *);
 extern void eigrp_update_send_interface_GR(eigrp_interface_t *, enum GR_type,

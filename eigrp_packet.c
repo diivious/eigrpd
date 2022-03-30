@@ -340,7 +340,7 @@ int eigrp_check_sha256_digest(struct stream *s,
 	return 1;
 }
 
-int eigrp_packet_write(struct thread *thread)
+void eigrp_packet_write(struct thread *thread)
 {
 	struct eigrp *eigrp = THREAD_ARG(thread);
 	struct eigrp_header *eigrph;
@@ -501,11 +501,11 @@ out:
 				 &eigrp->t_write);
 	}
 
-	return 0;
+	return;
 }
 
 /* Starting point of packet process function. */
-int eigrp_packet_read(struct thread *thread)
+void eigrp_packet_read(struct thread *thread)
 {
 	int ret;
 	struct stream *ibuf;
@@ -531,7 +531,7 @@ int eigrp_packet_read(struct thread *thread)
 	if (!(ibuf = eigrp_packet_recv(eigrp, eigrp->fd, &ifp, eigrp->ibuf))) {
 		/* This raw packet is known to be at least as big as its IP
 		 * header. */
-		return -1;
+		return;
 	}
 
 	/* Note that there should not be alignment problems with this assignment
@@ -549,7 +549,7 @@ int eigrp_packet_read(struct thread *thread)
 	    // DVS: your now broken...
 	    src.afi = AF_INET6;
 	    zlog_debug("IPv6: Neighbor not supported");
-	    return -1;
+	    return;
 	}
 
 	srcaddr = iph->ip_src;
@@ -571,7 +571,7 @@ int eigrp_packet_read(struct thread *thread)
 		c = if_lookup_address((void *)&srcaddr, AF_INET, eigrp->vrf_id);
 
 		if (c == NULL)
-			return 0;
+			return;
 
 		ifp = c->ifp;
 	}
@@ -586,7 +586,7 @@ int eigrp_packet_read(struct thread *thread)
 	   must remain very accurate in doing this.
 	*/
 	if (!ei)
-		return 0;
+		return;
 
 	/* Self-originated packet should be discarded silently. */
 	if (eigrp_intf_lookup_by_local_addr(eigrp, NULL, iph->ip_src)
@@ -594,7 +594,7 @@ int eigrp_packet_read(struct thread *thread)
 		if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV))
 			zlog_debug("eigrp_packet_read[%s]: Dropping self-originated packet",
 				inet_ntoa(srcaddr));
-		return 0;
+		return;
 	}
 
 	/* Advance from IP header to EIGRP header (iph->ip_hl has been verified
@@ -609,7 +609,7 @@ int eigrp_packet_read(struct thread *thread)
 
 	//  if (MSG_OK != eigrp_packet_examin(eigrph, stream_get_endp(ibuf) -
 	//  stream_get_getp(ibuf)))
-	//    return -1;
+	//    return;
 
 	/* If incoming interface is passive one, ignore it. */
 	if (eigrp_intf_is_passive(ei)) {
@@ -629,7 +629,7 @@ int eigrp_packet_read(struct thread *thread)
 		if (iph->ip_dst.s_addr == htonl(EIGRP_MULTICAST_ADDRESS)) {
 			eigrp_intf_set_multicast(ei);
 		}
-		return 0;
+		return;
 	}
 
 	/* else it must be a local eigrp interface, check it was received on
@@ -639,7 +639,7 @@ int eigrp_packet_read(struct thread *thread)
 		if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV))
 			zlog_warn("Packet from [%s] received on wrong link %s",
 				  inet_ntoa(iph->ip_src), ifp->name);
-		return 0;
+		return;
 	}
 
 	/* Verify more EIGRP header fields. */
@@ -649,7 +649,7 @@ int eigrp_packet_read(struct thread *thread)
 			zlog_debug(
 				"eigrp_packet_read[%s]: Header check failed, dropping.",
 				inet_ntoa(iph->ip_src));
-		return ret;
+		return;
 	}
 
 	/* calcualte the eigrp packet length, and move the pounter to the
@@ -684,7 +684,7 @@ int eigrp_packet_read(struct thread *thread)
 	 */
 	nbr = eigrp_nbr_lookup(ei, eigrph, &src);
 	if (!nbr) {
-		return 0;
+		return;
 	}
 
 	if (ntohl(eigrph->ack)) {
@@ -721,7 +721,7 @@ int eigrp_packet_read(struct thread *thread)
 		break;
 	}
 
-	return 0;
+	return;
 }
 
 static struct stream *eigrp_packet_recv(struct eigrp *eigrp, int fd,
@@ -1011,7 +1011,7 @@ static int eigrp_check_network_mask(eigrp_interface_t *ei,
 	return 0;
 }
 
-int eigrp_packet_unack_retrans(struct thread *thread)
+void eigrp_packet_unack_retrans(struct thread *thread)
 {
 	eigrp_neighbor_t *nbr;
 	nbr = (eigrp_neighbor_t *)THREAD_ARG(thread);
@@ -1027,8 +1027,10 @@ int eigrp_packet_unack_retrans(struct thread *thread)
 		eigrp_packet_enqueue(nbr->ei->obuf, duplicate);
 
 		packet->retrans_counter++;
-		if (packet->retrans_counter == EIGRP_PACKET_RETRANS_MAX)
-			return eigrp_retrans_count_exceeded(packet, nbr);
+		if (packet->retrans_counter == EIGRP_PACKET_RETRANS_MAX) {
+			eigrp_retrans_count_exceeded(packet, nbr);
+			return;
+		}
 
 		/*Start retransmission timer*/
 		packet->t_retrans_timer = NULL;
@@ -1045,10 +1047,10 @@ int eigrp_packet_unack_retrans(struct thread *thread)
 				 nbr->ei->eigrp->fd, &nbr->ei->eigrp->t_write);
 	}
 
-	return 0;
+	return;
 }
 
-int eigrp_packet_unack_multicast_retrans(struct thread *thread)
+void eigrp_packet_unack_multicast_retrans(struct thread *thread)
 {
 	eigrp_neighbor_t *nbr;
 	nbr = (eigrp_neighbor_t *)THREAD_ARG(thread);
@@ -1063,8 +1065,10 @@ int eigrp_packet_unack_multicast_retrans(struct thread *thread)
 		eigrp_packet_enqueue(nbr->ei->obuf, duplicate);
 
 		packet->retrans_counter++;
-		if (packet->retrans_counter == EIGRP_PACKET_RETRANS_MAX)
-			return eigrp_retrans_count_exceeded(packet, nbr);
+		if (packet->retrans_counter == EIGRP_PACKET_RETRANS_MAX) {
+		    eigrp_retrans_count_exceeded(packet, nbr);
+		    return;
+		}
 
 		/*Start retransmission timer*/
 		packet->t_retrans_timer = NULL;
@@ -1081,7 +1085,7 @@ int eigrp_packet_unack_multicast_retrans(struct thread *thread)
 				 nbr->ei->eigrp->fd, &nbr->ei->eigrp->t_write);
 	}
 
-	return 0;
+	return;
 }
 
 /* Get packet from tail of queue. */

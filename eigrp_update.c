@@ -636,12 +636,17 @@ void eigrp_update_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 void eigrp_update_send_all(struct eigrp *eigrp, eigrp_interface_t *exception)
 {
 	eigrp_interface_t *iface;
-	struct listnode *node, *node2, *nnode2;
+	eigrp_neighbor_t *nbr;
+
+	struct listnode *node, *nnode, *node2, *nnode2;
 	eigrp_prefix_descriptor_t *prefix;
 
 	for (ALL_LIST_ELEMENTS_RO(eigrp->eiflist, node, iface)) {
 		if (iface != exception) {
-			eigrp_update_send(eigrp, NULL, iface);
+		    /* iterate over all neighbors on eigrp interface */
+		    for (ALL_LIST_ELEMENTS_RO(iface->nbrs, nnode, nbr)) {
+			eigrp_update_send(eigrp, nbr, iface);
+		    }
 		}
 	}
 
@@ -837,7 +842,7 @@ static void eigrp_update_send_GR_part(eigrp_neighbor_t *nbr)
  * @param[in]		thread		contains neighbor who would receive
  * Graceful restart
  *
- * @return int      always 0
+ * @return void
  *
  * @par
  * Function used for sending Graceful restart Update packet
@@ -845,7 +850,7 @@ static void eigrp_update_send_GR_part(eigrp_neighbor_t *nbr)
  *
  * Uses nbr_gr_packet_type and t_nbr_send_gr from neighbor.
  */
-int eigrp_update_send_GR_thread(struct thread *thread)
+void eigrp_update_send_GR_thread(struct thread *thread)
 {
 	eigrp_neighbor_t *nbr;
 
@@ -860,7 +865,7 @@ int eigrp_update_send_GR_thread(struct thread *thread)
 		nbr->t_nbr_send_gr = NULL;
 		thread_add_timer_msec(master, eigrp_update_send_GR_thread, nbr,
 				      10, &nbr->t_nbr_send_gr);
-		return 0;
+		return;
 	}
 
 	/* send GR EIGRP packet chunk */
@@ -872,7 +877,7 @@ int eigrp_update_send_GR_thread(struct thread *thread)
 		nbr->t_nbr_send_gr = NULL;
 	}
 
-	return 0;
+	return;
 }
 
 /**
