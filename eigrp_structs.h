@@ -421,11 +421,11 @@ typedef struct eigrp_prefix_descriptor {
 
 	uint8_t nt;	    // network type
 	uint8_t state;	    // route FSM state
-	uint8_t af;	    // address family
 	uint8_t req_action; // required action
 
 	// If network type is REMOTE_EXTERNAL, pointer will have reference to
 	// its external TLV
+//	uint8_t af;	    // address family
 	struct TLV_IPv4_External_type *extTLV;
 
 	uint64_t serno; /*Serial number for this entry. Increased with each

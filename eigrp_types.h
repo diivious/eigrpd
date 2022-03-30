@@ -68,6 +68,6 @@ typedef eigrp_route_descriptor_t *(*eigrp_tlv_decoder_t)(struct eigrp *eigrp,
 typedef uint16_t (*eigrp_tlv_encoder_t)(struct eigrp *eigrp,
 					eigrp_neighbor_t *nbr,
 					eigrp_stream_t *pkt,
-					eigrp_prefix_descriptor_t *route);
+					eigrp_route_descriptor_t *route);
 
 #endif /* _ZEBRA_EIGRP_TYPES_H_ */

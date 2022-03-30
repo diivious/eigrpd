@@ -151,7 +151,6 @@ void eigrp_update_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			  eigrp_interface_t *ei, int length)
 {
 	eigrp_prefix_descriptor_t *prefix;
-	eigrp_route_descriptor_t *ne;
 	eigrp_route_descriptor_t *route;
 	uint32_t flags;
 	uint8_t same;
@@ -263,8 +262,7 @@ void eigrp_update_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 
 		// should have got route off the packet, but one never knows
 		if (route) {
-			prefix = eigrp_topology_table_lookup_ipv4(eigrp->topology_table,
-								&route->dest);
+			prefix = eigrp_topology_table_lookup_ipv4(eigrp->topology_table, &route->dest);
 			/*if exists it comes to DUAL*/
 			if (prefix != NULL) {
 				/* remove received prefix from neighbor prefix
@@ -273,14 +271,12 @@ void eigrp_update_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 					remove_received_prefix_gr(nbr_prefixes, prefix);
 
 				struct eigrp_fsm_action_message msg;
-				ne = eigrp_prefix_descriptor_lookup(prefix->entries, nbr);
-
 				msg.packet_type = EIGRP_OPC_UPDATE;
 				msg.eigrp = eigrp;
 				msg.data_type = EIGRP_INT;
 				msg.adv_router = nbr;
 				msg.metrics = route->metric;
-				msg.route = ne;
+				msg.route = route;
 				msg.prefix = prefix;
 				eigrp_fsm_event(&msg);
 
@@ -288,37 +284,34 @@ void eigrp_update_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 				/*Here comes topology information save*/
 				prefix = eigrp_prefix_descriptor_new();
 				prefix->serno = eigrp->serno;
-				prefix->destination =
-					(struct prefix *)prefix_ipv4_new();
+				prefix->destination = (struct prefix *)prefix_ipv4_new();
 				prefix_copy(prefix->destination, &route->dest);
-				prefix->af = AF_INET;
 				prefix->state = EIGRP_FSM_STATE_PASSIVE;
 				prefix->nt = EIGRP_TOPOLOGY_TYPE_REMOTE;
 
-				ne = eigrp_route_descriptor_new();
-				ne->ei = ei;
-				ne->adv_router = nbr;
-				ne->reported_metric = prefix->reported_metric;
-				ne->reported_distance = eigrp_calculate_metrics(eigrp, prefix->reported_metric);
+				route->adv_router = nbr;
+				route->reported_metric = prefix->reported_metric;
+				route->reported_distance = eigrp_calculate_metrics(eigrp, prefix->reported_metric);
+
 				/*
 				 * Filtering
 				 */
-				if (eigrp_update_prefix_apply(eigrp, ei, EIGRP_FILTER_IN,
-							      &route->dest))
-					ne->reported_metric.delay = EIGRP_MAX_METRIC;
+				if (eigrp_update_prefix_apply(eigrp, ei, EIGRP_FILTER_IN, &route->dest))
+					route->reported_metric.delay = EIGRP_MAX_METRIC;
 
-				ne->distance = eigrp_calculate_total_metrics(eigrp, ne);
-				prefix->fdistance = prefix->distance = prefix->rdistance = ne->distance;
-				ne->prefix = prefix;
-				ne->flags =
-					EIGRP_ROUTE_DESCRIPTOR_SUCCESSOR_FLAG;
+				route->distance = eigrp_calculate_total_metrics(eigrp, route);
+				prefix->fdistance = prefix->distance = prefix->rdistance = route->distance;
+				route->prefix = prefix;
+				route->flags = EIGRP_ROUTE_DESCRIPTOR_SUCCESSOR_FLAG;
 
-				eigrp_prefix_descriptor_add(
-					eigrp->topology_table, prefix);
-				eigrp_route_descriptor_add(eigrp, prefix, ne);
-				prefix->distance = prefix->fdistance =
-					prefix->rdistance = ne->distance;
-				prefix->reported_metric = ne->total_metric;
+				eigrp_prefix_descriptor_add(eigrp->topology_table, prefix);
+				eigrp_route_descriptor_add(eigrp, prefix, route);
+
+				prefix->distance = route->distance;
+				prefix->fdistance = route->distance;
+				prefix->rdistance = route->distance;
+
+				prefix->reported_metric = route->total_metric;
 				eigrp_topology_update_node_flags(eigrp, prefix);
 
 				prefix->req_action |= EIGRP_FSM_NEED_UPDATE;
@@ -462,10 +455,9 @@ static void eigrp_update_send_to_all_nbrs(struct eigrp *eigrp,
 }
 
 void eigrp_update_send_EOT(eigrp_neighbor_t *nbr)
-{
-	eigrp_packet_t *packet;
+{	eigrp_packet_t *packet;
 	uint16_t length = EIGRP_HEADER_LEN;
-	eigrp_route_descriptor_t *te;
+	eigrp_route_descriptor_t *route;
 	eigrp_prefix_descriptor_t *prefix;
 	struct listnode *node2, *nnode2;
 	eigrp_interface_t *ei = nbr->ei;
@@ -492,13 +484,12 @@ void eigrp_update_send_EOT(eigrp_neighbor_t *nbr)
 			continue;
 
 		prefix = rn->info;
-		for (ALL_LIST_ELEMENTS(prefix->entries, node2, nnode2, te)) {
-			if (eigrp_nbr_split_horizon_check(te, ei))
+		for (ALL_LIST_ELEMENTS(prefix->entries, node2, nnode2, route)) {
+			if (eigrp_nbr_split_horizon_check(route, ei))
 				continue;
 
 			if ((length + EIGRP_TLV_MAX_IPV4_BYTE) > eigrp_mtu) {
-				eigrp_update_place_on_nbr_queue(eigrp, nbr, packet,
-								seq_no, length);
+				eigrp_update_place_on_nbr_queue(eigrp, nbr, packet, seq_no, length);
 				seq_no++;
 
 				length = EIGRP_HEADER_LEN;
@@ -508,23 +499,19 @@ void eigrp_update_send_EOT(eigrp_neighbor_t *nbr)
 					EIGRP_EOT_FLAG, seq_no,
 					nbr->recv_sequence_number);
 
-				if ((ei->params.auth_type
-				     == EIGRP_AUTH_TYPE_MD5)
+				if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 				    && (ei->params.auth_keychain != NULL)) {
-					length += eigrp_add_authTLV_MD5_encode(
-						packet->s, ei);
+					length += eigrp_add_authTLV_MD5_encode(packet->s, ei);
 				}
 			}
 			/* Get destination address from prefix */
 			dest_addr = prefix->destination;
 
 			/* Check if any list fits */
-			if (eigrp_update_prefix_apply(
-				    eigrp, ei, EIGRP_FILTER_OUT, dest_addr))
+			if (eigrp_update_prefix_apply(eigrp, ei, EIGRP_FILTER_OUT, dest_addr))
 				continue;
 			else {
-				length += (nbr->tlv_encoder)(eigrp, nbr, packet->s,
-							     prefix);
+				length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, route);
 			}
 		}
 	}
@@ -564,8 +551,7 @@ void eigrp_update_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 	}
 
 	has_tlv = 0;
-	for (ALL_LIST_ELEMENTS(ei->eigrp->topology_changes, node, nnode,
-			       prefix)) {
+	for (ALL_LIST_ELEMENTS(ei->eigrp->topology_changes, node, nnode, prefix)) {
 
 		if (!(prefix->req_action & EIGRP_FSM_NEED_UPDATE))
 			continue;
@@ -577,8 +563,7 @@ void eigrp_update_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 		if ((length + EIGRP_TLV_MAX_IPV4_BYTE) > eigrp_mtu) {
 			if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 			    && (ei->params.auth_keychain != NULL)) {
-				eigrp_make_md5_digest(ei, packet->s,
-						      EIGRP_AUTH_UPDATE_FLAG);
+				eigrp_make_md5_digest(ei, packet->s, EIGRP_AUTH_UPDATE_FLAG);
 			}
 
 			eigrp_packet_checksum(ei, packet->s, length);
@@ -592,20 +577,17 @@ void eigrp_update_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 
 			length = EIGRP_HEADER_LEN;
 			packet = eigrp_packet_new(eigrp_mtu, NULL);
-			eigrp_packet_header_init(EIGRP_OPC_UPDATE, eigrp, packet->s,
-						 0, seq_no, 0);
+			eigrp_packet_header_init(EIGRP_OPC_UPDATE, eigrp, packet->s, 0, seq_no, 0);
 			if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 			    && (ei->params.auth_keychain != NULL)) {
-				length +=
-					eigrp_add_authTLV_MD5_encode(packet->s, ei);
+				length += eigrp_add_authTLV_MD5_encode(packet->s, ei);
 			}
 			has_tlv = 0;
 		}
 		/* Get destination address from prefix */
 		dest_addr = prefix->destination;
 
-		if (eigrp_update_prefix_apply(eigrp, ei, EIGRP_FILTER_OUT,
-					      dest_addr)) {
+		if (eigrp_update_prefix_apply(eigrp, ei, EIGRP_FILTER_OUT, dest_addr)) {
 			// prefix->reported_metric.delay = EIGRP_MAX_METRIC;
 			continue;
 		} else {
@@ -619,7 +601,7 @@ void eigrp_update_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			 * encode only 64bit, or both 32 and 64 bit versions of
 			 * the tlv.
 			 */
-			length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, prefix);
+			length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, route);
 			has_tlv = 1;
 		}
 	}
@@ -663,8 +645,7 @@ void eigrp_update_send_all(struct eigrp *eigrp, eigrp_interface_t *exception)
 		}
 	}
 
-	for (ALL_LIST_ELEMENTS(eigrp->topology_changes, node2, nnode2,
-			       prefix)) {
+	for (ALL_LIST_ELEMENTS(eigrp->topology_changes, node2, nnode2, prefix)) {
 		if (prefix->req_action & EIGRP_FSM_NEED_UPDATE) {
 			prefix->req_action &= ~EIGRP_FSM_NEED_UPDATE;
 			listnode_delete(eigrp->topology_changes, prefix);
@@ -690,17 +671,20 @@ void eigrp_update_send_all(struct eigrp *eigrp, eigrp_interface_t *exception)
  */
 static void eigrp_update_send_GR_part(eigrp_neighbor_t *nbr)
 {
+	eigrp_t *eigrp = nbr->ei->eigrp;
 	eigrp_interface_t *ei = nbr->ei;
-	struct eigrp *eigrp = ei->eigrp;
 	eigrp_packet_t *packet;
 	eigrp_prefix_descriptor_t *prefix;
+	eigrp_route_descriptor_t *route;
 
-	uint16_t length = EIGRP_HEADER_LEN;
+	struct list *successors;
 	struct prefix *dest_addr;
 	struct list *prefixes;
+	struct route_node *rn;
+
 	uint32_t flags;
 	unsigned int send_prefixes;
-	struct route_node *rn;
+	uint16_t length = EIGRP_HEADER_LEN;
 
 	/* get prefixes to send to neighbor */
 	prefixes = nbr->nbr_gr_prefixes_send;
@@ -761,14 +745,18 @@ static void eigrp_update_send_GR_part(eigrp_neighbor_t *nbr)
 		 */
 		dest_addr = prefix->destination;
 
-		if (eigrp_update_prefix_apply(eigrp, ei, EIGRP_FILTER_OUT,
-					      dest_addr)) {
+		if (eigrp_update_prefix_apply(eigrp, ei, EIGRP_FILTER_OUT, dest_addr)) {
 			/* do not send filtered route */
 			zlog_info("Filtered prefix %s won't be sent out.",
 				  eigrp_topo_prefix2string(dest_addr));
 		} else {
+			// grab the route from the prefix so we can get the metrics we need
+			successors = eigrp_topology_get_successor(prefix);
+			assert(successors); // If this is NULL somebody poked us in the eye.
+			route = listnode_head(successors);
+
 			/* sending route which wasn't filtered */
-			length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, prefix);
+			length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, route);
 			send_prefixes++;
 		}
 

@@ -41,7 +41,9 @@ void eigrp_reply_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 {
 	eigrp_interface_t *ei = nbr->ei;
 	eigrp_packet_t *packet = NULL;
+	eigrp_route_descriptor_t *route;
 	uint16_t length = EIGRP_HEADER_LEN;
+	struct list *successors;
 
 	/* Prepare EIGRP INIT UPDATE header */
 	packet = eigrp_packet_new(EIGRP_PACKET_MTU(ei->ifp->mtu), nbr);
@@ -54,10 +56,14 @@ void eigrp_reply_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 		length += eigrp_add_authTLV_MD5_encode(packet->s, ei);
 	}
 
-	length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, prefix);
+	// grab the route from the prefix so we can get the metrics we need
+	successors = eigrp_topology_get_successor(prefix);
+	assert(successors); // If this is NULL somebody poked us in the eye.
+	route = listnode_head(successors);
+	length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, route);
 
-	if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
-	    && (ei->params.auth_keychain != NULL)) {
+	if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5) &&
+	    (ei->params.auth_keychain != NULL)) {
 		eigrp_make_md5_digest(ei, packet->s, EIGRP_AUTH_UPDATE_FLAG);
 	}
 

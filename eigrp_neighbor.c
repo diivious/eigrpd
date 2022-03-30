@@ -47,7 +47,7 @@ eigrp_tlv_decoder_safe(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 static inline uint16_t eigrp_tlv_encoder_safe(struct eigrp *eigrp,
 					      eigrp_neighbor_t *nbr,
 					      eigrp_stream_t *pkt,
-					      eigrp_prefix_descriptor_t *route)
+					      eigrp_route_descriptor_t *route)
 {
 	return 0;
 }

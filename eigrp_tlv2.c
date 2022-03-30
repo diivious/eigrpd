@@ -53,7 +53,7 @@ static eigrp_route_descriptor_t *eigrp_tlv2_decoder(struct eigrp *eigrp,
 
 static uint16_t eigrp_tlv2_encoder(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 				   eigrp_stream_t *pkt,
-				   eigrp_prefix_descriptor_t *prefix)
+				   eigrp_route_descriptor_t *route)
 {
 	return 0;
 }

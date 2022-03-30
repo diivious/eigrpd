@@ -74,7 +74,9 @@ void eigrp_siaquery_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			 eigrp_prefix_descriptor_t *prefix)
 {
 	eigrp_packet_t *packet;
+	eigrp_route_descriptor_t *route;
 	uint16_t length = EIGRP_HEADER_LEN;
+	struct list *successors;
 
 	packet = eigrp_packet_new(EIGRP_PACKET_MTU(nbr->ei->ifp->mtu), nbr);
 
@@ -88,7 +90,11 @@ void eigrp_siaquery_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 		length += eigrp_add_authTLV_MD5_encode(packet->s, nbr->ei);
 	}
 
-	length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, prefix);
+	// grab the route from the prefix so we can get the metrics we need
+	successors = eigrp_topology_get_successor(prefix);
+	assert(successors); // If this is NULL somebody poked us in the eye.
+	route = listnode_head(successors);
+	length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, route);
 
 	if ((nbr->ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 	    && (nbr->ei->params.auth_keychain != NULL)) {

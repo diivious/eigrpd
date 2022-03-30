@@ -282,8 +282,8 @@ int eigrp_intf_up(struct eigrp *eigrp, eigrp_interface_t *ei)
 	metric.tag = 0;
 
 	/*Add connected route to topology table*/
-	route = eigrp_route_descriptor_new();
-	route->ei = ei;
+	route = eigrp_route_descriptor_new(ei);
+	route->type = EIGRP_TLV_IPv4_INT;
 
 	route->reported_metric = metric;
 	route->total_metric = metric;
@@ -296,25 +296,24 @@ int eigrp_intf_up(struct eigrp *eigrp, eigrp_interface_t *ei)
 
 	dest_addr = ei->address;
 	apply_mask(&dest_addr);
-	prefix = eigrp_topology_table_lookup_ipv4(eigrp->topology_table,
-						  &dest_addr);
+	prefix = eigrp_topology_table_lookup_ipv4(eigrp->topology_table, &dest_addr);
 
 	if (prefix == NULL) {
 		prefix = eigrp_prefix_descriptor_new();
 		prefix->serno = eigrp->serno;
 		prefix->destination = (struct prefix *)prefix_ipv4_new();
 		prefix_copy(prefix->destination, &dest_addr);
-		prefix->af = AF_INET;
 		prefix->nt = EIGRP_TOPOLOGY_TYPE_CONNECTED;
-
-		route->prefix = prefix;
 		prefix->reported_metric = metric;
 		prefix->state = EIGRP_FSM_STATE_PASSIVE;
 		prefix->fdistance = eigrp_calculate_metrics(eigrp, metric);
 		prefix->req_action |= EIGRP_FSM_NEED_UPDATE;
+
 		eigrp_prefix_descriptor_add(eigrp->topology_table, prefix);
+
 		listnode_add(eigrp->topology_changes, prefix);
 
+		route->prefix = prefix;
 		eigrp_route_descriptor_add(eigrp, prefix, route);
 
 		for (ALL_LIST_ELEMENTS(eigrp->eiflist, node, nnode, ei2)) {
@@ -323,6 +322,7 @@ int eigrp_intf_up(struct eigrp *eigrp, eigrp_interface_t *ei)
 
 		prefix->req_action &= ~EIGRP_FSM_NEED_UPDATE;
 		listnode_delete(eigrp->topology_changes, prefix);
+
 	} else {
 		eigrp_fsm_action_message_t msg;
 

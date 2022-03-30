@@ -238,13 +238,11 @@ static uint16_t eigrp_tlv1_addr_decode(eigrp_stream_t *pkt,
 static uint16_t eigrp_tlv1_addr_encode(eigrp_stream_t *pkt,
 				       eigrp_route_descriptor_t *route)
 {
-	eigrp_prefix_descriptor_t *prefix = route->prefix;
-	struct prefix *dest = prefix->destination;
+    struct prefix *dest = route->prefix->destination; // DVS: move to route->dest
 	uint16_t prefixlen;
 
 	stream_putc(pkt, dest->prefixlen);
 	prefixlen = (dest->prefixlen + 7) / 8;
-
 	stream_putc(pkt, dest->u.prefix4.s_addr & 0xFF);
 
 	/* OK, i could add "((fallthrough)) to each of these, but thats less
@@ -327,7 +325,7 @@ static eigrp_route_descriptor_t *eigrp_tlv1_decoder(struct eigrp *eigrp,
 	}
 
 	/* allocate buffer */
-	route = eigrp_route_descriptor_new();
+	route = eigrp_route_descriptor_new(nbr->ei);
 	if (!route) {
 		return NULL;
 	}
@@ -379,24 +377,25 @@ static eigrp_route_descriptor_t *eigrp_tlv1_decoder(struct eigrp *eigrp,
 
 static uint16_t eigrp_tlv1_encoder(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 				   eigrp_stream_t *pkt,
-				   eigrp_prefix_descriptor_t *prefix)
+				   eigrp_route_descriptor_t *route)
 {
-	eigrp_route_descriptor_t *route;
 	eigrp_interface_t *ei = nbr->ei;
-	struct list *successors = eigrp_topology_get_successor(prefix);
 	size_t tlv_start = stream_get_getp(pkt);
 	size_t tlv_end;
 	uint16_t type, length = 0;
 
-	// grab the route from the prefix so we can get the metrics we need
-	assert(successors); // If this is NULL somebody poked us in the eye.
-	route = listnode_head(successors);
-	type = route->type;
 
-	// need to fix these up when we know the answer...
+	// need to find a better way to handle - use of stream_put is awarkward
+	//
+	// most likely i will convert stream data pointyer to packed overlay
+	// structure.
+	// 
+	type = route->type;
 	stream_putw(pkt, type);
+	length += 2;
+
 	stream_putw(pkt, length);
-	length += 4;
+	length += 2;
 
 	// encode nexthop
 	length += eigrp_tlv1_nexthop_encode(pkt, route);
@@ -426,7 +425,7 @@ static uint16_t eigrp_tlv1_encoder(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 	 */
 	if (ei) {
 		if (eigrp_update_prefix_apply(eigrp, ei, EIGRP_FILTER_OUT,
-					      prefix->destination)) {
+					      route->prefix->destination)) {
 			zlog_info(
 				"Prefix Filtered:  Setting Metric to EIGRP_MAX_METRIC");
 			route->metric.delay = EIGRP_MAX_METRIC;

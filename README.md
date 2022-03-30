@@ -80,6 +80,42 @@ Lastly, build FRR as normal
 	make
 ```
 
+Debugging
+---------
+You need 2 shells - one for frr vtysh commands and one user shell to
+debug eigrp:
+
+In your root shell:
+```
+   #See if frr is running
+   systemctl status frr
+
+   #Check to see if frr is set to autostart eigrpd in
+   #/etc/frr/daemons, if so set it to "no", before starting frr
+
+   # if its running, then stop it
+   systemctl stop frr
+
+   # anf lastly, start it
+   systemctl start frr
+
+   #if your like me, paranoid, then kill the eigrpd process just in case
+   kill -9 `pidof eigrpd`
+```
+
+In your user shell - EIGRP:
+```
+   sudo gdb eigrpd/.libs/eigrpd 
+```
+
+In your root shell:
+```
+  vtysh -c 'configure terminal' -c 'router eigrp 4453' -c 'network 0.0.0.0/0' 
+  vtysh -c 'show running-config'
+  vtysh -c 'show ip eigrp top'
+  vtysh -c 'show ip eigrp nei'
+```
+
 Contributing
 ------------
 

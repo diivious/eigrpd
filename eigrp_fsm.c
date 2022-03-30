@@ -240,7 +240,7 @@ static const char *change2str(enum metric_change change)
  * msg - argument of type eigrp_fsm_action_message_t contain
  * details about what happen
  *
- * Return number of occurred event (arrow in diagram).
+ * Return fsm state of occurred event (arrow in diagram).
  *
  */
 static enum eigrp_fsm_events
@@ -254,9 +254,8 @@ eigrp_get_fsm_event(eigrp_fsm_action_message_t *msg)
 	enum metric_change change;
 
 	if (route == NULL) {
-		route = eigrp_route_descriptor_new();
+		route = eigrp_route_descriptor_new(msg->adv_router->ei);
 		route->adv_router = msg->adv_router;
-		route->ei = msg->adv_router->ei;
 		route->prefix = prefix;
 		msg->route = route;
 	}

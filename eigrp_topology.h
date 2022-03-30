@@ -35,7 +35,7 @@
 #include "lib/table.h"
 
 /* EIGRP Route Descriptor related functions. */
-extern eigrp_route_descriptor_t *eigrp_route_descriptor_new(void);
+extern eigrp_route_descriptor_t *eigrp_route_descriptor_new(eigrp_interface_t *);
 extern void eigrp_route_descriptor_add(struct eigrp *,
 				       eigrp_prefix_descriptor_t *,
 				       eigrp_route_descriptor_t *);

@@ -53,7 +53,7 @@ static int eigrp_route_descriptor_cmp(eigrp_route_descriptor_t *,
 /*
  * Returns new topology route
  */
-eigrp_route_descriptor_t *eigrp_route_descriptor_new(void)
+eigrp_route_descriptor_t *eigrp_route_descriptor_new(eigrp_interface_t *intf)
 {
 	eigrp_route_descriptor_t *new;
 
@@ -61,6 +61,7 @@ eigrp_route_descriptor_t *eigrp_route_descriptor_new(void)
 		      sizeof(eigrp_route_descriptor_t));
 	new->reported_distance = EIGRP_MAX_METRIC;
 	new->distance = EIGRP_MAX_METRIC;
+	new->ei = intf;
 
 	return new;
 }

@@ -27,6 +27,7 @@
 
 #include "eigrpd/eigrpd.h"
 #include "eigrpd/eigrp_structs.h"
+#include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
@@ -100,16 +101,18 @@ void eigrp_query_send(struct eigrp *eigrp, eigrp_interface_t *ei)
 {
 	eigrp_packet_t *packet = NULL;
 	eigrp_neighbor_t *nbr;
+	eigrp_prefix_descriptor_t *prefix;
+	eigrp_route_descriptor_t *route;
 
 	uint16_t length = EIGRP_HEADER_LEN;
 	struct listnode *node, *nnode, *node2, *nnode2;
-	eigrp_prefix_descriptor_t *prefix;
+	struct list *successors;
+
 	bool has_tlv = false;
 	bool new_packet = true;
 	uint16_t eigrp_mtu = EIGRP_PACKET_MTU(ei->ifp->mtu);
 
-	for (ALL_LIST_ELEMENTS(ei->eigrp->topology_changes, node, nnode,
-			       prefix)) {
+	for (ALL_LIST_ELEMENTS(ei->eigrp->topology_changes, node, nnode, prefix)) {
 		if (!(prefix->req_action & EIGRP_FSM_NEED_QUERY))
 			continue;
 
@@ -130,7 +133,12 @@ void eigrp_query_send(struct eigrp *eigrp, eigrp_interface_t *ei)
 			new_packet = false;
 		}
 
-		length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, prefix);
+		// grab the route from the prefix so we can get the metrics we need
+		successors = eigrp_topology_get_successor(prefix);
+		assert(successors); // If this is NULL somebody poked us in the eye.
+		route = listnode_head(successors);
+		length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, route);
+
 		has_tlv = true;
 		for (ALL_LIST_ELEMENTS(ei->nbrs, node2, nnode2, nbr)) {
 			if (nbr->state == EIGRP_NEIGHBOR_UP)
@@ -140,8 +148,7 @@ void eigrp_query_send(struct eigrp *eigrp, eigrp_interface_t *ei)
 		if (length + EIGRP_TLV_MAX_IPV4_BYTE > eigrp_mtu) {
 			if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 			    && ei->params.auth_keychain != NULL) {
-				eigrp_make_md5_digest(ei, packet->s,
-						      EIGRP_AUTH_UPDATE_FLAG);
+				eigrp_make_md5_digest(ei, packet->s, EIGRP_AUTH_UPDATE_FLAG);
 			}
 
 			eigrp_packet_checksum(ei, packet->s, length);
