@@ -568,6 +568,7 @@ void eigrp_update_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 
 			eigrp_packet_checksum(ei, packet->s, length);
 			packet->length = length;
+
 			//DVS:ipv6 issue
 			packet->dst.ip.v4.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
 
@@ -575,9 +576,6 @@ void eigrp_update_send(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 			seq_no++;
 			eigrp_update_send_to_all_nbrs(eigrp, ei, packet);
 
-			length = EIGRP_HEADER_LEN;
-			packet = eigrp_packet_new(eigrp_mtu, NULL);
-			eigrp_packet_header_init(EIGRP_OPC_UPDATE, eigrp, packet->s, 0, seq_no, 0);
 			if ((ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
 			    && (ei->params.auth_keychain != NULL)) {
 				length += eigrp_add_authTLV_MD5_encode(packet->s, ei);

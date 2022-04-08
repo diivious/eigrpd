@@ -385,9 +385,21 @@ static uint16_t eigrp_tlv1_encoder(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 	uint16_t type, length = 0;
 
 
+	/* Filtering
+	 * TODO: Work in progress
+	 */
+	if (ei) {
+		if (eigrp_update_prefix_apply(eigrp, ei, EIGRP_FILTER_OUT,
+					      route->prefix->destination)) {
+			zlog_info(
+				"Prefix Filtered:  Setting Metric to EIGRP_MAX_METRIC");
+			route->metric.delay = EIGRP_MAX_METRIC;
+		}
+	}
+
 	// need to find a better way to handle - use of stream_put is awarkward
 	//
-	// most likely i will convert stream data pointyer to packed overlay
+	// most likely i will convert stream data pointer to packed overlay
 	// structure.
 	// 
 	type = route->type;
@@ -418,18 +430,6 @@ static uint16_t eigrp_tlv1_encoder(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 				   eigrp_topo_addr2string(&nbr->src), type);
 		}
 		break;
-	}
-
-	/* Filtering
-	 * TODO: Work in progress
-	 */
-	if (ei) {
-		if (eigrp_update_prefix_apply(eigrp, ei, EIGRP_FILTER_OUT,
-					      route->prefix->destination)) {
-			zlog_info(
-				"Prefix Filtered:  Setting Metric to EIGRP_MAX_METRIC");
-			route->metric.delay = EIGRP_MAX_METRIC;
-		}
 	}
 
 	// now the fix up...
