@@ -93,8 +93,10 @@ void eigrp_router_id_update(struct eigrp *eigrp)
 		//        eigrp_topo_addr2string(eigrp->router_id));
 
 		/* update eigrp_interface's */
-		FOR_ALL_INTERFACES (vrf, ifp)
+	    FOR_ALL_INTERFACES (vrf, ifp) {
+		    if (ifp)
 			eigrp_intf_update(eigrp, ifp);
+	    }
 	}
 }
 
@@ -150,9 +152,7 @@ static struct eigrp *eigrp_new(uint16_t as, vrf_id_t vrf_id)
 
 	eigrp->ibuf = stream_new(EIGRP_PACKET_MAX_LEN + 1);
 
-	eigrp->t_read = NULL;
-	thread_add_read(master, eigrp_packet_read, eigrp, eigrp->fd,
-			&eigrp->t_read);
+	thread_add_read(master, eigrp_packet_read, eigrp, eigrp->fd, &eigrp->t_read);
 	eigrp->oi_write_q = list_new();
 
 	// DVS: get it into a workable form, but this is an ugly hack

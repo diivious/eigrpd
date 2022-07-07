@@ -93,6 +93,10 @@ eigrp_interface_t *eigrp_intf_new(struct eigrp *eigrp, struct interface *ifp,
 
 	/* Set zebra interface pointer. */
 	ei->ifp = ifp;
+
+	/* Relate eigrp interface to eigrp instance. */
+	ei->eigrp = eigrp;
+
 	prefix_copy(&ei->address, p);
 
 	ifp->info = ei;
@@ -111,8 +115,6 @@ eigrp_interface_t *eigrp_intf_new(struct eigrp *eigrp, struct interface *ifp,
 		ei->prefix[i] = NULL;
 		ei->routemap[i] = NULL;
 	}
-
-	ei->eigrp = eigrp;
 
 	ei->params.v_hello = EIGRP_HELLO_INTERVAL_DEFAULT;
 	ei->params.v_wait = EIGRP_HOLD_INTERVAL_DEFAULT;
@@ -151,14 +153,17 @@ int eigrp_intf_delete_hook(struct interface *ifp)
 
 static int eigrp_ifp_create(struct interface *ifp)
 {
+	struct listnode *node, *nnode;
+	struct eigrp *eigrp;
 	eigrp_interface_t *ei = ifp->info;
 
-	if (!ei)
-		return 0;
+	if (ei) {
+	    ei->params.type = eigrp_intf_settype(ifp);
 
-	ei->params.type = eigrp_intf_settype(ifp);
-
-	eigrp_intf_update(ei->eigrp, ifp);
+	    for (ALL_LIST_ELEMENTS(eigrp_om->eigrp, node, nnode, eigrp)) {
+		eigrp_intf_update(eigrp, ifp);
+	    }
+	}
 
 	return 0;
 }
@@ -239,9 +244,10 @@ struct list *eigrp_iflist;
 
 void eigrp_intf_init(void)
 {
+	/* Initialize Zebra interface data structure. */
 	if_zapi_callbacks(eigrp_ifp_create, eigrp_ifp_up, eigrp_ifp_down,
 			  eigrp_ifp_destroy);
-	/* Initialize Zebra interface data structure. */
+
 	// hook_register_prio(if_add, 0, eigrp_intf_new);
 	hook_register_prio(if_del, 0, eigrp_intf_delete_hook);
 }
@@ -267,7 +273,7 @@ int eigrp_intf_up(struct eigrp *eigrp, eigrp_interface_t *ei)
 	/* Set multicast memberships appropriately for new state. */
 	eigrp_intf_set_multicast(ei);
 
-	thread_add_event(master, eigrp_hello_timer, ei, (1), NULL);
+	thread_add_event(master, eigrp_hello_timer, ei, (1), &ei->t_hello);
 
 	/*Prepare metrics*/
 	metric.bandwidth = eigrp_bandwidth_to_scaled(ei->params.bandwidth);

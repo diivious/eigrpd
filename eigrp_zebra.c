@@ -121,9 +121,10 @@ static int eigrp_zebra_redistribute_route(ZAPI_CALLBACK_ARGS)
 
 static int eigrp_zebra_interface_address_add(ZAPI_CALLBACK_ARGS)
 {
-	eigrp_interface_t *ei;
+	struct listnode *node, *nnode;
 	struct interface *ifp;
 	struct connected *c;
+	struct eigrp *eigrp;
 
 	c = zebra_interface_address_read(cmd, zclient->ibuf, vrf_id);
 	if (c == NULL)
@@ -137,10 +138,13 @@ static int eigrp_zebra_interface_address_add(ZAPI_CALLBACK_ARGS)
 			   buf);
 	}
 
-	ei = ifp->info;
-	if (ei && ei->eigrp)
-		eigrp_intf_update(ei->eigrp, c->ifp);
-
+	/*
+	 * In the event there are multiple eigrp autonymnous systems running,
+	 * we need to check each one and add the interface as approperate
+	 */
+	for (ALL_LIST_ELEMENTS(eigrp_om->eigrp, node, nnode, eigrp)) {
+	    eigrp_intf_update(eigrp, ifp);
+	}
 	return 0;
 }
 

@@ -217,10 +217,11 @@ int eigrp_network_set(struct eigrp *eigrp, struct prefix *p)
 	/* Schedule Router ID Update. */
 	if (eigrp->router_id.s_addr == INADDR_ANY)
 		eigrp_router_id_update(eigrp);
-	/* Run network config now. */
+
 	/* Get target interface. */
 	FOR_ALL_INTERFACES (vrf, ifp) {
 		zlog_debug("Setting up %s", ifp->name);
+		/* Run network config. */
 		eigrp_network_run_interface(eigrp, p, ifp);
 	}
 	return 1;
@@ -255,13 +256,10 @@ static void eigrp_network_run_interface(struct eigrp *eigrp, struct prefix *p,
 
 			ei = eigrp_intf_new(eigrp, ifp, co->address);
 
-			/* Relate eigrp interface to eigrp instance. */
-			ei->eigrp = eigrp;
-
 			/* if router_id is not configured, dont bring up
 			 * interfaces.
 			 * eigrp_router_id_update() will call eigrp_intf_update
-			 * whenever r-id is configured instead.
+			 * whenever rid is configured instead.
 			 */
 			if (if_is_operative(ifp))
 				eigrp_intf_up(eigrp, ei);
@@ -271,27 +269,29 @@ static void eigrp_network_run_interface(struct eigrp *eigrp, struct prefix *p,
 
 void eigrp_intf_update(struct eigrp *eigrp, struct interface *ifp)
 {
-	struct listnode *node, *nnode;
 	struct route_node *rn;
 
 	/*
 	 * In the event there are multiple eigrp autonymnous systems running,
-	 * we need to check eac one and add the interface as approperate
+	 * we need to check each one and add the interface as approperate
 	 */
-	for (ALL_LIST_ELEMENTS(eigrp_om->eigrp, node, nnode, eigrp)) {
-		if (ifp->vrf->vrf_id != eigrp->vrf_id)
-			continue;
-
-		/* EIGRP must be on and Router-ID must be configured. */
-		if (eigrp->router_id.s_addr == 0)
-			continue;
-
-		/* Run each network for this interface. */
-		for (rn = route_top(eigrp->networks); rn; rn = route_next(rn))
-			if (rn->info != NULL) {
-				eigrp_network_run_interface(eigrp, &rn->p, ifp);
-			}
+	if (ifp->vrf) {
+	    if (ifp->vrf->vrf_id != eigrp->vrf_id)
+		return;
+	} else {
+	    if (eigrp->vrf_id != 0) 
+		return;
 	}
+
+	/* EIGRP must be on and Router-ID must be configured. */
+	if (eigrp->router_id.s_addr == 0)
+	    return;
+
+	/* Run each network for this interface. */
+	for (rn = route_top(eigrp->networks); rn; rn = route_next(rn))
+	    if (rn->info != NULL) {
+		eigrp_network_run_interface(eigrp, &rn->p, ifp);
+	    }
 }
 
 int eigrp_network_unset(struct eigrp *eigrp, struct prefix *p)

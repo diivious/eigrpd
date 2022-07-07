@@ -216,43 +216,11 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 	} else
 		ei->prefix[EIGRP_FILTER_OUT] = NULL;
 
-#if 0
-    /* route-map IN for whole process */
-    if (dist->route[DISTRIBUTE_V4_IN])
-    {
-	zlog_info("<DEBUG ACL ALL in");
-	routemap = route_map_lookup_by_name (dist->route[DISTRIBUTE_V4_IN]);
-	if (routemap)
-	    ei->routemap[EIGRP_FILTER_IN] = routemap;
-	else
-	    ei->routemap[EIGRP_FILTER_IN] = NULL;
-    }
-    else
-    {
-	ei->routemap[EIGRP_FILTER_IN] = NULL;
-    }
-
-    /* route-map OUT for whole process */
-    if (dist->route[DISTRIBUTE_V4_OUT])
-    {
-	routemap = route_map_lookup_by_name (dist->route[DISTRIBUTE_V4_OUT]);
-	if (routemap)
-	    ei->routemap[EIGRP_FILTER_OUT] = routemap;
-	else
-	    ei->routemap[EIGRP_FILTER_OUT] = NULL;
-    }
-    else
-    {
-	ei->routemap[EIGRP_FILTER_OUT] = NULL;
-    }
-#endif
 	// TODO: check Graceful restart after 10sec
 
-	/* check if there is already GR scheduled */
-	if (ei->t_distribute != NULL) {
-		/* if is, cancel schedule */
-		thread_cancel(&(ei->t_distribute));
-	}
+	/* Cancel GR scheduled */
+	thread_cancel(&(ei->t_distribute));
+
 	/* schedule Graceful restart for interface in 10sec */
 	eigrp->t_distribute = NULL;
 	thread_add_timer(master, eigrp_distribute_timer_interface, ei, 10,

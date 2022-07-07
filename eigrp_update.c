@@ -854,13 +854,10 @@ void eigrp_update_send_GR_thread(struct thread *thread)
 
 	/* get argument from thread */
 	nbr = THREAD_ARG(thread);
-	/* remove this thread pointer */
-	nbr->t_nbr_send_gr = NULL;
 
 	/* if there is packet waiting in queue,
 	 * schedule this thread again with small delay */
 	if (nbr->retrans_queue->count > 0) {
-		nbr->t_nbr_send_gr = NULL;
 		thread_add_timer_msec(master, eigrp_update_send_GR_thread, nbr,
 				      10, &nbr->t_nbr_send_gr);
 		return;
@@ -872,7 +869,6 @@ void eigrp_update_send_GR_thread(struct thread *thread)
 	/* if it wasn't last chunk, schedule this thread again */
 	if (nbr->nbr_gr_packet_type != EIGRP_PACKET_PART_LAST) {
 		thread_execute(master, eigrp_update_send_GR_thread, nbr, 0);
-		nbr->t_nbr_send_gr = NULL;
 	}
 
 	return;
@@ -937,17 +933,18 @@ void eigrp_update_send_GR(eigrp_neighbor_t *nbr, enum GR_type gr_type,
 
 	/* save prefixes to neighbor */
 	nbr->nbr_gr_prefixes_send = prefixes;
+
 	/* indicate, that this is first GR Update packet chunk */
 	nbr->nbr_gr_packet_type = EIGRP_PACKET_PART_FIRST;
+
 	/* execute packet sending in thread */
 	thread_execute(master, eigrp_update_send_GR_thread, nbr, 0);
-	nbr->t_nbr_send_gr = NULL;
 }
 
 /**
  * @fn eigrp_update_send_interface_GR
  *
- * @param[in]		ei			Interface to neighbors of which
+ * @param[in]		ei		Interface to neighbors of which
  * the
  * GR
  * is sent

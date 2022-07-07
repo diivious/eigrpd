@@ -51,7 +51,6 @@ extern const char *eigrp_intf_name_string(eigrp_interface_t *);
 
 extern int eigrp_intf_ipmulticast(struct eigrp *, struct prefix *,
 				  unsigned int);
-extern void eigrp_intf_update(struct eigrp *, struct interface *);
 extern int eigrp_intf_add_allspfrouters(struct eigrp *, struct prefix *,
 					unsigned int);
 extern int eigrp_intf_drop_allspfrouters(struct eigrp *top, struct prefix *p,
