@@ -462,7 +462,7 @@ struct variable eigrp_variables[] = {
 	 4,
 	 {5, 1, 1, 23}}};
 
-static eigrp_neighbor_t *eigrp_snmp_nbr_lookup(struct eigrp *eigrp,
+static eigrp_neighbor_t *eigrp_snmp_nbr_lookup(eigrp_instance_t *eigrp,
 					       struct in_addr *nbr_addr,
 					       unsigned int *ifindex)
 {
@@ -480,7 +480,7 @@ static eigrp_neighbor_t *eigrp_snmp_nbr_lookup(struct eigrp *eigrp,
 	return NULL;
 }
 
-static eigrp_neighbor_t *eigrp_snmp_nbr_lookup_next(struct eigrp *eigrp,
+static eigrp_neighbor_t *eigrp_snmp_nbr_lookup_next(eigrp_instance_t *eigrp,
 						    struct in_addr *nbr_addr,
 						    unsigned int *ifindex,
 						    int first)
@@ -516,7 +516,7 @@ static eigrp_neighbor_t *eigrp_snmp_nbr_lookup_next(struct eigrp *eigrp,
 	return NULL;
 }
 
-static eigrp_neighbor_t *eigrpNbrLookup(struct eigrp *eigrp, struct variable *v,
+static eigrp_neighbor_t *eigrpNbrLookup(eigrp_instance_t *eigrp, struct variable *v,
 					oid *name, size_t *length,
 					struct in_addr *nbr_addr,
 					unsigned int *ifindex, int exact)
@@ -524,7 +524,7 @@ static eigrp_neighbor_t *eigrpNbrLookup(struct eigrp *eigrp, struct variable *v,
 	unsigned int len;
 	int first;
 	eigrp_neighbor_t *nbr;
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 
 	if (exact) {
 		if (*length != v->namelen + IN_ADDR_SIZE + 1)
@@ -569,7 +569,7 @@ static uint8_t *eigrpVpnEntry(struct variable *v, oid *name, size_t *length,
 			      int exact, size_t *var_len,
 			      WriteMethod **write_method)
 {
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 
 	eigrp = eigrp_lookup();
 
@@ -598,7 +598,7 @@ static uint8_t *eigrpVpnEntry(struct variable *v, oid *name, size_t *length,
 	return NULL;
 }
 
-static uint32_t eigrp_neighbor_count(struct eigrp *eigrp)
+static uint32_t eigrp_neighbor_count(eigrp_instance_t *eigrp)
 {
 	uint32_t count;
 	eigrp_interface_t *ei;
@@ -625,7 +625,7 @@ static uint8_t *eigrpTraffStatsEntry(struct variable *v, oid *name,
 				     size_t *length, int exact, size_t *var_len,
 				     WriteMethod **write_method)
 {
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 	eigrp_interface_t *ei;
 	struct listnode *node, *nnode;
 	int counter;
@@ -858,7 +858,7 @@ static uint8_t *eigrpTopologyEntry(struct variable *v, oid *name,
 				   size_t *length, int exact, size_t *var_len,
 				   WriteMethod **write_method)
 {
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 
 	eigrp = eigrp_lookup();
 
@@ -989,7 +989,7 @@ static uint8_t *eigrpPeerEntry(struct variable *v, oid *name, size_t *length,
 			       int exact, size_t *var_len,
 			       WriteMethod **write_method)
 {
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 	eigrp_interface_t *ei;
 	eigrp_neighbor_t *nbr;
 	struct in_addr nbr_addr;
@@ -1110,7 +1110,7 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 				    size_t *length, int exact, size_t *var_len,
 				    WriteMethod **write_method)
 {
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 	struct listnode *node, *nnode;
 	struct keychain *keychain;
 	struct list *keylist;
@@ -1291,7 +1291,7 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 void eigrp_snmp_init()
 {
 	eigrp_snmp_iflist = list_new();
-	smux_init(eigrp_om->master);
+	smux_init(eigrp_om->eigrpd_thread);
 	REGISTER_MIB("ciscoEigrpMIB", eigrp_variables, variable, eigrp_oid);
 }
 #endif

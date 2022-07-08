@@ -32,7 +32,7 @@
 #include "eigrpd/eigrp_fsm.h"
 
 /* EIGRP SIA-REPLY read function */
-void eigrp_siareply_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
+void eigrp_siareply_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 			    struct eigrp_header *eigrph, struct stream *pkt,
 			    eigrp_interface_t *ei, int length)
 {
@@ -73,7 +73,7 @@ void eigrp_siareply_receive(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
 	eigrp_hello_send_ack(nbr);
 }
 
-void eigrp_siareply_send(struct eigrp *eigrp,
+void eigrp_siareply_send(eigrp_instance_t *eigrp,
 			 eigrp_neighbor_t *nbr,
 			 eigrp_prefix_descriptor_t *prefix)
 {

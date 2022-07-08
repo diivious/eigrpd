@@ -65,7 +65,7 @@ const struct message eigrp_packet_type_str[] = {
 static unsigned char zeropad[16] = {0};
 
 /* Forward function reference*/
-static struct stream *eigrp_packet_recv(struct eigrp *eigrp, int fd,
+static struct stream *eigrp_packet_recv(eigrp_instance_t *eigrp, int fd,
 					struct interface **ifp,
 					struct stream *s);
 static int eigrp_verify_header(struct stream *s, eigrp_interface_t *ei,
@@ -81,7 +81,7 @@ static int eigrp_retrans_count_exceeded(eigrp_packet_t *packet,
 /*
  * New testing block of code for handling Acks
  */
-static void eigrp_packet_ack(struct eigrp *eigrp, struct eigrp_header *eigrph,
+static void eigrp_packet_ack(eigrp_instance_t *eigrp, struct eigrp_header *eigrph,
 			     eigrp_neighbor_t *nbr)
 {
 	struct eigrp_packet *packet = NULL;
@@ -342,7 +342,7 @@ int eigrp_check_sha256_digest(struct stream *s,
 
 void eigrp_packet_write(struct thread *thread)
 {
-	struct eigrp *eigrp = THREAD_ARG(thread);
+	eigrp_instance_t *eigrp = THREAD_ARG(thread);
 	struct eigrp_header *eigrph;
 	eigrp_interface_t *ei;
 	eigrp_packet_t *packet;
@@ -494,8 +494,7 @@ out:
 
 	/* If packets still remain in queue, call write thread. */
 	if (!list_isempty(eigrp->oi_write_q)) {
-		thread_add_write(master, eigrp_packet_write, eigrp, eigrp->fd,
-				 &eigrp->t_write);
+	    EIGRP_THREAD_ADD_WRITE(eigrp);
 	}
 
 	return;
@@ -506,7 +505,7 @@ void eigrp_packet_read(struct thread *thread)
 {
 	int ret;
 	struct stream *ibuf;
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 	eigrp_interface_t *ei;
 	struct ip *iph;
 	struct eigrp_header *eigrph;
@@ -521,7 +520,7 @@ void eigrp_packet_read(struct thread *thread)
 	eigrp = THREAD_ARG(thread);
 
 	/* prepare for next packet. */
-	thread_add_read(master, eigrp_packet_read, eigrp, eigrp->fd, &eigrp->t_read);
+	thread_add_read(eigrpd_thread, eigrp_packet_read, eigrp, eigrp->fd, &eigrp->t_read);
 
 	stream_reset(eigrp->ibuf);
 	if (!(ibuf = eigrp_packet_recv(eigrp, eigrp->fd, &ifp, eigrp->ibuf))) {
@@ -720,7 +719,7 @@ void eigrp_packet_read(struct thread *thread)
 	return;
 }
 
-static struct stream *eigrp_packet_recv(struct eigrp *eigrp, int fd,
+static struct stream *eigrp_packet_recv(eigrp_instance_t *eigrp, int fd,
 					struct interface **ifp,
 					struct stream *ibuf)
 {
@@ -852,7 +851,7 @@ eigrp_packet_t *eigrp_packet_new(size_t size, eigrp_neighbor_t *nbr)
 	return new;
 }
 
-void eigrp_packet_send_reliably(struct eigrp *eigrp, eigrp_neighbor_t *nbr)
+void eigrp_packet_send_reliably(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr)
 {
 	eigrp_packet_t *packet;
 
@@ -865,7 +864,7 @@ void eigrp_packet_send_reliably(struct eigrp *eigrp, eigrp_neighbor_t *nbr)
 		eigrp_packet_enqueue(nbr->ei->obuf, duplicate);
 
 		/*Start retransmission timer*/
-		thread_add_timer(master, eigrp_packet_unack_retrans, nbr,
+		thread_add_timer(eigrpd_thread, eigrp_packet_unack_retrans, nbr,
 				 EIGRP_PACKET_RETRANS_TIME,
 				 &packet->t_retrans_timer);
 
@@ -877,8 +876,7 @@ void eigrp_packet_send_reliably(struct eigrp *eigrp, eigrp_neighbor_t *nbr)
 			listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
 			nbr->ei->on_write_q = 1;
 		}
-		thread_add_write(master, eigrp_packet_write, nbr->ei->eigrp,
-				 nbr->ei->eigrp->fd, &nbr->ei->eigrp->t_write);
+		EIGRP_THREAD_ADD_WRITE(nbr->ei->eigrp);
 	}
 }
 
@@ -895,7 +893,7 @@ void eigrp_packet_checksum(eigrp_interface_t *ei, struct stream *s,
 }
 
 /* Make EIGRP header. */
-void eigrp_packet_header_init(int type, struct eigrp *eigrp, struct stream *s,
+void eigrp_packet_header_init(int type, eigrp_instance_t *eigrp, struct stream *s,
 			      uint32_t flags, uint32_t sequence, uint32_t ack)
 {
 	struct eigrp_header *eigrph;
@@ -1029,7 +1027,7 @@ void eigrp_packet_unack_retrans(struct thread *thread)
 		}
 
 		/*Start retransmission timer*/
-		thread_add_timer(master, eigrp_packet_unack_retrans, nbr,
+		thread_add_timer(eigrpd_thread, eigrp_packet_unack_retrans, nbr,
 				 EIGRP_PACKET_RETRANS_TIME,
 				 &packet->t_retrans_timer);
 
@@ -1038,8 +1036,7 @@ void eigrp_packet_unack_retrans(struct thread *thread)
 			listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
 			nbr->ei->on_write_q = 1;
 		}
-		thread_add_write(master, eigrp_packet_write, nbr->ei->eigrp,
-				 nbr->ei->eigrp->fd, &nbr->ei->eigrp->t_write);
+		EIGRP_THREAD_ADD_WRITE(nbr->ei->eigrp);
 	}
 
 	return;
@@ -1066,7 +1063,7 @@ void eigrp_packet_unack_multicast_retrans(struct thread *thread)
 		}
 
 		/*Start retransmission timer*/
-		thread_add_timer(master, eigrp_packet_unack_multicast_retrans,
+		thread_add_timer(eigrpd_thread, eigrp_packet_unack_multicast_retrans,
 				 nbr, EIGRP_PACKET_RETRANS_TIME,
 				 &packet->t_retrans_timer);
 
@@ -1075,8 +1072,7 @@ void eigrp_packet_unack_multicast_retrans(struct thread *thread)
 			listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
 			nbr->ei->on_write_q = 1;
 		}
-		thread_add_write(master, eigrp_packet_write, nbr->ei->eigrp,
-				 nbr->ei->eigrp->fd, &nbr->ei->eigrp->t_write);
+		EIGRP_THREAD_ADD_WRITE(nbr->ei->eigrp);
 	}
 
 	return;

@@ -38,16 +38,16 @@
 
 DEFINE_MGROUP(EIGRPD, "eigrpd");
 DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_TOP, "EIGRP structure");
-DEFINE_QOBJ_TYPE(eigrp);
+DEFINE_QOBJ_TYPE(eigrp_instance);
 
-static struct eigrp_master eigrp_master;
-struct eigrp_master *eigrp_om;
+static struct eigrpd eigrpd;
+struct eigrpd *eigrp_om;
 
 extern struct zclient *zclient;
 extern struct in_addr router_id_zebra;
 
 /*
- * void eigrp_router_id_update(struct eigrp *eigrp)
+ * void eigrp_router_id_update(eigrp_instance_t *eigrp)
  *
  * Description:
  * update routerid associated with this instance of EIGRP.
@@ -69,7 +69,7 @@ extern struct in_addr router_id_zebra;
  * This does not work for IPv6, and to make the code simpler, its
  * stored and processed internerall as a 32bit number
  */
-void eigrp_router_id_update(struct eigrp *eigrp)
+void eigrp_router_id_update(eigrp_instance_t *eigrp)
 {
 	struct vrf *vrf = vrf_lookup_by_id(eigrp->vrf_id);
 	struct interface *ifp;
@@ -100,13 +100,13 @@ void eigrp_router_id_update(struct eigrp *eigrp)
 	}
 }
 
-void eigrp_master_init(void)
+void eigrp_init(void)
 {
 	struct timeval tv;
 
-	memset(&eigrp_master, 0, sizeof(struct eigrp_master));
+	memset(&eigrpd, 0, sizeof(struct eigrpd));
 
-	eigrp_om = &eigrp_master;
+	eigrp_om = &eigrpd;
 	eigrp_om->eigrp = list_new();
 
 	monotime(&tv);
@@ -114,9 +114,9 @@ void eigrp_master_init(void)
 }
 
 /* Allocate new eigrp structure. */
-static struct eigrp *eigrp_new(uint16_t as, vrf_id_t vrf_id)
+static eigrp_instance_t *eigrp_new(uint16_t as, vrf_id_t vrf_id)
 {
-	struct eigrp *eigrp = XCALLOC(MTYPE_EIGRP_TOP, sizeof(struct eigrp));
+	eigrp_instance_t *eigrp = XCALLOC(MTYPE_EIGRP_TOP, sizeof(struct eigrp_instance));
 
 	/* init information relevant to peers */
 	eigrp->vrf_id = vrf_id;
@@ -152,7 +152,7 @@ static struct eigrp *eigrp_new(uint16_t as, vrf_id_t vrf_id)
 
 	eigrp->ibuf = stream_new(EIGRP_PACKET_MAX_LEN + 1);
 
-	thread_add_read(master, eigrp_packet_read, eigrp, eigrp->fd, &eigrp->t_read);
+	thread_add_read(eigrpd_thread, eigrp_packet_read, eigrp, eigrp->fd, &eigrp->t_read);
 	eigrp->oi_write_q = list_new();
 
 	// DVS: get it into a workable form, but this is an ugly hack
@@ -192,7 +192,7 @@ static struct eigrp *eigrp_new(uint16_t as, vrf_id_t vrf_id)
 	  if_rmap_hook_add (eigrp_intf_rmap_update);
 	  if_rmap_hook_delete (eigrp_intf_rmap_update);
 	*/
-	QOBJ_REG(eigrp, eigrp);
+	QOBJ_REG(eigrp, eigrp_instance);
 	return eigrp;
 }
 
@@ -203,9 +203,9 @@ static struct eigrp *eigrp_new(uint16_t as, vrf_id_t vrf_id)
  *
  * Look for existing eigrp process based on the VRF its running over
  */
-struct eigrp *eigrp_lookup(vrf_id_t vrf_id)
+eigrp_instance_t *eigrp_lookup(vrf_id_t vrf_id)
 {
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 	struct listnode *node, *nnode;
 
 	for (ALL_LIST_ELEMENTS(eigrp_om->eigrp, node, nnode, eigrp)) {
@@ -216,9 +216,9 @@ struct eigrp *eigrp_lookup(vrf_id_t vrf_id)
 	return NULL;
 }
 
-struct eigrp *eigrp_get(uint16_t as, vrf_id_t vrf_id)
+eigrp_instance_t *eigrp_get(uint16_t as, vrf_id_t vrf_id)
 {
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 
 	eigrp = eigrp_lookup(vrf_id);
 	if (eigrp == NULL) {
@@ -232,14 +232,14 @@ struct eigrp *eigrp_get(uint16_t as, vrf_id_t vrf_id)
 /* Shut down the entire process */
 void eigrp_terminate(void)
 {
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 	struct listnode *node, *nnode;
 
 	/* shutdown already in progress */
-	if (CHECK_FLAG(eigrp_om->options, EIGRP_MASTER_SHUTDOWN))
+	if (CHECK_FLAG(eigrp_om->options, EIGRPD_SHUTDOWN))
 		return;
 
-	SET_FLAG(eigrp_om->options, EIGRP_MASTER_SHUTDOWN);
+	SET_FLAG(eigrp_om->options, EIGRPD_SHUTDOWN);
 
 	for (ALL_LIST_ELEMENTS(eigrp_om->eigrp, node, nnode, eigrp))
 		eigrp_finish(eigrp);
@@ -247,12 +247,12 @@ void eigrp_terminate(void)
 	frr_fini();
 }
 
-void eigrp_finish(struct eigrp *eigrp)
+void eigrp_finish(eigrp_instance_t *eigrp)
 {
 	eigrp_finish_final(eigrp);
 
 	/* eigrp being shut-down? If so, was this the last eigrp instance? */
-	if (CHECK_FLAG(eigrp_om->options, EIGRP_MASTER_SHUTDOWN)
+	if (CHECK_FLAG(eigrp_om->options, EIGRPD_SHUTDOWN)
 	    && (listcount(eigrp_om->eigrp) == 0)) {
 		if (zclient) {
 			zclient_stop(zclient);
@@ -265,7 +265,7 @@ void eigrp_finish(struct eigrp *eigrp)
 }
 
 /* Final cleanup of eigrp instance */
-void eigrp_finish_final(struct eigrp *eigrp)
+void eigrp_finish_final(eigrp_instance_t *eigrp)
 {
 	eigrp_interface_t *ei;
 	eigrp_neighbor_t *nbr;

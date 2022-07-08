@@ -43,7 +43,7 @@
 /**
  * extract the vector metric from the TLV and put it into a usable form
  */
-static eigrp_route_descriptor_t *eigrp_tlv2_decoder(struct eigrp *eigrp,
+static eigrp_route_descriptor_t *eigrp_tlv2_decoder(eigrp_instance_t *eigrp,
 						    eigrp_neighbor_t *nbr,
 						    eigrp_stream_t *pkt,
 						    uint16_t pktlen)
@@ -51,7 +51,7 @@ static eigrp_route_descriptor_t *eigrp_tlv2_decoder(struct eigrp *eigrp,
 	return 0;
 }
 
-static uint16_t eigrp_tlv2_encoder(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
+static uint16_t eigrp_tlv2_encoder(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 				   eigrp_stream_t *pkt,
 				   eigrp_route_descriptor_t *route)
 {

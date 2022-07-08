@@ -34,10 +34,10 @@
 
 extern void eigrp_zebra_init(void);
 
-extern void eigrp_zebra_route_add(struct eigrp *eigrp, struct prefix *p,
+extern void eigrp_zebra_route_add(eigrp_instance_t *eigrp, struct prefix *p,
 				  struct list *successors, uint32_t distance);
-extern void eigrp_zebra_route_delete(struct eigrp *eigrp, struct prefix *);
-extern int eigrp_redistribute_set(struct eigrp *, int, struct eigrp_metrics);
-extern int eigrp_redistribute_unset(struct eigrp *, int);
+extern void eigrp_zebra_route_delete(eigrp_instance_t *eigrp, struct prefix *);
+extern int eigrp_redistribute_set(eigrp_instance_t *, int, struct eigrp_metrics);
+extern int eigrp_redistribute_unset(eigrp_instance_t *, int);
 
 #endif /* _ZEBRA_EIGRP_ZEBRA_H_ */

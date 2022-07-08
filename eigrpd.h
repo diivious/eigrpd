@@ -47,13 +47,13 @@ DECLARE_MGROUP(EIGRPD);
 #define EIGRP_TLV_MTR_VERSION 3 // MTR TLVs with 32bit metric *Not Supported
 #define EIGRP_TLV_SAF_VERSION 4 // SAF TLVs with 64bit metric *Not Supported
 
-/* EIGRP master for system wide configuration and variables. */
-typedef struct eigrp_master {
+/* EIGRPD system wide configuration and variables. */
+typedef struct eigrpd {
 	/* EIGRP instance. */
 	struct list *eigrp;
 
-	/* EIGRP thread master. */
-	struct thread_master *master;
+	/* EIGRP parent thread. */
+	struct thread_master *thread;
 
 	/* Zebra interface list. */
 	struct list *iflist;
@@ -64,24 +64,24 @@ typedef struct eigrp_master {
 	/* Various EIGRP global configuration. */
 	uint8_t options;
 
-#define EIGRP_MASTER_SHUTDOWN (1 << 0) /* deferred-shutdown */
-} eigrp_master_t;
+#define EIGRPD_SHUTDOWN (1 << 0) /* deferred-shutdown */
+} eigrpd_t;
 
 /* Extern variables. */
 extern struct zclient *zclient;
-extern struct thread_master *master;
-extern struct eigrp_master *eigrp_om;
+extern struct thread_master *eigrpd_thread;
+extern struct eigrpd *eigrp_om;
 extern struct zebra_privs_t eigrpd_privs;
 
 /* Prototypes */
-extern void eigrp_master_init(void);
+extern void eigrp_init(void);
 extern void eigrp_terminate(void);
-extern void eigrp_finish(struct eigrp *);
-extern void eigrp_finish_final(struct eigrp *);
+extern void eigrp_finish(eigrp_instance_t *);
+extern void eigrp_finish_final(eigrp_instance_t *);
 
-extern struct eigrp *eigrp_get(uint16_t as, vrf_id_t vrf_id);
-extern struct eigrp *eigrp_lookup(vrf_id_t vrf_id);
+extern eigrp_instance_t *eigrp_get(uint16_t as, vrf_id_t vrf_id);
+extern eigrp_instance_t *eigrp_lookup(vrf_id_t vrf_id);
 
-extern void eigrp_router_id_update(struct eigrp *);
+extern void eigrp_router_id_update(eigrp_instance_t *);
 
 #endif /* _ZEBRA_EIGRPD_H */

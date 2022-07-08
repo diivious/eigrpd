@@ -51,8 +51,8 @@ extern eigrp_bandwidth_t eigrp_scaled_to_bandwidth(eigrp_scaled_t);
 extern eigrp_scaled_t eigrp_delay_to_scaled(eigrp_delay_t);
 extern eigrp_delay_t eigrp_scaled_to_delay(eigrp_scaled_t);
 
-extern eigrp_metric_t eigrp_calculate_metrics(struct eigrp *, eigrp_metrics_t);
-extern eigrp_metric_t eigrp_calculate_total_metrics(struct eigrp *,
+extern eigrp_metric_t eigrp_calculate_metrics(eigrp_instance_t *, eigrp_metrics_t);
+extern eigrp_metric_t eigrp_calculate_total_metrics(eigrp_instance_t *,
 						    eigrp_route_descriptor_t *);
 extern bool eigrp_metrics_is_same(eigrp_metrics_t, eigrp_metrics_t);
 

@@ -37,11 +37,18 @@
 
 #define EIGRP_PACKET_MTU(mtu) ((mtu) - (sizeof(struct ip)))
 
+
+/* Thready Macros */
+
+#define EIGRP_THREAD_ADD_WRITE(E)					\
+    thread_add_write(eigrpd_thread, eigrp_packet_write, (E), (E)->fd, &(E)->t_write)
+
+
 /* Topology Macros */
 
 
 /* FSM macros*/
 #define EIGRP_FSM_EVENT_SCHEDULE(I, E)                                         \
-	thread_add_event(master, eigrp_fsm_event, (I), (E))
+	thread_add_event(eigrpd_thread, eigrp_fsm_event, (I), (E))
 
 #endif /* _ZEBRA_EIGRP_MACROS_H_ */

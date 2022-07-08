@@ -34,7 +34,7 @@
 
 static int eigrp_network_match_iface(const struct prefix *connected_prefix,
 				     const struct prefix *prefix);
-static void eigrp_network_run_interface(struct eigrp *, struct prefix *,
+static void eigrp_network_run_interface(eigrp_instance_t *, struct prefix *,
 					struct interface *);
 
 int eigrp_sock_init(struct vrf *vrf)
@@ -92,7 +92,7 @@ int eigrp_sock_init(struct vrf *vrf)
 	return eigrp_sock;
 }
 
-void eigrp_adjust_sndbuflen(struct eigrp *eigrp, unsigned int buflen)
+void eigrp_adjust_sndbuflen(eigrp_instance_t *eigrp, unsigned int buflen)
 {
 	int newbuflen;
 	/* Check if any work has to be done at all. */
@@ -117,7 +117,7 @@ void eigrp_adjust_sndbuflen(struct eigrp *eigrp, unsigned int buflen)
 		zlog_warn("%s: failed to get SO_SNDBUF", __func__);
 }
 
-int eigrp_intf_ipmulticast(struct eigrp *top, struct prefix *p,
+int eigrp_intf_ipmulticast(eigrp_instance_t *top, struct prefix *p,
 			   unsigned int ifindex)
 {
 	uint8_t val;
@@ -154,7 +154,7 @@ int eigrp_intf_ipmulticast(struct eigrp *top, struct prefix *p,
 }
 
 /* Join to the EIGRP multicast group. */
-int eigrp_intf_add_allspfrouters(struct eigrp *top, struct prefix *p,
+int eigrp_intf_add_allspfrouters(eigrp_instance_t *top, struct prefix *p,
 				 unsigned int ifindex)
 {
 	int ret;
@@ -176,7 +176,7 @@ int eigrp_intf_add_allspfrouters(struct eigrp *top, struct prefix *p,
 	return ret;
 }
 
-int eigrp_intf_drop_allspfrouters(struct eigrp *top, struct prefix *p,
+int eigrp_intf_drop_allspfrouters(eigrp_instance_t *top, struct prefix *p,
 				  unsigned int ifindex)
 {
 	int ret;
@@ -197,7 +197,7 @@ int eigrp_intf_drop_allspfrouters(struct eigrp *top, struct prefix *p,
 	return ret;
 }
 
-int eigrp_network_set(struct eigrp *eigrp, struct prefix *p)
+int eigrp_network_set(eigrp_instance_t *eigrp, struct prefix *p)
 {
 	struct vrf *vrf = vrf_lookup_by_id(eigrp->vrf_id);
 	struct route_node *rn;
@@ -237,7 +237,7 @@ static int eigrp_network_match_iface(const struct prefix *co_prefix,
 	return prefix_match_network_statement(net, co_prefix);
 }
 
-static void eigrp_network_run_interface(struct eigrp *eigrp, struct prefix *p,
+static void eigrp_network_run_interface(eigrp_instance_t *eigrp, struct prefix *p,
 					struct interface *ifp)
 {
 	eigrp_interface_t *ei;
@@ -267,7 +267,7 @@ static void eigrp_network_run_interface(struct eigrp *eigrp, struct prefix *p,
 	}
 }
 
-void eigrp_intf_update(struct eigrp *eigrp, struct interface *ifp)
+void eigrp_intf_update(eigrp_instance_t *eigrp, struct interface *ifp)
 {
 	struct route_node *rn;
 
@@ -294,7 +294,7 @@ void eigrp_intf_update(struct eigrp *eigrp, struct interface *ifp)
 	    }
 }
 
-int eigrp_network_unset(struct eigrp *eigrp, struct prefix *p)
+int eigrp_network_unset(eigrp_instance_t *eigrp, struct prefix *p)
 {
 	struct route_node *rn;
 	struct listnode *node, *nnode;
@@ -337,6 +337,6 @@ int eigrp_network_unset(struct eigrp *eigrp, struct prefix *p)
 	return 1;
 }
 
-void eigrp_external_routes_refresh(struct eigrp *eigrp, int type)
+void eigrp_external_routes_refresh(eigrp_instance_t *eigrp, int type)
 {
 }

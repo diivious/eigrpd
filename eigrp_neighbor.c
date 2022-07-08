@@ -39,12 +39,12 @@
 DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_NEIGHBOR, "EIGRP neighbor");
 
 static inline eigrp_route_descriptor_t *
-eigrp_tlv_decoder_safe(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
+eigrp_tlv_decoder_safe(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 		       eigrp_stream_t *pkt, uint16_t pktlen)
 {
 	return NULL;
 }
-static inline uint16_t eigrp_tlv_encoder_safe(struct eigrp *eigrp,
+static inline uint16_t eigrp_tlv_encoder_safe(eigrp_instance_t *eigrp,
 					      eigrp_neighbor_t *nbr,
 					      eigrp_stream_t *pkt,
 					      eigrp_route_descriptor_t *route)
@@ -156,7 +156,7 @@ eigrp_neighbor_t *eigrp_nbr_lookup_by_addr(eigrp_interface_t *ei,
  * Function is used for neighbor lookup by address
  * in whole EIGRP process.
  */
-eigrp_neighbor_t *eigrp_nbr_lookup_by_addr_process(struct eigrp *eigrp,
+eigrp_neighbor_t *eigrp_nbr_lookup_by_addr_process(eigrp_instance_t *eigrp,
 						   struct in_addr nbr_addr)
 {
 	eigrp_interface_t *ei;
@@ -186,7 +186,7 @@ void eigrp_nbr_delete(eigrp_neighbor_t *nbr)
 		eigrp_topology_neighbor_down(nbr->ei->eigrp, nbr);
 
 	/* Cancel all events. */ /* Thread lookup cost would be negligible. */
-	thread_cancel_event(master, nbr);
+	thread_cancel_event(eigrpd_thread, nbr);
 	eigrp_packet_queue_free(nbr->multicast_queue);
 	eigrp_packet_queue_free(nbr->retrans_queue);
 	THREAD_OFF(nbr->t_holddown);
@@ -199,7 +199,7 @@ void eigrp_nbr_delete(eigrp_neighbor_t *nbr)
 void holddown_timer_expired(struct thread *thread)
 {
 	eigrp_neighbor_t *nbr = THREAD_ARG(thread);
-	struct eigrp *eigrp = nbr->ei->eigrp;
+	eigrp_instance_t *eigrp = nbr->ei->eigrp;
 
 	zlog_info("Neighbor %s (%s) is down: holding time expired",
 		  eigrp_topo_addr2string(&nbr->src),
@@ -278,7 +278,7 @@ void eigrp_nbr_state_update(eigrp_neighbor_t *nbr)
 	case EIGRP_NEIGHBOR_DOWN: {
 		/*Start Hold Down Timer for neighbor*/
 		//     THREAD_OFF(nbr->t_holddown);
-		//     THREAD_TIMER_ON(master, nbr->t_holddown,
+		//     THREAD_TIMER_ON(eigrpd_thread, nbr->t_holddown,
 		//     holddown_timer_expired,
 		//     nbr, nbr->v_holddown);
 		break;
@@ -286,21 +286,21 @@ void eigrp_nbr_state_update(eigrp_neighbor_t *nbr)
 	case EIGRP_NEIGHBOR_PENDING: {
 		/*Reset Hold Down Timer for neighbor*/
 		THREAD_OFF(nbr->t_holddown);
-		thread_add_timer(master, holddown_timer_expired, nbr,
+		thread_add_timer(eigrpd_thread, holddown_timer_expired, nbr,
 				 nbr->v_holddown, &nbr->t_holddown);
 		break;
 	}
 	case EIGRP_NEIGHBOR_UP: {
 		/*Reset Hold Down Timer for neighbor*/
 		THREAD_OFF(nbr->t_holddown);
-		thread_add_timer(master, holddown_timer_expired, nbr,
+		thread_add_timer(eigrpd_thread, holddown_timer_expired, nbr,
 				 nbr->v_holddown, &nbr->t_holddown);
 		break;
 	}
 	}
 }
 
-int eigrp_nbr_count_get(struct eigrp *eigrp)
+int eigrp_nbr_count_get(eigrp_instance_t *eigrp)
 {
 	eigrp_interface_t *iface;
 	struct listnode *node, *node2, *nnode2;
@@ -330,7 +330,7 @@ int eigrp_nbr_count_get(struct eigrp *eigrp)
  * Send Hello packet with Peer Termination TLV with
  * neighbor's address, set it's state to DOWN and delete the neighbor
  */
-void eigrp_nbr_hard_restart(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
+void eigrp_nbr_hard_restart(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 			    struct vty *vty)
 {
 	zlog_debug("Neighbor %s (%s) is down: manually cleared",

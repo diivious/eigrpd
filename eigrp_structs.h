@@ -73,7 +73,7 @@ typedef struct eigrp_extdata {
  *it.
  *
  */
-struct eigrp {
+struct eigrp_instance {
 	vrf_id_t vrf_id;
 
 	uint16_t AS;	     /* Autonomous system number */
@@ -195,7 +195,7 @@ typedef struct eigrp_intf_stats {
 typedef struct eigrp_interface {
 
 	/* This interface's parent eigrp instance. */
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 
 	/* Zebra Interface Properties */
 	struct interface *ifp;	//Interface data from zebra
@@ -261,18 +261,17 @@ typedef struct eigrp_packet {
 	/* IP destination address. */
 	eigrp_addr_t dst;
 
-	/*Packet retransmission thread*/
+	/*Packet retransmission thread and counter*/
 	struct thread *t_retrans_timer;
-
-	/*Packet retransmission counter*/
 	uint8_t retrans_counter;
 
+	/*neighbor details for sendng packet*/
+	eigrp_neighbor_t *nbr;
 	uint32_t sequence_number;
 
 	/* EIGRP packet length. */
 	uint16_t length;
 
-	struct eigrp_neighbor *nbr;
 } eigrp_packet_t;
 
 struct eigrp_header {

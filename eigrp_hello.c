@@ -77,13 +77,13 @@ void eigrp_hello_timer(struct thread *thread)
 	eigrp_hello_send(ei, EIGRP_HELLO_NORMAL, NULL);
 
 	/* Hello timer set. */
-	thread_add_timer(master, eigrp_hello_timer, ei, ei->params.v_hello,
+	thread_add_timer(eigrpd_thread, eigrp_hello_timer, ei, ei->params.v_hello,
 			 &ei->t_hello);
 
 	return;
 }
 
-static bool eigrp_hello_k_same(struct eigrp *eigrp, eigrp_neighbor_t *nbr)
+static bool eigrp_hello_k_same(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr)
 {
 	if ((eigrp->k_values[0] == nbr->K1) &&
 	    (eigrp->k_values[1] == nbr->K2) &&
@@ -124,7 +124,7 @@ static void eigrp_hello_k_update(eigrp_neighbor_t *nbr,
  * older TLV packet formats.
  */
 static eigrp_neighbor_t *
-eigrp_hello_parameter_decode(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
+eigrp_hello_parameter_decode(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 			     struct eigrp_tlv_hdr_type *tlv)
 {
 	struct TLV_Parameter_Type *param = (struct TLV_Parameter_Type *)tlv;
@@ -251,7 +251,7 @@ static void eigrp_sw_version_decode(eigrp_neighbor_t *nbr,
  * a match is found, move the sending neighbor to the down state. If
  * out address is not in the TLV, then ignore the peer termination
  */
-static void eigrp_peer_termination_decode(struct eigrp *eigrp,
+static void eigrp_peer_termination_decode(eigrp_instance_t *eigrp,
 					  eigrp_neighbor_t *nbr,
 					  struct eigrp_tlv_hdr_type *tlv)
 {
@@ -317,7 +317,7 @@ static uint16_t eigrp_peer_termination_encode(struct stream *s,
  * @usage
  * Not all TLVs are current decoder.  This is a work in progress..
  */
-void eigrp_hello_receive(struct eigrp *eigrp, struct eigrp_header *eigrph,
+void eigrp_hello_receive(eigrp_instance_t *eigrp, struct eigrp_header *eigrph,
 			 eigrp_addr_t *src, eigrp_interface_t *ei,
 			 struct stream *s, int size)
 {
@@ -496,7 +496,7 @@ static uint16_t eigrp_tidlist_encode(struct stream *s)
  * Part of conditional receive process
  *
  */
-static uint16_t eigrp_sequence_encode(struct eigrp *eigrp, struct stream *s)
+static uint16_t eigrp_sequence_encode(eigrp_instance_t *eigrp, struct stream *s)
 {
 	uint16_t length = EIGRP_TLV_SEQ_BASE_LEN;
 	eigrp_interface_t *ei;
@@ -547,7 +547,7 @@ static uint16_t eigrp_sequence_encode(struct eigrp *eigrp, struct stream *s)
  * Part of conditional receive process
  *
  */
-static uint16_t eigrp_next_sequence_encode(struct eigrp *eigrp,
+static uint16_t eigrp_next_sequence_encode(eigrp_instance_t *eigrp,
 					   struct stream *s)
 {
 	uint16_t length = EIGRP_NEXT_SEQUENCE_TLV_SIZE;
@@ -731,8 +731,7 @@ void eigrp_hello_send_ack(eigrp_neighbor_t *nbr)
 			listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
 			nbr->ei->on_write_q = 1;
 		}
-		thread_add_write(master, eigrp_packet_write, nbr->ei->eigrp,
-				 nbr->ei->eigrp->fd, &nbr->ei->eigrp->t_write);
+		EIGRP_THREAD_ADD_WRITE(nbr->ei->eigrp);
 	}
 }
 
@@ -782,12 +781,10 @@ void eigrp_hello_send(eigrp_interface_t *ei, uint8_t flags,
 
 		if (ei->eigrp->t_write == NULL) {
 			if (flags & EIGRP_HELLO_GRACEFUL_SHUTDOWN) {
-				thread_execute(master, eigrp_packet_write,
+				thread_execute(eigrpd_thread, eigrp_packet_write,
 					       ei->eigrp, ei->eigrp->fd);
 			} else {
-				thread_add_write(master, eigrp_packet_write,
-						 ei->eigrp, ei->eigrp->fd,
-						 &ei->eigrp->t_write);
+				EIGRP_THREAD_ADD_WRITE(ei->eigrp);
 			}
 		}
 	}

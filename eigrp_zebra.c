@@ -56,13 +56,13 @@ struct zebra_privs_t eigrpd_privs = {
 	.cap_num_i = 0};
 
 /* For registering threads. */
-extern struct thread_master *master;
+extern struct thread_master *eigrpd_thread;
 struct in_addr router_id_zebra;
 
 /* Router-id update message from zebra. */
 static int eigrp_zebra_router_id_update(ZAPI_CALLBACK_ARGS)
 {
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 	struct prefix router_id;
 	zebra_router_id_update_read(zclient->ibuf, &router_id);
 
@@ -98,7 +98,7 @@ static void eigrp_zebra_connected(struct zclient *zclient)
 static int eigrp_zebra_redistribute_route(ZAPI_CALLBACK_ARGS)
 {
 	struct zapi_route api;
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 
 	if (zapi_route_decode(zclient->ibuf, &api) < 0)
 		return -1;
@@ -124,7 +124,7 @@ static int eigrp_zebra_interface_address_add(ZAPI_CALLBACK_ARGS)
 	struct listnode *node, *nnode;
 	struct interface *ifp;
 	struct connected *c;
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 
 	c = zebra_interface_address_read(cmd, zclient->ibuf, vrf_id);
 	if (c == NULL)
@@ -180,7 +180,7 @@ static int eigrp_zebra_interface_address_delete(ZAPI_CALLBACK_ARGS)
 	return 0;
 }
 
-void eigrp_zebra_route_add(struct eigrp *eigrp, struct prefix *p,
+void eigrp_zebra_route_add(eigrp_instance_t *eigrp, struct prefix *p,
 			   struct list *successors, uint32_t distance)
 {
 	struct zapi_route api;
@@ -229,7 +229,7 @@ void eigrp_zebra_route_add(struct eigrp *eigrp, struct prefix *p,
 	zclient_route_send(ZEBRA_ROUTE_ADD, zclient, &api);
 }
 
-void eigrp_zebra_route_delete(struct eigrp *eigrp, struct prefix *p)
+void eigrp_zebra_route_delete(eigrp_instance_t *eigrp, struct prefix *p)
 {
 	struct zapi_route api;
 
@@ -261,7 +261,7 @@ static int eigrp_is_type_redistributed(int type, vrf_id_t vrf_id)
 					   vrf_id));
 }
 
-int eigrp_redistribute_set(struct eigrp *eigrp, int type,
+int eigrp_redistribute_set(eigrp_instance_t *eigrp, int type,
 			   struct eigrp_metrics metric)
 {
 
@@ -284,7 +284,7 @@ int eigrp_redistribute_set(struct eigrp *eigrp, int type,
 	return CMD_SUCCESS;
 }
 
-int eigrp_redistribute_unset(struct eigrp *eigrp, int type)
+int eigrp_redistribute_unset(eigrp_instance_t *eigrp, int type)
 {
 
 	if (eigrp_is_type_redistributed(type, eigrp->vrf_id)) {
@@ -310,7 +310,7 @@ void eigrp_zebra_init(void)
 {
 	struct zclient_options opt = {.receive_notify = false};
 
-	zclient = zclient_new(master, &opt, eigrp_handlers,
+	zclient = zclient_new(eigrpd_thread, &opt, eigrp_handlers,
 			      array_size(eigrp_handlers));
 
 	zclient_init(zclient, ZEBRA_ROUTE_EIGRP, 0, &eigrpd_privs);

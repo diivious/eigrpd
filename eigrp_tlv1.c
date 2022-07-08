@@ -277,7 +277,7 @@ static uint16_t eigrp_tlv1_addr_encode(eigrp_stream_t *pkt,
 	return (prefixlen + 1);
 }
 
-static uint16_t eigrp_tlv1_nexthop_decode(struct eigrp *eigrp,
+static uint16_t eigrp_tlv1_nexthop_decode(eigrp_instance_t *eigrp,
 					  eigrp_stream_t *pkt,
 					  eigrp_route_descriptor_t *route)
 {
@@ -301,7 +301,7 @@ static uint16_t eigrp_tlv1_nexthop_encode(eigrp_stream_t *pkt,
 /**
  * decode an incoming TLV into a topology route and return it for processing
  */
-static eigrp_route_descriptor_t *eigrp_tlv1_decoder(struct eigrp *eigrp,
+static eigrp_route_descriptor_t *eigrp_tlv1_decoder(eigrp_instance_t *eigrp,
 						    eigrp_neighbor_t *nbr,
 						    eigrp_stream_t *pkt,
 						    uint16_t pktlen)
@@ -375,7 +375,7 @@ static eigrp_route_descriptor_t *eigrp_tlv1_decoder(struct eigrp *eigrp,
 	return (route);
 }
 
-static uint16_t eigrp_tlv1_encoder(struct eigrp *eigrp, eigrp_neighbor_t *nbr,
+static uint16_t eigrp_tlv1_encoder(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 				   eigrp_stream_t *pkt,
 				   eigrp_route_descriptor_t *route)
 {

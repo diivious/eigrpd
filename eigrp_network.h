@@ -33,11 +33,11 @@
 
 /* Prototypes */
 extern int eigrp_sock_init(struct vrf *vrf);
-extern int eigrp_network_set(struct eigrp *eigrp, struct prefix *p);
-extern int eigrp_network_unset(struct eigrp *eigrp, struct prefix *p);
+extern int eigrp_network_set(eigrp_instance_t *eigrp, struct prefix *p);
+extern int eigrp_network_unset(eigrp_instance_t *eigrp, struct prefix *p);
 
-extern void eigrp_adjust_sndbuflen(struct eigrp *, unsigned int);
+extern void eigrp_adjust_sndbuflen(eigrp_instance_t *, unsigned int);
 
-extern void eigrp_external_routes_refresh(struct eigrp *, int);
+extern void eigrp_external_routes_refresh(eigrp_instance_t *, int);
 
 #endif /* EIGRP_NETWORK_H_ */

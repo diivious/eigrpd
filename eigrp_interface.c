@@ -52,7 +52,7 @@ static void eigrp_intf_stream_set(eigrp_interface_t *ei)
 
 static void eigrp_intf_stream_unset(eigrp_interface_t *ei)
 {
-	struct eigrp *eigrp = ei->eigrp;
+	eigrp_instance_t *eigrp = ei->eigrp;
 
 	if (ei->on_write_q) {
 		listnode_delete(eigrp->oi_write_q, ei);
@@ -80,7 +80,7 @@ const char *eigrp_intf_name_string(eigrp_interface_t *ei)
 	return ei->ifp->name;
 }
 
-eigrp_interface_t *eigrp_intf_new(struct eigrp *eigrp, struct interface *ifp,
+eigrp_interface_t *eigrp_intf_new(eigrp_instance_t *eigrp, struct interface *ifp,
 				  struct prefix *p)
 {
 	eigrp_interface_t *ei = ifp->info;
@@ -134,7 +134,7 @@ eigrp_interface_t *eigrp_intf_new(struct eigrp *eigrp, struct interface *ifp,
 int eigrp_intf_delete_hook(struct interface *ifp)
 {
 	eigrp_interface_t *ei = ifp->info;
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 
 	if (!ei)
 		return 0;
@@ -154,7 +154,7 @@ int eigrp_intf_delete_hook(struct interface *ifp)
 static int eigrp_ifp_create(struct interface *ifp)
 {
 	struct listnode *node, *nnode;
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 	eigrp_interface_t *ei = ifp->info;
 
 	if (ei) {
@@ -259,7 +259,7 @@ void eigrp_del_intf_params(eigrp_intf_params_t *eip)
 		free(eip->auth_keychain);
 }
 
-int eigrp_intf_up(struct eigrp *eigrp, eigrp_interface_t *ei)
+int eigrp_intf_up(eigrp_instance_t *eigrp, eigrp_interface_t *ei)
 {
 	eigrp_prefix_descriptor_t *prefix;
 	eigrp_route_descriptor_t *route;
@@ -273,7 +273,7 @@ int eigrp_intf_up(struct eigrp *eigrp, eigrp_interface_t *ei)
 	/* Set multicast memberships appropriately for new state. */
 	eigrp_intf_set_multicast(ei);
 
-	thread_add_event(master, eigrp_hello_timer, ei, (1), &ei->t_hello);
+	thread_add_event(eigrpd_thread, eigrp_hello_timer, ei, (1), &ei->t_hello);
 
 	/*Prepare metrics*/
 	metric.bandwidth = eigrp_bandwidth_to_scaled(ei->params.bandwidth);
@@ -411,7 +411,7 @@ void eigrp_intf_set_multicast(eigrp_interface_t *ei)
 	}
 }
 
-void eigrp_intf_free(struct eigrp *eigrp, eigrp_interface_t *ei, int source)
+void eigrp_intf_free(eigrp_instance_t *eigrp, eigrp_interface_t *ei, int source)
 {
 	struct prefix dest_addr;
 	eigrp_prefix_descriptor_t *pe;
@@ -447,7 +447,7 @@ void eigrp_intf_reset(struct interface *ifp)
 	eigrp_intf_up(ei->eigrp, ei);
 }
 
-eigrp_interface_t *eigrp_intf_lookup_by_local_addr(struct eigrp *eigrp,
+eigrp_interface_t *eigrp_intf_lookup_by_local_addr(eigrp_instance_t *eigrp,
 						   struct interface *ifp,
 						   struct in_addr address)
 {
@@ -476,7 +476,7 @@ eigrp_interface_t *eigrp_intf_lookup_by_local_addr(struct eigrp *eigrp,
  * @par
  * Function is used for lookup interface by name.
  */
-eigrp_interface_t *eigrp_intf_lookup_by_name(struct eigrp *eigrp,
+eigrp_interface_t *eigrp_intf_lookup_by_name(eigrp_instance_t *eigrp,
 					     const char *if_name)
 {
 	eigrp_interface_t *ei;

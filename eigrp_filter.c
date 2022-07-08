@@ -46,7 +46,7 @@
 void eigrp_distribute_update(struct distribute_ctx *ctx,
 			     struct distribute *dist)
 {
-	struct eigrp *eigrp = eigrp_lookup(ctx->vrf->vrf_id);
+	eigrp_instance_t *eigrp = eigrp_lookup(ctx->vrf->vrf_id);
 	struct interface *ifp;
 	eigrp_interface_t *ei = NULL;
 	struct access_list *alist;
@@ -147,7 +147,7 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 		}
 		/* schedule Graceful restart for whole process in 10sec */
 		eigrp->t_distribute = NULL;
-		thread_add_timer(master, eigrp_distribute_timer_process, eigrp,
+		thread_add_timer(eigrpd_thread, eigrp_distribute_timer_process, eigrp,
 				 (10), &eigrp->t_distribute);
 
 		return;
@@ -223,14 +223,14 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 
 	/* schedule Graceful restart for interface in 10sec */
 	eigrp->t_distribute = NULL;
-	thread_add_timer(master, eigrp_distribute_timer_interface, ei, 10,
+	thread_add_timer(eigrpd_thread, eigrp_distribute_timer_interface, ei, 10,
 			 &eigrp->t_distribute);
 }
 
 /*
  * Function called by prefix-list and access-list update
  */
-static void eigrp_distribute_update_interface(struct eigrp *eigrp,
+static void eigrp_distribute_update_interface(eigrp_instance_t *eigrp,
 					      struct interface *ifp)
 {
 	struct distribute *dist;
@@ -245,7 +245,7 @@ static void eigrp_distribute_update_interface(struct eigrp *eigrp,
  */
 void eigrp_distribute_update_all(struct prefix_list *notused)
 {
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 	struct vrf *vrf;
 	struct interface *ifp;
 
@@ -280,7 +280,7 @@ void eigrp_distribute_update_all_wrapper(struct access_list *notused)
  */
 void eigrp_distribute_timer_process(struct thread *thread)
 {
-	struct eigrp *eigrp;
+	eigrp_instance_t *eigrp;
 
 	eigrp = THREAD_ARG(thread);
 	eigrp->t_distribute = NULL;
