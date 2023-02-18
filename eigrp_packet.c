@@ -31,6 +31,7 @@
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
 #include "eigrpd/eigrp_dump.h"
+#include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_errors.h"
 
@@ -95,7 +96,7 @@ static void eigrp_packet_ack(eigrp_instance_t *eigrp, struct eigrp_header *eigrp
 		    && (ntohl(eigrph->ack) == nbr->init_sequence_number)) {
 			eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_UP);
 			zlog_info("Neighbor(%s) adjacency became full",
-				  eigrp_topo_addr2string(&nbr->src));
+				  eigrp_print_addr(&nbr->src));
 			nbr->init_sequence_number = 0;
 			nbr->recv_sequence_number = ntohl(eigrph->sequence);
 			eigrp_update_send_EOT(nbr);
@@ -471,17 +472,16 @@ void eigrp_packet_write(struct thread *thread)
 		zlog_debug(
 			"Sending [%s][%d/%d] to [%s] via [%s] ret [%d].",
 			lookup_msg(eigrp_packet_type_str, eigrph->opcode, NULL),
-			seqno, ack, eigrp_topo_addr2string(&packet->dst),
+			seqno, ack, eigrp_print_addr(&packet->dst),
 			EIGRP_INTF_NAME(ei), ret);
 	}
 
-	if (ret < 0)
-		zlog_warn(
-			"*** sendmsg in eigrp_packet_write failed to %s, "
-			"id %d, off %d, len %d, interface %s, mtu %u: %s",
-			inet_ntoa(iph.ip_dst), iph.ip_id, iph.ip_off,
-			iph.ip_len, ei->ifp->name, ei->ifp->mtu,
-			safe_strerror(errno));
+	if (ret < 0) //DVS: IPV6 issue
+		zlog_warn("*** sendmsg in eigrp_packet_write failed to %pI4, "
+			  "id %d, off %d, len %d, interface %s, mtu %u: %s",
+			  &iph.ip_dst, iph.ip_id, iph.ip_off,
+			  iph.ip_len, ei->ifp->name, ei->ifp->mtu,
+			  safe_strerror(errno));
 
 	/* Now delete packet from queue. */
 	eigrp_packet_delete(ei);
@@ -587,8 +587,8 @@ void eigrp_packet_read(struct thread *thread)
 	if (eigrp_intf_lookup_by_local_addr(eigrp, NULL, iph->ip_src)
 	    || (IPV4_ADDR_SAME(&srcaddr, &ei->address.u.prefix4))) {
 		if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV))
-			zlog_debug("eigrp_packet_read[%s]: Dropping self-originated packet",
-				inet_ntoa(srcaddr));
+			zlog_debug("eigrp_packet_read[%pI4]: Dropping self-originated packet",
+				   &srcaddr);
 		return;
 	}
 
@@ -608,18 +608,11 @@ void eigrp_packet_read(struct thread *thread)
 
 	/* If incoming interface is passive one, ignore it. */
 	if (eigrp_intf_is_passive(ei)) {
-		char buf[3][INET_ADDRSTRLEN];
-
 		if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV))
 			zlog_debug(
-				"ignoring packet from router %s sent to %s, "
-				"received on a passive interface, %s",
-				inet_ntop(AF_INET, &eigrph->vrid, buf[0],
-					  sizeof(buf[0])),
-				inet_ntop(AF_INET, &iph->ip_dst, buf[1],
-					  sizeof(buf[1])),
-				inet_ntop(AF_INET, &ei->address.u.prefix4,
-					  buf[2], sizeof(buf[2])));
+				"ignoring packet from router %u sent to %pI4, received on a passive interface, %pI4",
+				ntohs(eigrph->vrid), &iph->ip_dst,
+				&ei->address.u.prefix4);
 
 		if (iph->ip_dst.s_addr == htonl(EIGRP_MULTICAST_ADDRESS)) {
 			eigrp_intf_set_multicast(ei);
@@ -632,8 +625,9 @@ void eigrp_packet_read(struct thread *thread)
 	 */
 	else if (ei->ifp != ifp) {
 		if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV))
-			zlog_warn("Packet from [%s] received on wrong link %s",
-				  inet_ntoa(iph->ip_src), ifp->name);
+			zlog_warn(
+				"Packet from [%pI4] received on wrong link %s",
+				&iph->ip_src, ifp->name);
 		return;
 	}
 
@@ -642,8 +636,8 @@ void eigrp_packet_read(struct thread *thread)
 	if (ret < 0) {
 		if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV))
 			zlog_debug(
-				"eigrp_packet_read[%s]: Header check failed, dropping.",
-				inet_ntoa(iph->ip_src));
+				"eigrp_packet_read[%pI4]: Header check failed, dropping.",
+				&iph->ip_src);
 		return;
 	}
 
@@ -651,17 +645,12 @@ void eigrp_packet_read(struct thread *thread)
 	   start of the eigrp TLVs */
 	opcode = eigrph->opcode;
 
-	if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV)) {
-		char src[PREFIX_STRLEN], dst[PREFIX_STRLEN];
-
-		strlcpy(src, inet_ntoa(iph->ip_src), sizeof(src));
-		strlcpy(dst, inet_ntoa(iph->ip_dst), sizeof(dst));
+	if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV))
 		zlog_debug(
-			"Received [%s][%d/%d] length [%u] via [%s] src [%s] dst [%s]",
+			"Received [%s][%d/%d] length [%u] via [%s] src [%pI4] dst [%pI4]",
 			lookup_msg(eigrp_packet_type_str, opcode, NULL),
 			ntohl(eigrph->sequence), ntohl(eigrph->ack), length,
-			EIGRP_INTF_NAME(ei), src, dst);
-	}
+			EIGRP_INTF_NAME(ei), &iph->ip_src, &iph->ip_dst);
 
 	/* Read rest of the packet and call each sort of packet routine. */
 	stream_forward_getp(ibuf, EIGRP_HEADER_LEN);
@@ -970,8 +959,8 @@ static int eigrp_verify_header(struct stream *ibuf, eigrp_interface_t *ei,
 	/* Check network mask, Silently discarded. */
 	if (!eigrp_check_network_mask(ei, iph->ip_src)) {
 		zlog_warn(
-			"interface %s: eigrp_packet_read network address is not same [%s]",
-			EIGRP_INTF_NAME(ei), inet_ntoa(iph->ip_src));
+			"interface %s: eigrp_packet_read network address is not same [%pI4]",
+			EIGRP_INTF_NAME(ei), &iph->ip_src);
 		return -1;
 	}
 	//

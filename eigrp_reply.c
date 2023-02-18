@@ -18,7 +18,7 @@
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2, or (at your option) any
  * later version.
- *
+ *etworkn
  * GNU Zebra is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
@@ -33,6 +33,7 @@
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
 
@@ -116,12 +117,9 @@ void eigrp_reply_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 
 		} else {
 			// Destination must exists
-			char buf[PREFIX_STRLEN];
-			zlog_err(
-				"%s: Received prefix %s which we do not know about",
-				__PRETTY_FUNCTION__,
-				prefix2str(prefix->destination, buf,
-					   sizeof(buf)));
+			zlog_err("%s: Received prefix %s which we do not know about",
+				 __PRETTY_FUNCTION__,
+				 eigrp_print_prefix(prefix->destination));
 			continue;
 		}
 	}

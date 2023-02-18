@@ -34,6 +34,7 @@
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_errors.h"
@@ -142,7 +143,7 @@ eigrp_hello_parameter_decode(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 	if (eigrp_hello_k_same(eigrp, nbr)) {
 		if (eigrp_nbr_state_get(nbr) == EIGRP_NEIGHBOR_DOWN) {
 			zlog_info("Neighbor %s (%s) is pending: new adjacency",
-				  eigrp_topo_addr2string(&nbr->src),
+				  eigrp_print_addr(&nbr->src),
 				  ifindex2ifname(nbr->ei->ifp->ifindex,
 						 eigrp->vrf_id));
 
@@ -159,7 +160,7 @@ eigrp_hello_parameter_decode(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 			if ((param->K1 & param->K2 & param->K3 & param->K4 & param->K5) == 255) {
 				zlog_info(
 					"Neighbor %s (%s) is down: Interface PEER-TERMINATION received",
-					eigrp_topo_addr2string(&nbr->src),
+					eigrp_print_addr(&nbr->src),
 					ifindex2ifname(nbr->ei->ifp->ifindex,
 						       eigrp->vrf_id));
 				eigrp_nbr_delete(nbr);
@@ -167,7 +168,7 @@ eigrp_hello_parameter_decode(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 			} else {
 				zlog_info(
 					"Neighbor %s (%s) going down: Kvalue mismatch",
-					eigrp_topo_addr2string(&nbr->src),
+					eigrp_print_addr(&nbr->src),
 					ifindex2ifname(nbr->ei->ifp->ifindex,
 						       eigrp->vrf_id));
 				eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
@@ -263,7 +264,7 @@ static void eigrp_peer_termination_decode(eigrp_instance_t *eigrp,
 
 	if (my_ip == received_ip) {
 		zlog_info("Neighbor %s (%s) is down: Peer Termination received",
-			  eigrp_topo_addr2string(&nbr->src),
+			  eigrp_print_addr(&nbr->src),
 			  ifindex2ifname(nbr->ei->ifp->ifindex, eigrp->vrf_id));
 		/* set neighbor to DOWN */
 		nbr->state = EIGRP_NEIGHBOR_DOWN;
@@ -330,7 +331,7 @@ void eigrp_hello_receive(eigrp_instance_t *eigrp, struct eigrp_header *eigrph,
 	if (IS_DEBUG_EIGRP_PACKET(eigrph->opcode - 1, RECV)) {
 		zlog_debug("Processing Hello size[%u] int(%s) src(%s)", size,
 			   ifindex2ifname(ei->ifp->ifindex, eigrp->vrf_id),
-			   eigrp_topo_addr2string(src));
+			   eigrp_print_addr(src));
 	}
 
 	/* check for mall formed packet, if so abort now */
@@ -415,7 +416,7 @@ void eigrp_hello_receive(eigrp_instance_t *eigrp, struct eigrp_header *eigrph,
 
 	if (IS_DEBUG_EIGRP_PACKET(0, RECV))
 		zlog_debug("Hello Packet received from %s",
-			   eigrp_topo_addr2string(&nbr->src));
+			   eigrp_print_addr(&nbr->src));
 }
 
 uint32_t FRR_MAJOR;
@@ -721,7 +722,7 @@ void eigrp_hello_send_ack(eigrp_neighbor_t *nbr)
 		if (IS_DEBUG_EIGRP_PACKET(0, SEND))
 			zlog_debug("Queueing [Hello] Ack Seq [%u] nbr [%s]",
 				   nbr->recv_sequence_number,
-				   eigrp_topo_addr2string(&nbr->src));
+				   eigrp_print_addr(&nbr->src));
 
 		/* Add packet to the top of the interface output queue*/
 		eigrp_packet_enqueue(nbr->ei->obuf, packet);

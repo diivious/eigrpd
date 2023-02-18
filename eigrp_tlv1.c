@@ -36,6 +36,7 @@
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
 #include "eigrpd/eigrp_metric.h"
@@ -319,7 +320,7 @@ static eigrp_route_descriptor_t *eigrp_tlv1_decoder(eigrp_instance_t *eigrp,
 	if ((length > pktlen) || (length < EIGRP_IPV4_MIN_TLV)) {
 		if (IS_DEBUG_EIGRP_PACKET(0, RECV)) {
 			zlog_debug("EIGRP TLV: Neighbor(%s) corrupt packet",
-				   eigrp_topo_addr2string(&nbr->src));
+				   eigrp_print_addr(&nbr->src));
 		}
 		return NULL;
 	}
@@ -367,7 +368,7 @@ static eigrp_route_descriptor_t *eigrp_tlv1_decoder(eigrp_instance_t *eigrp,
 		if (IS_DEBUG_EIGRP_PACKET(0, RECV)) {
 			zlog_debug(
 				"EIGRP TLV: Neighbor(%s): invalid TLV_type(%u)",
-				eigrp_topo_addr2string(&nbr->src), type);
+				eigrp_print_addr(&nbr->src), type);
 		}
 		break;
 	}
@@ -427,7 +428,7 @@ static uint16_t eigrp_tlv1_encoder(eigrp_instance_t *eigrp, eigrp_neighbor_t *nb
 	default:
 		if (IS_DEBUG_EIGRP_PACKET(0, RECV)) {
 			zlog_debug("Neighbor(%s): invalid TLV_type(%u)",
-				   eigrp_topo_addr2string(&nbr->src), type);
+				   eigrp_print_addr(&nbr->src), type);
 		}
 		break;
 	}

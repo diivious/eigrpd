@@ -33,6 +33,7 @@
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_zebra.h"
 
@@ -75,7 +76,7 @@ static void eigrp_nbr_init(eigrp_neighbor_t *nbr, eigrp_addr_t *src)
 
 	//  if (IS_DEBUG_EIGRP_EVENT)
 	//    zlog_debug("NSM[%s:%s]: start", EIGRP_INTF_NAME (nbr->oi),
-	//               eigrp_routerid2string(nbr->router_id));
+	//               eigrp_print_routerid(nbr->router_id));
 }
 
 /**
@@ -202,7 +203,7 @@ void holddown_timer_expired(struct thread *thread)
 	eigrp_instance_t *eigrp = nbr->ei->eigrp;
 
 	zlog_info("Neighbor %s (%s) is down: holding time expired",
-		  eigrp_topo_addr2string(&nbr->src),
+		  eigrp_print_addr(&nbr->src),
 		  ifindex2ifname(nbr->ei->ifp->ifindex, eigrp->vrf_id));
 	nbr->state = EIGRP_NEIGHBOR_DOWN;
 	eigrp_nbr_delete(nbr);
@@ -334,12 +335,12 @@ void eigrp_nbr_hard_restart(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 			    struct vty *vty)
 {
 	zlog_debug("Neighbor %s (%s) is down: manually cleared",
-		   eigrp_topo_addr2string(&nbr->src),
+		   eigrp_print_addr(&nbr->src),
 		   ifindex2ifname(nbr->ei->ifp->ifindex, eigrp->vrf_id));
 	if (vty != NULL) {
 		vty_time_print(vty, 0);
 		vty_out(vty, "Neighbor %s (%s) is down: manually cleared\n",
-			eigrp_topo_addr2string(&nbr->src),
+			eigrp_print_addr(&nbr->src),
 			ifindex2ifname(nbr->ei->ifp->ifindex, eigrp->vrf_id));
 	}
 

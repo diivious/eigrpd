@@ -34,6 +34,7 @@
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
 #include "eigrpd/eigrp_dump.h"
+#include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
 #include "eigrpd/eigrp_metric.h"
@@ -143,12 +144,9 @@ void eigrp_prefix_descriptor_add(struct route_table *topology,
 	rn = route_node_get(topology, pe->destination);
 	if (rn->info) {
 		if (IS_DEBUG_EIGRP_EVENT) {
-			char buf[PREFIX_STRLEN];
-
-			zlog_debug(
-				"%s: %s Should we have found this prefix in the topo table?",
-				__func__,
-				prefix2str(pe->destination, buf, sizeof(buf)));
+			zlog_debug("%s: %s Should we have found this prefix in the topo table?",
+				   __func__,
+				   eigrp_print_prefix(pe->destination));
 		}
 		route_unlock_node(rn);
 	}

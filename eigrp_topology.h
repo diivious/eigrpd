@@ -84,24 +84,6 @@ extern void eigrp_update_topology_table_prefix(eigrp_instance_t *eigrp,
 /* IPv4/IPv6 prefix and address management functions
  * might move to eigrp_addr.h if this grows
  */
-static inline const char *
-eigrp_topo_prefix2string(struct prefix *network)
-{
-    return inet_ntoa(network->u.prefix4);
-}
-
-static inline const char *
-eigrp_topo_addr2string(eigrp_addr_t *addr)
-{
-    return inet_ntoa(addr->ip.v4);
-}
-
-static inline const char *
-eigrp_routerid2string(struct in_addr ipv4)
-{
-    return inet_ntoa(ipv4);
-}
-
 static inline
 void eigrp_addr_copy (eigrp_addr_t *dst, eigrp_addr_t *src)
 {

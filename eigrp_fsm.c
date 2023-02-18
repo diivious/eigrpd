@@ -72,6 +72,7 @@
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
 #include "eigrpd/eigrp_metric.h"
+#include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
 
@@ -403,9 +404,9 @@ int eigrp_fsm_event(eigrp_fsm_action_message_t *msg)
 	zlog_info(
 		"EIGRP AS: %d State: %s Event: %s Network: %s Packet Type: %s Reply RIJ Count: %d change: %s",
 		msg->eigrp->AS, prefix_state2str(msg->prefix->state),
-		fsm_state2str(event), eigrp_topo_prefix2string(msg->prefix->destination),
-		packet_type2str(msg->packet_type), msg->prefix->rij->count,
-		change2str(msg->change));
+		fsm_state2str(event),
+		eigrp_print_prefix(msg->prefix->destination),
+		packet_type2str(msg->packet_type), msg->prefix->rij->count, change2str(msg->change));
 	(*(NSM[msg->prefix->state][event].func))(msg);
 
 	return 1;
