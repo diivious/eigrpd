@@ -31,6 +31,7 @@
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_auth.h"
 #include "eigrpd/eigrp_fsm.h"
 
 uint32_t eigrp_query_send_all(eigrp_instance_t *eigrp)

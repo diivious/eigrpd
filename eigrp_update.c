@@ -31,13 +31,16 @@
 
 #include "eigrpd/eigrpd.h"
 #include "eigrpd/eigrp_structs.h"
+#include "eigrpd/eigrp_topology.h"
+#include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_auth.h"
+#include "eigrpd/eigrp_fsm.h"
+
 #include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_network.h"
-#include "eigrpd/eigrp_topology.h"
-#include "eigrpd/eigrp_fsm.h"
 #include "eigrpd/eigrp_metric.h"
 
 #include "routemap.h"
@@ -667,7 +670,7 @@ void eigrp_update_send_all(eigrp_instance_t *eigrp, eigrp_interface_t *exception
  * @par
  * Function used for sending Graceful restart Update packet
  * and if there are multiple chunks, send only one of them.
- * It is called from thread. Do not call it directly.
+ * It is called from event. Do not call it directly.
  *
  * Uses nbr_gr_packet_type from neighbor.
  */
@@ -834,30 +837,30 @@ static void eigrp_update_send_GR_part(eigrp_neighbor_t *nbr)
 }
 
 /**
- * @fn eigrp_update_send_GR_thread
+ * @fn eigrp_update_send_GR_event
  *
- * @param[in]		thread		contains neighbor who would receive
+ * @param[in]		event		contains neighbor who would receive
  * Graceful restart
  *
  * @return void
  *
  * @par
  * Function used for sending Graceful restart Update packet
- * in thread, it is prepared for multiple chunks of packet.
+ * in event, it is prepared for multiple chunks of packet.
  *
  * Uses nbr_gr_packet_type and t_nbr_send_gr from neighbor.
  */
-void eigrp_update_send_GR_thread(struct thread *thread)
+void eigrp_update_send_GR_event(struct event *event)
 {
 	eigrp_neighbor_t *nbr;
 
-	/* get argument from thread */
-	nbr = THREAD_ARG(thread);
+	/* get argument from event */
+	nbr = EVENT_ARG(event);
 
 	/* if there is packet waiting in queue,
-	 * schedule this thread again with small delay */
+	 * schedule this event again with small delay */
 	if (nbr->retrans_queue->count > 0) {
-		thread_add_timer_msec(eigrpd_thread, eigrp_update_send_GR_thread, nbr,
+		event_add_timer_msec(eigrpd_event, eigrp_update_send_GR_event, nbr,
 				      10, &nbr->t_nbr_send_gr);
 		return;
 	}
@@ -865,9 +868,9 @@ void eigrp_update_send_GR_thread(struct thread *thread)
 	/* send GR EIGRP packet chunk */
 	eigrp_update_send_GR_part(nbr);
 
-	/* if it wasn't last chunk, schedule this thread again */
+	/* if it wasn't last chunk, schedule this event again */
 	if (nbr->nbr_gr_packet_type != EIGRP_PACKET_PART_LAST) {
-		thread_execute(eigrpd_thread, eigrp_update_send_GR_thread, nbr, 0);
+		event_execute(eigrpd_event, eigrp_update_send_GR_event, nbr, 0);
 	}
 
 	return;
@@ -936,8 +939,8 @@ void eigrp_update_send_GR(eigrp_neighbor_t *nbr, enum GR_type gr_type,
 	/* indicate, that this is first GR Update packet chunk */
 	nbr->nbr_gr_packet_type = EIGRP_PACKET_PART_FIRST;
 
-	/* execute packet sending in thread */
-	thread_execute(eigrpd_thread, eigrp_update_send_GR_thread, nbr, 0);
+	/* execute packet sending in event */
+	event_execute(eigrpd_event, eigrp_update_send_GR_event, nbr, 0);
 }
 
 /**

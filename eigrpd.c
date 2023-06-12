@@ -152,7 +152,7 @@ static eigrp_instance_t *eigrp_new(uint16_t as, vrf_id_t vrf_id)
 
 	eigrp->ibuf = stream_new(EIGRP_PACKET_MAX_LEN + 1);
 
-	thread_add_read(eigrpd_thread, eigrp_packet_read, eigrp, eigrp->fd, &eigrp->t_read);
+	event_add_read(eigrpd_event, eigrp_packet_read, eigrp, eigrp->fd, &eigrp->t_read);
 	eigrp->oi_write_q = list_new();
 
 	// DVS: get it into a workable form, but this is an ugly hack
@@ -277,8 +277,8 @@ void eigrp_finish_final(eigrp_instance_t *eigrp)
 		eigrp_intf_free(eigrp, ei, INTERFACE_DOWN_BY_FINAL);
 	}
 
-	THREAD_OFF(eigrp->t_write);
-	THREAD_OFF(eigrp->t_read);
+	EVENT_OFF(eigrp->t_write);
+	EVENT_OFF(eigrp->t_read);
 	close(eigrp->fd);
 
 	list_delete(&eigrp->eiflist);

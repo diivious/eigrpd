@@ -95,7 +95,7 @@ int eigrp_fsm_event_qact(eigrp_fsm_action_message_t *);
  * Which function is used depends on actual state of FSM and occurred
  * event(arrow in diagram). Usage:
  * NSM[actual/starting state][occurred event].func
- * Functions are should be executed within separate thread.
+ * Functions are should be executed within separate event.
  */
 const struct {
 	int (*func)(eigrp_fsm_action_message_t *);
@@ -394,8 +394,8 @@ eigrp_get_fsm_event(eigrp_fsm_action_message_t *msg)
 }
 
 /*
- * Function made to execute in separate thread.
- * Load argument from thread and execute proper NSM function
+ * Function made to execute in separate event.
+ * Load argument from event and execute proper NSM function
  */
 int eigrp_fsm_event(eigrp_fsm_action_message_t *msg)
 {

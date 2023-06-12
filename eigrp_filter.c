@@ -143,11 +143,11 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 		/* check if there is already GR scheduled */
 		if (eigrp->t_distribute != NULL) {
 			/* if is, cancel schedule */
-			thread_cancel(&(eigrp->t_distribute));
+			event_cancel(&(eigrp->t_distribute));
 		}
 		/* schedule Graceful restart for whole process in 10sec */
 		eigrp->t_distribute = NULL;
-		thread_add_timer(eigrpd_thread, eigrp_distribute_timer_process, eigrp,
+		event_add_timer(eigrpd_event, eigrp_distribute_timer_process, eigrp,
 				 (10), &eigrp->t_distribute);
 
 		return;
@@ -219,11 +219,11 @@ void eigrp_distribute_update(struct distribute_ctx *ctx,
 	// TODO: check Graceful restart after 10sec
 
 	/* Cancel GR scheduled */
-	thread_cancel(&(ei->t_distribute));
+	event_cancel(&(ei->t_distribute));
 
 	/* schedule Graceful restart for interface in 10sec */
 	eigrp->t_distribute = NULL;
-	thread_add_timer(eigrpd_thread, eigrp_distribute_timer_interface, ei, 10,
+	event_add_timer(eigrpd_event, eigrp_distribute_timer_interface, ei, 10,
 			 &eigrp->t_distribute);
 }
 
@@ -270,7 +270,7 @@ void eigrp_distribute_update_all_wrapper(struct access_list *notused)
 /*
  * @fn eigrp_distribute_timer_process
  *
- * @param[in]   thread  current execution thread timer is associated with
+ * @param[in]   event  current execution event timer is associated with
  *
  * @return int  always returns 0
  *
@@ -278,11 +278,11 @@ void eigrp_distribute_update_all_wrapper(struct access_list *notused)
  * Called when 10sec waiting time expire and
  * executes Graceful restart for whole process
  */
-void eigrp_distribute_timer_process(struct thread *thread)
+void eigrp_distribute_timer_process(struct event *event)
 {
 	eigrp_instance_t *eigrp;
 
-	eigrp = THREAD_ARG(thread);
+	eigrp = EVENT_ARG(event);
 	eigrp->t_distribute = NULL;
 
 	/* execute GR for whole process */
@@ -294,7 +294,7 @@ void eigrp_distribute_timer_process(struct thread *thread)
 /*
  * @fn eigrp_distribute_timer_interface
  *
- * @param[in]   thread  current execution thread timer is associated with
+ * @param[in]   event  current execution event timer is associated with
  *
  * @return int  always returns 0
  *
@@ -302,11 +302,11 @@ void eigrp_distribute_timer_process(struct thread *thread)
  * Called when 10sec waiting time expire and
  * executes Graceful restart for interface
  */
-void eigrp_distribute_timer_interface(struct thread *thread)
+void eigrp_distribute_timer_interface(struct event *event)
 {
 	eigrp_interface_t *ei;
 
-	ei = THREAD_ARG(thread);
+	ei = EVENT_ARG(event);
 	ei->t_distribute = NULL;
 
 	/* execute GR for interface */

@@ -54,8 +54,8 @@
 /* EIGRPd options. */
 struct option longopts[] = {{0}};
 
-/* Master of threads. */
-struct thread_master *eigrpd_thread;
+/* Master of events. */
+struct event_loop *eigrpd_event;
 
 /* Forward declaration of daemon info structure. */
 static struct frr_daemon_info eigrpd_di;
@@ -146,10 +146,10 @@ int main(int argc, char **argv, char **envp)
 
 	eigrp_sw_version_init();
 
-	/* EIGRP frr thread init. */
+	/* EIGRP frr event init. */
 	eigrp_init();
-	eigrp_om->thread = frr_init();
-	eigrpd_thread = eigrp_om->thread;
+	eigrp_om->event = frr_init();
+	eigrpd_event = eigrp_om->event;
 
 	eigrp_error_init();
 	eigrp_vrf_init();
@@ -191,7 +191,7 @@ int main(int argc, char **argv, char **envp)
 	/*if_rmap_init (EIGRP_NODE); */
 
 	frr_config_fork();
-	frr_run(eigrpd_thread);
+	frr_run(eigrpd_event);
 
 	/* Not reached. */
 	return 0;

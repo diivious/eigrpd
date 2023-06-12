@@ -30,23 +30,17 @@
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
-#include "eigrpd/eigrp_dump.h"
+#include "eigrpd/eigrp_auth.h"
+
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
+#include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_errors.h"
-
-#include "lib_errors.h"
-#include "lib/keychain.h"
-#include "lib/checksum.h"
-#include "lib/md5.h"
-#include "lib/sha256.h"
 
 DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_PACKET,          "EIGRP Packet");
 DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_PACKET_QUEUE,    "EIGRP Packet Queue");
 DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_IPV4_INT_TLV,    "EIGRP IPv4 TLV");
 DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_SEQ_TLV,         "EIGRP SEQ TLV");
-DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_AUTH_TLV,        "EIGRP AUTH TLV");
-DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_AUTH_SHA256_TLV, "EIGRP SHA TLV");
 
 /* Packet Type String. */
 const struct message eigrp_packet_type_str[] = {
@@ -61,9 +55,6 @@ const struct message eigrp_packet_type_str[] = {
 	{EIGRP_OPC_SIAQUERY, "SIAQuery"},
 	{EIGRP_OPC_SIAREPLY, "SIAReply"},
 	{0}};
-
-
-static unsigned char zeropad[16] = {0};
 
 /* Forward function reference*/
 static struct stream *eigrp_packet_recv(eigrp_instance_t *eigrp, int fd,
@@ -116,234 +107,9 @@ static void eigrp_packet_ack(eigrp_instance_t *eigrp, struct eigrp_header *eigrp
 	}
 }
 
-int eigrp_make_md5_digest(eigrp_interface_t *ei, struct stream *s,
-			  uint8_t flags)
+void eigrp_packet_write(struct event *event)
 {
-	struct key *key = NULL;
-	struct keychain *keychain;
-
-	unsigned char digest[EIGRP_AUTH_TYPE_MD5_LEN];
-	MD5_CTX ctx;
-	uint8_t *ibuf;
-	size_t backup_get, backup_end;
-	struct TLV_MD5_Authentication_Type *auth_TLV;
-
-	ibuf = s->data;
-	backup_end = s->endp;
-	backup_get = s->getp;
-
-	auth_TLV = eigrp_authTLV_MD5_new();
-
-	stream_set_getp(s, EIGRP_HEADER_LEN);
-	stream_get(auth_TLV, s, EIGRP_AUTH_MD5_TLV_SIZE);
-	stream_set_getp(s, backup_get);
-
-	keychain = keychain_lookup(ei->params.auth_keychain);
-	if (keychain)
-		key = key_lookup_for_send(keychain);
-	else {
-		eigrp_authTLV_MD5_free(auth_TLV);
-		return EIGRP_AUTH_TYPE_NONE;
-	}
-
-	memset(&ctx, 0, sizeof(ctx));
-	MD5Init(&ctx);
-
-	/* Generate a digest. Each situation needs different handling */
-	if (flags & EIGRP_AUTH_BASIC_HELLO_FLAG) {
-		MD5Update(&ctx, ibuf, EIGRP_MD5_BASIC_COMPUTE);
-		MD5Update(&ctx, key->string, strlen(key->string));
-		if (strlen(key->string) < 16)
-			MD5Update(&ctx, zeropad, 16 - strlen(key->string));
-	} else if (flags & EIGRP_AUTH_UPDATE_INIT_FLAG) {
-		MD5Update(&ctx, ibuf, EIGRP_MD5_UPDATE_INIT_COMPUTE);
-	} else if (flags & EIGRP_AUTH_UPDATE_FLAG) {
-		MD5Update(&ctx, ibuf, EIGRP_MD5_BASIC_COMPUTE);
-		MD5Update(&ctx, key->string, strlen(key->string));
-		if (strlen(key->string) < 16)
-			MD5Update(&ctx, zeropad, 16 - strlen(key->string));
-		if (backup_end > (EIGRP_HEADER_LEN + EIGRP_AUTH_MD5_TLV_SIZE)) {
-			MD5Update(&ctx,
-				  ibuf
-					  + (EIGRP_HEADER_LEN
-					     + EIGRP_AUTH_MD5_TLV_SIZE),
-				  backup_end - 20
-					  - (EIGRP_HEADER_LEN
-					     + EIGRP_AUTH_MD5_TLV_SIZE));
-		}
-	}
-
-	MD5Final(digest, &ctx);
-
-	/* Append md5 digest to the end of the stream. */
-	memcpy(auth_TLV->digest, digest, EIGRP_AUTH_TYPE_MD5_LEN);
-
-	stream_set_endp(s, EIGRP_HEADER_LEN);
-	stream_put(s, auth_TLV, EIGRP_AUTH_MD5_TLV_SIZE);
-	stream_set_endp(s, backup_end);
-
-	eigrp_authTLV_MD5_free(auth_TLV);
-	return EIGRP_AUTH_TYPE_MD5_LEN;
-}
-
-int eigrp_check_md5_digest(struct stream *s,
-			   struct TLV_MD5_Authentication_Type *authTLV,
-			   eigrp_neighbor_t *nbr, uint8_t flags)
-{
-	MD5_CTX ctx;
-	unsigned char digest[EIGRP_AUTH_TYPE_MD5_LEN];
-	unsigned char orig[EIGRP_AUTH_TYPE_MD5_LEN];
-	struct key *key = NULL;
-	struct keychain *keychain;
-	uint8_t *ibuf;
-	size_t backup_end;
-	struct TLV_MD5_Authentication_Type *auth_TLV;
-	struct eigrp_header *eigrph;
-
-	if (ntohl(nbr->crypt_seqnum) > ntohl(authTLV->key_sequence)) {
-		zlog_warn(
-			"interface %s: eigrp_check_md5 bad sequence %d (expect %d)",
-			EIGRP_INTF_NAME(nbr->ei), ntohl(authTLV->key_sequence),
-			ntohl(nbr->crypt_seqnum));
-		return 0;
-	}
-
-	eigrph = (struct eigrp_header *)s->data;
-	eigrph->checksum = 0;
-
-	auth_TLV = (struct TLV_MD5_Authentication_Type *)(s->data
-							  + EIGRP_HEADER_LEN);
-	memcpy(orig, auth_TLV->digest, EIGRP_AUTH_TYPE_MD5_LEN);
-	memset(digest, 0, EIGRP_AUTH_TYPE_MD5_LEN);
-	memset(auth_TLV->digest, 0, EIGRP_AUTH_TYPE_MD5_LEN);
-
-	ibuf = s->data;
-	backup_end = s->endp;
-
-	keychain = keychain_lookup(nbr->ei->params.auth_keychain);
-	if (keychain)
-		key = key_lookup_for_send(keychain);
-
-	if (!key) {
-		zlog_warn(
-			"Interface %s: Expected key value not found in config",
-			nbr->ei->ifp->name);
-		return 0;
-	}
-
-	memset(&ctx, 0, sizeof(ctx));
-	MD5Init(&ctx);
-
-	/* Generate a digest. Each situation needs different handling */
-	if (flags & EIGRP_AUTH_BASIC_HELLO_FLAG) {
-		MD5Update(&ctx, ibuf, EIGRP_MD5_BASIC_COMPUTE);
-		MD5Update(&ctx, key->string, strlen(key->string));
-		if (strlen(key->string) < 16)
-			MD5Update(&ctx, zeropad, 16 - strlen(key->string));
-	} else if (flags & EIGRP_AUTH_UPDATE_INIT_FLAG) {
-		MD5Update(&ctx, ibuf, EIGRP_MD5_UPDATE_INIT_COMPUTE);
-	} else if (flags & EIGRP_AUTH_UPDATE_FLAG) {
-		MD5Update(&ctx, ibuf, EIGRP_MD5_BASIC_COMPUTE);
-		MD5Update(&ctx, key->string, strlen(key->string));
-		if (strlen(key->string) < 16)
-			MD5Update(&ctx, zeropad, 16 - strlen(key->string));
-		if (backup_end > (EIGRP_HEADER_LEN + EIGRP_AUTH_MD5_TLV_SIZE)) {
-			MD5Update(&ctx,
-				  ibuf
-					  + (EIGRP_HEADER_LEN
-					     + EIGRP_AUTH_MD5_TLV_SIZE),
-				  backup_end - 20
-					  - (EIGRP_HEADER_LEN
-					     + EIGRP_AUTH_MD5_TLV_SIZE));
-		}
-	}
-
-	MD5Final(digest, &ctx);
-
-	/* compare the two */
-	if (memcmp(orig, digest, EIGRP_AUTH_TYPE_MD5_LEN) != 0) {
-		zlog_warn("interface %s: eigrp_check_md5 checksum mismatch",
-			  EIGRP_INTF_NAME(nbr->ei));
-		return 0;
-	}
-
-	/* save neighbor's crypt_seqnum */
-	nbr->crypt_seqnum = authTLV->key_sequence;
-
-	return 1;
-}
-
-int eigrp_make_sha256_digest(eigrp_interface_t *ei, struct stream *s,
-			     uint8_t flags)
-{
-	struct key *key = NULL;
-	struct keychain *keychain;
-	char source_ip[PREFIX_STRLEN];
-
-	unsigned char digest[EIGRP_AUTH_TYPE_SHA256_LEN];
-	unsigned char buffer[1 + PLAINTEXT_LENGTH + 45 + 1] = {0};
-
-	HMAC_SHA256_CTX ctx;
-	void *ibuf;
-	size_t backup_get, backup_end;
-	struct TLV_SHA256_Authentication_Type *auth_TLV;
-
-	ibuf = s->data;
-	backup_end = s->endp;
-	backup_get = s->getp;
-
-	auth_TLV = eigrp_authTLV_SHA256_new();
-
-	stream_set_getp(s, EIGRP_HEADER_LEN);
-	stream_get(auth_TLV, s, EIGRP_AUTH_SHA256_TLV_SIZE);
-	stream_set_getp(s, backup_get);
-
-	keychain = keychain_lookup(ei->params.auth_keychain);
-	if (keychain)
-		key = key_lookup_for_send(keychain);
-
-	if (!key) {
-		zlog_warn(
-			"Interface %s: Expected key value not found in config",
-			ei->ifp->name);
-		eigrp_authTLV_SHA256_free(auth_TLV);
-		return 0;
-	}
-
-	inet_ntop(AF_INET, &ei->address.u.prefix4, source_ip, PREFIX_STRLEN);
-
-	memset(&ctx, 0, sizeof(ctx));
-	buffer[0] = '\n';
-	memcpy(buffer + 1, key, strlen(key->string));
-	memcpy(buffer + 1 + strlen(key->string), source_ip, strlen(source_ip));
-	HMAC__SHA256_Init(&ctx, buffer,
-			  1 + strlen(key->string) + strlen(source_ip));
-	HMAC__SHA256_Update(&ctx, ibuf, strlen(ibuf));
-	HMAC__SHA256_Final(digest, &ctx);
-
-
-	/* Put hmac-sha256 digest to it's place */
-	memcpy(auth_TLV->digest, digest, EIGRP_AUTH_TYPE_SHA256_LEN);
-
-	stream_set_endp(s, EIGRP_HEADER_LEN);
-	stream_put(s, auth_TLV, EIGRP_AUTH_SHA256_TLV_SIZE);
-	stream_set_endp(s, backup_end);
-
-	eigrp_authTLV_SHA256_free(auth_TLV);
-
-	return EIGRP_AUTH_TYPE_SHA256_LEN;
-}
-
-int eigrp_check_sha256_digest(struct stream *s,
-			      struct TLV_SHA256_Authentication_Type *authTLV,
-			      eigrp_neighbor_t *nbr, uint8_t flags)
-{
-	return 1;
-}
-
-void eigrp_packet_write(struct thread *thread)
-{
-	eigrp_instance_t *eigrp = THREAD_ARG(thread);
+	eigrp_instance_t *eigrp = EVENT_ARG(event);
 	struct eigrp_header *eigrph;
 	eigrp_interface_t *ei;
 	eigrp_packet_t *packet;
@@ -492,16 +258,16 @@ out:
 		list_delete_node(eigrp->oi_write_q, node);
 	}
 
-	/* If packets still remain in queue, call write thread. */
+	/* If packets still remain in queue, call write event. */
 	if (!list_isempty(eigrp->oi_write_q)) {
-	    EIGRP_THREAD_ADD_WRITE(eigrp);
+	    EIGRP_EVENT_ADD_WRITE(eigrp);
 	}
 
 	return;
 }
 
 /* Starting point of packet process function. */
-void eigrp_packet_read(struct thread *thread)
+void eigrp_packet_read(struct event *event)
 {
 	int ret;
 	struct stream *ibuf;
@@ -517,10 +283,10 @@ void eigrp_packet_read(struct thread *thread)
 	uint16_t length = 0;
 
 	/* first of all get interface pointer. */
-	eigrp = THREAD_ARG(thread);
+	eigrp = EVENT_ARG(event);
 
 	/* prepare for next packet. */
-	thread_add_read(eigrpd_thread, eigrp_packet_read, eigrp, eigrp->fd, &eigrp->t_read);
+	event_add_read(eigrpd_event, eigrp_packet_read, eigrp, eigrp->fd, &eigrp->t_read);
 
 	stream_reset(eigrp->ibuf);
 	if (!(ibuf = eigrp_packet_recv(eigrp, eigrp->fd, &ifp, eigrp->ibuf))) {
@@ -598,8 +364,7 @@ void eigrp_packet_read(struct thread *thread)
 	stream_forward_getp(ibuf, (iph->ip_hl * 4));
 	eigrph = (struct eigrp_header *)stream_pnt(ibuf);
 
-	if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV)
-	    && IS_DEBUG_EIGRP_TRANSMIT(0, PACKET_DETAIL))
+	if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV) && IS_DEBUG_EIGRP_TRANSMIT(0, PACKET_DETAIL))
 		eigrp_header_dump(eigrph);
 
 	//  if (MSG_OK != eigrp_packet_examin(eigrph, stream_get_endp(ibuf) -
@@ -609,8 +374,7 @@ void eigrp_packet_read(struct thread *thread)
 	/* If incoming interface is passive one, ignore it. */
 	if (eigrp_intf_is_passive(ei)) {
 		if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV))
-			zlog_debug(
-				"ignoring packet from router %u sent to %pI4, received on a passive interface, %pI4",
+			zlog_debug("ignoring packet from router %u sent to %pI4, received on a passive interface, %pI4",
 				ntohs(eigrph->vrid), &iph->ip_dst,
 				&ei->address.u.prefix4);
 
@@ -853,19 +617,19 @@ void eigrp_packet_send_reliably(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr)
 		eigrp_packet_enqueue(nbr->ei->obuf, duplicate);
 
 		/*Start retransmission timer*/
-		thread_add_timer(eigrpd_thread, eigrp_packet_unack_retrans, nbr,
+		event_add_timer(eigrpd_event, eigrp_packet_unack_retrans, nbr,
 				 EIGRP_PACKET_RETRANS_TIME,
 				 &packet->t_retrans_timer);
 
 		/*Increment sequence number counter*/
 		nbr->ei->eigrp->sequence_number++;
 
-		/* Hook thread to write packet. */
+		/* Hook event to write packet. */
 		if (nbr->ei->on_write_q == 0) {
 			listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
 			nbr->ei->on_write_q = 1;
 		}
-		EIGRP_THREAD_ADD_WRITE(nbr->ei->eigrp);
+		EIGRP_EVENT_ADD_WRITE(nbr->ei->eigrp);
 	}
 }
 
@@ -947,7 +711,7 @@ void eigrp_packet_free(eigrp_packet_t *packet)
 	if (packet->s)
 		stream_free(packet->s);
 
-	THREAD_OFF(packet->t_retrans_timer);
+	EVENT_OFF(packet->t_retrans_timer);
 
 	XFREE(MTYPE_EIGRP_PACKET, packet);
 }
@@ -994,10 +758,10 @@ static int eigrp_check_network_mask(eigrp_interface_t *ei,
 	return 0;
 }
 
-void eigrp_packet_unack_retrans(struct thread *thread)
+void eigrp_packet_unack_retrans(struct event *event)
 {
 	eigrp_neighbor_t *nbr;
-	nbr = (eigrp_neighbor_t *)THREAD_ARG(thread);
+	nbr = (eigrp_neighbor_t *)EVENT_ARG(event);
 
 	eigrp_packet_t *packet;
 	packet = eigrp_packet_queue_next(nbr->retrans_queue);
@@ -1016,25 +780,25 @@ void eigrp_packet_unack_retrans(struct thread *thread)
 		}
 
 		/*Start retransmission timer*/
-		thread_add_timer(eigrpd_thread, eigrp_packet_unack_retrans, nbr,
+		event_add_timer(eigrpd_event, eigrp_packet_unack_retrans, nbr,
 				 EIGRP_PACKET_RETRANS_TIME,
 				 &packet->t_retrans_timer);
 
-		/* Hook thread to write packet. */
+		/* Hook event to write packet. */
 		if (nbr->ei->on_write_q == 0) {
 			listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
 			nbr->ei->on_write_q = 1;
 		}
-		EIGRP_THREAD_ADD_WRITE(nbr->ei->eigrp);
+		EIGRP_EVENT_ADD_WRITE(nbr->ei->eigrp);
 	}
 
 	return;
 }
 
-void eigrp_packet_unack_multicast_retrans(struct thread *thread)
+void eigrp_packet_unack_multicast_retrans(struct event *event)
 {
 	eigrp_neighbor_t *nbr;
-	nbr = (eigrp_neighbor_t *)THREAD_ARG(thread);
+	nbr = (eigrp_neighbor_t *)EVENT_ARG(event);
 
 	eigrp_packet_t *packet;
 	packet = eigrp_packet_queue_next(nbr->multicast_queue);
@@ -1052,16 +816,16 @@ void eigrp_packet_unack_multicast_retrans(struct thread *thread)
 		}
 
 		/*Start retransmission timer*/
-		thread_add_timer(eigrpd_thread, eigrp_packet_unack_multicast_retrans,
+		event_add_timer(eigrpd_event, eigrp_packet_unack_multicast_retrans,
 				 nbr, EIGRP_PACKET_RETRANS_TIME,
 				 &packet->t_retrans_timer);
 
-		/* Hook thread to write packet. */
+		/* Hook event to write packet. */
 		if (nbr->ei->on_write_q == 0) {
 			listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
 			nbr->ei->on_write_q = 1;
 		}
-		EIGRP_THREAD_ADD_WRITE(nbr->ei->eigrp);
+		EIGRP_EVENT_ADD_WRITE(nbr->ei->eigrp);
 	}
 
 	return;
@@ -1101,115 +865,6 @@ eigrp_packet_t *eigrp_packet_duplicate(eigrp_packet_t *old,
 	stream_copy(new->s, old->s);
 
 	return new;
-}
-
-uint16_t eigrp_add_authTLV_MD5_encode(struct stream *s, eigrp_interface_t *ei)
-{
-	struct key *key;
-	struct keychain *keychain;
-	struct TLV_MD5_Authentication_Type *authTLV;
-
-	authTLV = eigrp_authTLV_MD5_new();
-
-	authTLV->type = htons(EIGRP_TLV_AUTH);
-	authTLV->length = htons(EIGRP_AUTH_MD5_TLV_SIZE);
-	authTLV->auth_type = htons(EIGRP_AUTH_TYPE_MD5);
-	authTLV->auth_length = htons(EIGRP_AUTH_TYPE_MD5_LEN);
-	authTLV->key_sequence = 0;
-	memset(authTLV->Nullpad, 0, sizeof(authTLV->Nullpad));
-
-	keychain = keychain_lookup(ei->params.auth_keychain);
-	if (keychain)
-		key = key_lookup_for_send(keychain);
-	else {
-		free(ei->params.auth_keychain);
-		ei->params.auth_keychain = NULL;
-		eigrp_authTLV_MD5_free(authTLV);
-		return 0;
-	}
-
-	if (key) {
-		authTLV->key_id = htonl(key->index);
-		memset(authTLV->digest, 0, EIGRP_AUTH_TYPE_MD5_LEN);
-		stream_put(s, authTLV,
-			   sizeof(struct TLV_MD5_Authentication_Type));
-		eigrp_authTLV_MD5_free(authTLV);
-		return EIGRP_AUTH_MD5_TLV_SIZE;
-	}
-
-	eigrp_authTLV_MD5_free(authTLV);
-
-	return 0;
-}
-
-uint16_t eigrp_add_authTLV_SHA256_encode(struct stream *s,
-					 eigrp_interface_t *ei)
-{
-	struct key *key;
-	struct keychain *keychain;
-	struct TLV_SHA256_Authentication_Type *authTLV;
-
-	authTLV = eigrp_authTLV_SHA256_new();
-
-	authTLV->type = htons(EIGRP_TLV_AUTH);
-	authTLV->length = htons(EIGRP_AUTH_SHA256_TLV_SIZE);
-	authTLV->auth_type = htons(EIGRP_AUTH_TYPE_SHA256);
-	authTLV->auth_length = htons(EIGRP_AUTH_TYPE_SHA256_LEN);
-	authTLV->key_sequence = 0;
-	memset(authTLV->Nullpad, 0, sizeof(authTLV->Nullpad));
-
-	keychain = keychain_lookup(ei->params.auth_keychain);
-	if (keychain)
-		key = key_lookup_for_send(keychain);
-	else {
-		free(ei->params.auth_keychain);
-		ei->params.auth_keychain = NULL;
-		eigrp_authTLV_SHA256_free(authTLV);
-		return 0;
-	}
-
-	if (key) {
-		authTLV->key_id = 0;
-		memset(authTLV->digest, 0, EIGRP_AUTH_TYPE_SHA256_LEN);
-		stream_put(s, authTLV,
-			   sizeof(struct TLV_SHA256_Authentication_Type));
-		eigrp_authTLV_SHA256_free(authTLV);
-		return EIGRP_AUTH_SHA256_TLV_SIZE;
-	}
-
-	eigrp_authTLV_SHA256_free(authTLV);
-
-	return 0;
-}
-
-struct TLV_MD5_Authentication_Type *eigrp_authTLV_MD5_new(void)
-{
-	struct TLV_MD5_Authentication_Type *new;
-
-	new = XCALLOC(MTYPE_EIGRP_AUTH_TLV,
-		      sizeof(struct TLV_MD5_Authentication_Type));
-
-	return new;
-}
-
-void eigrp_authTLV_MD5_free(struct TLV_MD5_Authentication_Type *authTLV)
-{
-	XFREE(MTYPE_EIGRP_AUTH_TLV, authTLV);
-}
-
-struct TLV_SHA256_Authentication_Type *eigrp_authTLV_SHA256_new(void)
-{
-	struct TLV_SHA256_Authentication_Type *new;
-
-	new = XCALLOC(MTYPE_EIGRP_AUTH_SHA256_TLV,
-		      sizeof(struct TLV_SHA256_Authentication_Type));
-
-	return new;
-}
-
-void eigrp_authTLV_SHA256_free(struct TLV_SHA256_Authentication_Type *authTLV)
-{
-	XFREE(MTYPE_EIGRP_AUTH_SHA256_TLV, authTLV);
 }
 
 void eigrp_IPv4_InternalTLV_free(

@@ -4,6 +4,8 @@
  * Copyright (C) 2019 Network Device Education Foundation, Inc. ("NetDEF")
  *                    Rafael Zalamena
  *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -52,16 +54,16 @@ static void redistribute_get_metrics(const struct lyd_node *dnode,
 }
 
 static eigrp_interface_t *eigrp_interface_lookup(const eigrp_instance_t *eigrp,
-						 const char *ifname)
+						      const char *ifname)
 {
-	eigrp_interface_t *eif;
+	eigrp_interface_t *intf;
 	struct listnode *ln;
 
-	for (ALL_LIST_ELEMENTS_RO(eigrp->eiflist, ln, eif)) {
-		if (strcmp(ifname, eif->ifp->name))
+	for (ALL_LIST_ELEMENTS_RO(eigrp->eiflist, ln, intf)) {
+		if (strcmp(ifname, intf->ifp->name))
 			continue;
 
-		return eif;
+		return intf;
 	}
 
 	return NULL;
@@ -90,7 +92,8 @@ static int eigrpd_instance_create(struct nb_cb_create_args *args)
 		else
 			vrfid = VRF_DEFAULT;
 
-		eigrp = eigrp_get(yang_dnode_get_uint16(args->dnode, "./asn"), vrfid);
+		eigrp = eigrp_get(yang_dnode_get_uint16(args->dnode, "./asn"),
+				  vrfid);
 		args->resource->ptr = eigrp;
 		break;
 	case NB_EV_ABORT:
@@ -171,7 +174,7 @@ static int eigrpd_instance_router_id_destroy(struct nb_cb_destroy_args *args)
 static int
 eigrpd_instance_passive_interface_create(struct nb_cb_create_args *args)
 {
-	eigrp_interface_t *eif;
+	eigrp_interface_t *intf;
 	eigrp_instance_t *eigrp;
 	const char *ifname;
 
@@ -187,8 +190,8 @@ eigrpd_instance_passive_interface_create(struct nb_cb_create_args *args)
 		}
 
 		ifname = yang_dnode_get_string(args->dnode, NULL);
-		eif = eigrp_interface_lookup(eigrp, ifname);
-		if (eif == NULL)
+		intf = eigrp_interface_lookup(eigrp, ifname);
+		if (intf == NULL)
 			return NB_ERR_INCONSISTENCY;
 		break;
 	case NB_EV_PREPARE:
@@ -198,11 +201,11 @@ eigrpd_instance_passive_interface_create(struct nb_cb_create_args *args)
 	case NB_EV_APPLY:
 		eigrp = nb_running_get_entry(args->dnode, NULL, true);
 		ifname = yang_dnode_get_string(args->dnode, NULL);
-		eif = eigrp_interface_lookup(eigrp, ifname);
-		if (eif == NULL)
+		intf = eigrp_interface_lookup(eigrp, ifname);
+		if (intf == NULL)
 			return NB_ERR_INCONSISTENCY;
 
-		eif->params.passive_interface = EIGRP_INTF_PASSIVE;
+		intf->params.passive_interface = EIGRP_INTF_PASSIVE;
 		break;
 	}
 
@@ -212,7 +215,7 @@ eigrpd_instance_passive_interface_create(struct nb_cb_create_args *args)
 static int
 eigrpd_instance_passive_interface_destroy(struct nb_cb_destroy_args *args)
 {
-	eigrp_interface_t *eif;
+	eigrp_interface_t *intf;
 	eigrp_instance_t *eigrp;
 	const char *ifname;
 
@@ -225,11 +228,11 @@ eigrpd_instance_passive_interface_destroy(struct nb_cb_destroy_args *args)
 	case NB_EV_APPLY:
 		eigrp = nb_running_get_entry(args->dnode, NULL, true);
 		ifname = yang_dnode_get_string(args->dnode, NULL);
-		eif = eigrp_interface_lookup(eigrp, ifname);
-		if (eif == NULL)
+		intf = eigrp_interface_lookup(eigrp, ifname);
+		if (intf == NULL)
 			break;
 
-		eif->params.passive_interface = EIGRP_INTF_ACTIVE;
+		intf->params.passive_interface = EIGRP_INTF_ACTIVE;
 		break;
 	}
 
@@ -244,10 +247,12 @@ static int eigrpd_instance_active_time_modify(struct nb_cb_modify_args *args)
 	switch (args->event) {
 	case NB_EV_VALIDATE:
 		/* TODO: Not implemented. */
-		return NB_ERR_INCONSISTENCY;
 	case NB_EV_PREPARE:
 	case NB_EV_ABORT:
+		return NB_OK;
 	case NB_EV_APPLY:
+		snprintf(args->errmsg, args->errmsg_len,
+			 "active time not implemented yet");
 		/* NOTHING */
 		break;
 	}
@@ -678,11 +683,12 @@ static int eigrpd_instance_neighbor_create(struct nb_cb_create_args *args)
 	switch (args->event) {
 	case NB_EV_VALIDATE:
 		/* TODO: Not implemented. */
-		return NB_ERR_INCONSISTENCY;
 	case NB_EV_PREPARE:
 	case NB_EV_ABORT:
+		return NB_OK;
 	case NB_EV_APPLY:
-		/* NOTHING */
+		snprintf(args->errmsg, args->errmsg_len,
+			 "neighbor Command is not implemented yet");
 		break;
 	}
 
@@ -694,11 +700,12 @@ static int eigrpd_instance_neighbor_destroy(struct nb_cb_destroy_args *args)
 	switch (args->event) {
 	case NB_EV_VALIDATE:
 		/* TODO: Not implemented. */
-		return NB_ERR_INCONSISTENCY;
 	case NB_EV_PREPARE:
 	case NB_EV_ABORT:
+		return NB_OK;
 	case NB_EV_APPLY:
-		/* NOTHING */
+		snprintf(args->errmsg, args->errmsg_len,
+			 "no neighbor Command is not implemented yet");
 		break;
 	}
 
@@ -776,11 +783,13 @@ eigrpd_instance_redistribute_route_map_modify(struct nb_cb_modify_args *args)
 	switch (args->event) {
 	case NB_EV_VALIDATE:
 		/* TODO: Not implemented. */
-		return NB_ERR_INCONSISTENCY;
 	case NB_EV_PREPARE:
 	case NB_EV_ABORT:
+		return NB_OK;
 	case NB_EV_APPLY:
-		/* NOTHING */
+		snprintf(
+			args->errmsg, args->errmsg_len,
+			"'redistribute X route-map FOO' command not implemented yet");
 		break;
 	}
 
@@ -793,11 +802,13 @@ eigrpd_instance_redistribute_route_map_destroy(struct nb_cb_destroy_args *args)
 	switch (args->event) {
 	case NB_EV_VALIDATE:
 		/* TODO: Not implemented. */
-		return NB_ERR_INCONSISTENCY;
 	case NB_EV_PREPARE:
 	case NB_EV_ABORT:
+		return NB_OK;
 	case NB_EV_APPLY:
-		/* NOTHING */
+		snprintf(
+			args->errmsg, args->errmsg_len,
+			"'no redistribute X route-map FOO' command not implemented yet");
 		break;
 	}
 
@@ -1087,10 +1098,12 @@ lib_interface_eigrp_split_horizon_modify(struct nb_cb_modify_args *args)
 	switch (args->event) {
 	case NB_EV_VALIDATE:
 		/* TODO: Not implemented. */
-		return NB_ERR_INCONSISTENCY;
 	case NB_EV_PREPARE:
 	case NB_EV_ABORT:
+		return NB_OK;
 	case NB_EV_APPLY:
+		snprintf(args->errmsg, args->errmsg_len,
+			 "split-horizon command not implemented yet");
 		/* NOTHING */
 		break;
 	}
@@ -1103,7 +1116,7 @@ lib_interface_eigrp_split_horizon_modify(struct nb_cb_modify_args *args)
  */
 static int lib_interface_eigrp_instance_create(struct nb_cb_create_args *args)
 {
-	eigrp_interface_t *eif;
+	eigrp_interface_t *intf;
 	struct interface *ifp;
 	eigrp_instance_t *eigrp;
 
@@ -1120,8 +1133,8 @@ static int lib_interface_eigrp_instance_create(struct nb_cb_create_args *args)
 
 		eigrp = eigrp_get(yang_dnode_get_uint16(args->dnode, "./asn"),
 				  ifp->vrf->vrf_id);
-		eif = eigrp_interface_lookup(eigrp, ifp->name);
-		if (eif == NULL)
+		intf = eigrp_interface_lookup(eigrp, ifp->name);
+		if (intf == NULL)
 			return NB_ERR_INCONSISTENCY;
 		break;
 	case NB_EV_PREPARE:
@@ -1132,11 +1145,11 @@ static int lib_interface_eigrp_instance_create(struct nb_cb_create_args *args)
 		ifp = nb_running_get_entry(args->dnode, NULL, true);
 		eigrp = eigrp_get(yang_dnode_get_uint16(args->dnode, "./asn"),
 				  ifp->vrf->vrf_id);
-		eif = eigrp_interface_lookup(eigrp, ifp->name);
-		if (eif == NULL)
+		intf = eigrp_interface_lookup(eigrp, ifp->name);
+		if (intf == NULL)
 			return NB_ERR_INCONSISTENCY;
 
-		nb_running_set_entry(args->dnode, eif);
+		nb_running_set_entry(args->dnode, intf);
 		break;
 	}
 
@@ -1169,11 +1182,12 @@ static int lib_interface_eigrp_instance_summarize_addresses_create(
 	switch (args->event) {
 	case NB_EV_VALIDATE:
 		/* TODO: Not implemented. */
-		return NB_ERR_INCONSISTENCY;
 	case NB_EV_PREPARE:
 	case NB_EV_ABORT:
+		return NB_OK;
 	case NB_EV_APPLY:
-		/* NOTHING */
+		snprintf(args->errmsg, args->errmsg_len,
+			 "summary command not implemented yet");
 		break;
 	}
 
@@ -1186,10 +1200,12 @@ static int lib_interface_eigrp_instance_summarize_addresses_destroy(
 	switch (args->event) {
 	case NB_EV_VALIDATE:
 		/* TODO: Not implemented. */
-		return NB_ERR_INCONSISTENCY;
 	case NB_EV_PREPARE:
 	case NB_EV_ABORT:
+		return NB_OK;
 	case NB_EV_APPLY:
+		snprintf(args->errmsg, args->errmsg_len,
+			 "no summary command not implemented yet");
 		/* NOTHING */
 		break;
 	}
@@ -1203,7 +1219,7 @@ static int lib_interface_eigrp_instance_summarize_addresses_destroy(
 static int lib_interface_eigrp_instance_authentication_modify(
 	struct nb_cb_modify_args *args)
 {
-	eigrp_interface_t *eif;
+	eigrp_interface_t *intf;
 
 	switch (args->event) {
 	case NB_EV_VALIDATE:
@@ -1212,8 +1228,8 @@ static int lib_interface_eigrp_instance_authentication_modify(
 		/* NOTHING */
 		break;
 	case NB_EV_APPLY:
-		eif = nb_running_get_entry(args->dnode, NULL, true);
-		eif->params.auth_type = yang_dnode_get_enum(args->dnode, NULL);
+		intf = nb_running_get_entry(args->dnode, NULL, true);
+		intf->params.auth_type = yang_dnode_get_enum(args->dnode, NULL);
 		break;
 	}
 
@@ -1226,7 +1242,7 @@ static int lib_interface_eigrp_instance_authentication_modify(
 static int
 lib_interface_eigrp_instance_keychain_modify(struct nb_cb_modify_args *args)
 {
-	eigrp_interface_t *eif;
+	eigrp_interface_t *intf;
 	struct keychain *keychain;
 
 	switch (args->event) {
@@ -1247,11 +1263,11 @@ lib_interface_eigrp_instance_keychain_modify(struct nb_cb_modify_args *args)
 		args->resource->ptr = NULL;
 		break;
 	case NB_EV_APPLY:
-		eif = nb_running_get_entry(args->dnode, NULL, true);
-		if (eif->params.auth_keychain)
-			free(eif->params.auth_keychain);
+		intf = nb_running_get_entry(args->dnode, NULL, true);
+		if (intf->params.auth_keychain)
+			free(intf->params.auth_keychain);
 
-		eif->params.auth_keychain = args->resource->ptr;
+		intf->params.auth_keychain = args->resource->ptr;
 		break;
 	}
 
@@ -1261,7 +1277,7 @@ lib_interface_eigrp_instance_keychain_modify(struct nb_cb_modify_args *args)
 static int
 lib_interface_eigrp_instance_keychain_destroy(struct nb_cb_destroy_args *args)
 {
-	eigrp_interface_t *eif;
+	eigrp_interface_t *intf;
 
 	switch (args->event) {
 	case NB_EV_VALIDATE:
@@ -1270,11 +1286,11 @@ lib_interface_eigrp_instance_keychain_destroy(struct nb_cb_destroy_args *args)
 		/* NOTHING */
 		break;
 	case NB_EV_APPLY:
-		eif = nb_running_get_entry(args->dnode, NULL, true);
-		if (eif->params.auth_keychain)
-			free(eif->params.auth_keychain);
+		intf = nb_running_get_entry(args->dnode, NULL, true);
+		if (intf->params.auth_keychain)
+			free(intf->params.auth_keychain);
 
-		eif->params.auth_keychain = NULL;
+		intf->params.auth_keychain = NULL;
 		break;
 	}
 

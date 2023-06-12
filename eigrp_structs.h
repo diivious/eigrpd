@@ -32,8 +32,6 @@
 #ifndef _ZEBRA_EIGRP_STRUCTS_H_
 #define _ZEBRA_EIGRP_STRUCTS_H_
 
-#include "filter.h"
-
 #include "eigrpd/eigrp_const.h"
 #include "eigrpd/eigrp_types.h"
 #include "eigrpd/eigrp_macros.h"
@@ -100,10 +98,10 @@ struct eigrp_instance {
 	struct stream *ibuf;
 	struct list *oi_write_q;
 
-	/*Threads*/
-	struct thread *t_write;
-	struct thread *t_read;
-	struct thread *t_distribute; /* timer for distribute list */
+	/*Events*/
+	struct event *t_write;
+	struct event *t_read;
+	struct event *t_distribute; /* timer for distribute list */
 
 	struct route_table *networks; /* EIGRP config networks. */
 
@@ -219,9 +217,9 @@ typedef struct eigrp_interface {
 	/* Neighbor information. */
 	struct list *nbrs; /* EIGRP Neighbor List */
 
-	/* Threads. */
-	struct thread *t_hello;	     /* timer */
-	struct thread *t_distribute; /* timer for distribute list */
+	/* Events. */
+	struct event *t_hello;	     /* timer */
+	struct event *t_distribute; /* timer for distribute list */
 
 	/* Packet send buffer. */
 	eigrp_packet_queue_t *obuf; /* Output queue */
@@ -261,8 +259,8 @@ typedef struct eigrp_packet {
 	/* IP destination address. */
 	eigrp_addr_t dst;
 
-	/*Packet retransmission thread and counter*/
-	struct thread *t_retrans_timer;
+	/*Packet retransmission event and counter*/
+	struct event *t_retrans_timer;
 	uint8_t retrans_counter;
 
 	/*neighbor details for sendng packet*/

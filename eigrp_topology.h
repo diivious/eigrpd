@@ -32,8 +32,6 @@
 #ifndef _ZEBRA_EIGRP_TOPOLOGY_H
 #define _ZEBRA_EIGRP_TOPOLOGY_H
 
-#include "lib/table.h"
-
 /* EIGRP Route Descriptor related functions. */
 extern eigrp_route_descriptor_t *eigrp_route_descriptor_new(eigrp_interface_t *);
 extern void eigrp_route_descriptor_add(eigrp_instance_t *,

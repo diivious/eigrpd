@@ -1291,7 +1291,7 @@ static uint8_t *eigrpInterfaceEntry(struct variable *v, oid *name,
 void eigrp_snmp_init()
 {
 	eigrp_snmp_iflist = list_new();
-	smux_init(eigrp_om->eigrpd_thread);
+	smux_init(eigrp_om->eigrpd_event);
 	REGISTER_MIB("ciscoEigrpMIB", eigrp_variables, variable, eigrp_oid);
 }
 #endif

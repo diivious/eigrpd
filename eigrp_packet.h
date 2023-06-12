@@ -50,8 +50,8 @@ typedef struct eigrp_tlv_header {
 } eigrp_tlv_header_t;
 
 /*Prototypes*/
-extern void eigrp_packet_read(struct thread *);
-extern void eigrp_packet_write(struct thread *);
+extern void eigrp_packet_read(struct event *);
+extern void eigrp_packet_write(struct event *);
 
 extern eigrp_packet_t *eigrp_packet_new(size_t, eigrp_neighbor_t *);
 extern eigrp_packet_t *eigrp_packet_duplicate(eigrp_packet_t *,
@@ -72,13 +72,8 @@ extern void eigrp_packet_queue_reset(eigrp_packet_queue_t *);
 
 extern void eigrp_packet_send_reliably(eigrp_instance_t *, eigrp_neighbor_t *);
 
-extern uint16_t eigrp_add_authTLV_MD5_encode(struct stream *,
-					     eigrp_interface_t *);
-extern uint16_t eigrp_add_authTLV_SHA256_encode(struct stream *,
-						eigrp_interface_t *);
-
-extern void eigrp_packet_unack_retrans(struct thread *);
-extern void eigrp_packet_unack_multicast_retrans(struct thread *);
+extern void eigrp_packet_unack_retrans(struct event *);
+extern void eigrp_packet_unack_multicast_retrans(struct event *);
 
 /**
  * Found in eigrp-tlv*.c for peer versioning of TLV decoding
@@ -96,7 +91,7 @@ extern void eigrp_hello_send_ack(eigrp_neighbor_t *);
 extern void eigrp_hello_receive(eigrp_instance_t *, eigrp_header_t *,
 			 eigrp_addr_t *, eigrp_interface_t *,
 			 struct stream *, int);
-extern void eigrp_hello_timer(struct thread *);
+extern void eigrp_hello_timer(struct event *);
 
 /*
  * These externs are found in eigrp_update.c
@@ -112,7 +107,7 @@ extern void eigrp_update_receive(eigrp_instance_t *, eigrp_neighbor_t *,
 extern void eigrp_update_send_all(eigrp_instance_t *, eigrp_interface_t *);
 extern void eigrp_update_send_init(eigrp_instance_t *, eigrp_neighbor_t *);
 extern void eigrp_update_send_EOT(eigrp_neighbor_t *);
-extern void eigrp_update_send_GR_thread(struct thread *);
+extern void eigrp_update_send_GR_event(struct event *);
 extern void eigrp_update_send_GR(eigrp_neighbor_t *, enum GR_type,
 				 struct vty *);
 extern void eigrp_update_send_interface_GR(eigrp_interface_t *, enum GR_type,
@@ -159,22 +154,6 @@ extern void eigrp_siareply_receive(eigrp_instance_t *, eigrp_neighbor_t *,
 /*
  * These externs need to cleaned up
  */
-extern struct TLV_MD5_Authentication_Type *eigrp_authTLV_MD5_new(void);
-extern void eigrp_authTLV_MD5_free(struct TLV_MD5_Authentication_Type *);
-extern struct TLV_SHA256_Authentication_Type *eigrp_authTLV_SHA256_new(void);
-extern void eigrp_authTLV_SHA256_free(struct TLV_SHA256_Authentication_Type *);
-
-extern int eigrp_make_md5_digest(eigrp_interface_t *, struct stream *, uint8_t);
-extern int eigrp_check_md5_digest(struct stream *,
-				  struct TLV_MD5_Authentication_Type *,
-				  eigrp_neighbor_t *, uint8_t);
-extern int eigrp_make_sha256_digest(eigrp_interface_t *, struct stream *,
-				    uint8_t);
-extern int eigrp_check_sha256_digest(struct stream *,
-				     struct TLV_SHA256_Authentication_Type *,
-				     eigrp_neighbor_t *, uint8_t);
-
-
 extern void eigrp_IPv4_InternalTLV_free(struct TLV_IPv4_Internal_type *);
 
 extern struct TLV_Sequence_Type *eigrp_SequenceTLV_new(void);

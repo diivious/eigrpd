@@ -9,6 +9,7 @@ man8 += $(MANBUILD)/frr-eigrpd.8
 endif
 
 eigrpd_eigrpd_SOURCES = \
+	eigrpd/eigrp_auth.c \
 	eigrpd/eigrp_cli.c \
 	eigrpd/eigrp_dump.c \
 	eigrpd/eigrp_errors.c \
@@ -50,6 +51,7 @@ clippy_scan += \
 	# end
 
 noinst_HEADERS += \
+	eigrpd/eigrp_auth.h \
 	eigrpd/eigrp_cli.h \
 	eigrpd/eigrp_const.h \
 	eigrpd/eigrp_errors.h \

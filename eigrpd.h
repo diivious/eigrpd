@@ -28,8 +28,12 @@
 #ifndef _ZEBRA_EIGRPD_H
 #define _ZEBRA_EIGRPD_H
 
-#include "lib/thread.h"
-#include "lib/memory.h"
+#include <zebra.h>
+
+#include "frrevent.h"
+#include "filter.h"
+#include "log.h"
+#include "memory.h"
 
 DECLARE_MGROUP(EIGRPD);
 
@@ -52,8 +56,8 @@ typedef struct eigrpd {
 	/* EIGRP instance. */
 	struct list *eigrp;
 
-	/* EIGRP parent thread. */
-	struct thread_master *thread;
+	/* EIGRP parent event. */
+	struct event_loop *event;
 
 	/* Zebra interface list. */
 	struct list *iflist;
@@ -69,7 +73,7 @@ typedef struct eigrpd {
 
 /* Extern variables. */
 extern struct zclient *zclient;
-extern struct thread_master *eigrpd_thread;
+extern struct event_loop *eigrpd_event;
 extern struct eigrpd *eigrp_om;
 extern struct zebra_privs_t eigrpd_privs;
 

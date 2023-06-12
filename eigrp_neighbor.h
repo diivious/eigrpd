@@ -69,9 +69,9 @@ typedef struct eigrp_neighbor {
 	/* Timer values. */
 	uint16_t v_holddown;
 
-	/* Threads. */
-	struct thread *t_holddown;
-	struct thread *t_nbr_send_gr; /* thread for sending multiple GR packet
+	/* Events. */
+	struct event *t_holddown;
+	struct event *t_nbr_send_gr; /* event for sending multiple GR packet
 					 chunks */
 
 	eigrp_packet_queue_t *retrans_queue;
@@ -95,7 +95,7 @@ extern eigrp_neighbor_t *eigrp_nbr_lookup(eigrp_interface_t *, struct eigrp_head
 extern eigrp_neighbor_t *eigrp_nbr_create(eigrp_interface_t *, eigrp_addr_t *);
 extern void eigrp_nbr_delete(eigrp_neighbor_t *neigh);
 
-extern void holddown_timer_expired(struct thread *thread);
+extern void holddown_timer_expired(struct event *event);
 
 extern int eigrp_neighborship_check(eigrp_neighbor_t *,
 				    struct TLV_Parameter_Type *tlv);

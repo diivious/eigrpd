@@ -55,8 +55,8 @@ struct zebra_privs_t eigrpd_privs = {
 	.cap_num_p = array_size(_caps_p),
 	.cap_num_i = 0};
 
-/* For registering threads. */
-extern struct thread_master *eigrpd_thread;
+/* For registering events. */
+extern struct event_loop *eigrpd_event;
 struct in_addr router_id_zebra;
 
 /* Router-id update message from zebra. */
@@ -301,7 +301,7 @@ void eigrp_zebra_init(void)
 {
 	struct zclient_options opt = {.receive_notify = false};
 
-	zclient = zclient_new(eigrpd_thread, &opt, eigrp_handlers,
+	zclient = zclient_new(eigrpd_event, &opt, eigrp_handlers,
 			      array_size(eigrp_handlers));
 
 	zclient_init(zclient, ZEBRA_ROUTE_EIGRP, 0, &eigrpd_privs);

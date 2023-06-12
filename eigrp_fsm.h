@@ -37,7 +37,7 @@ typedef enum {
 
 typedef struct eigrp_fsm_action_message {
 	uint8_t packet_type;			// UPDATE, QUERY, SIAQUERY, SIAREPLY
-	eigrp_instance_t *eigrp;			// which thread sent mesg
+	eigrp_instance_t *eigrp;		// which event sent mesg
 	eigrp_neighbor_t *adv_router;		// advertising neighbor
 	eigrp_route_descriptor_t *route;	//
 	eigrp_prefix_descriptor_t *prefix;	//

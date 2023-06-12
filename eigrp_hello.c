@@ -34,6 +34,7 @@
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_auth.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_dump.h"
@@ -55,7 +56,7 @@ static const struct message eigrp_general_tlv_type_str[] = {
 /*
  * @fn eigrp_hello_timer
  *
- * @param[in]   thread  current execution thread timer is associated with
+ * @param[in]   event  current execution event timer is associated with
  *
  * @return void
  *
@@ -64,11 +65,11 @@ static const struct message eigrp_general_tlv_type_str[] = {
  * Sends hello packet via multicast for all interfaces eigrp
  * is configured for
  */
-void eigrp_hello_timer(struct thread *thread)
+void eigrp_hello_timer(struct event *event)
 {
 	eigrp_interface_t *ei;
 
-	ei = THREAD_ARG(thread);
+	ei = EVENT_ARG(event);
 
 	if (IS_DEBUG_EIGRP(0, TIMERS))
 		zlog_debug("Start Hello Timer (%s) Expire [%u]",
@@ -78,7 +79,7 @@ void eigrp_hello_timer(struct thread *thread)
 	eigrp_hello_send(ei, EIGRP_HELLO_NORMAL, NULL);
 
 	/* Hello timer set. */
-	thread_add_timer(eigrpd_thread, eigrp_hello_timer, ei, ei->params.v_hello,
+	event_add_timer(eigrpd_event, eigrp_hello_timer, ei, ei->params.v_hello,
 			 &ei->t_hello);
 
 	return;
@@ -727,12 +728,12 @@ void eigrp_hello_send_ack(eigrp_neighbor_t *nbr)
 		/* Add packet to the top of the interface output queue*/
 		eigrp_packet_enqueue(nbr->ei->obuf, packet);
 
-		/* Hook thread to write packet. */
+		/* Hook event to write packet. */
 		if (nbr->ei->on_write_q == 0) {
 			listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
 			nbr->ei->on_write_q = 1;
 		}
-		EIGRP_THREAD_ADD_WRITE(nbr->ei->eigrp);
+		EIGRP_EVENT_ADD_WRITE(nbr->ei->eigrp);
 	}
 }
 
@@ -774,7 +775,7 @@ void eigrp_hello_send(eigrp_interface_t *ei, uint8_t flags,
 		// Add packet to the top of the interface output queue
 		eigrp_packet_enqueue(ei->obuf, packet);
 
-		/* Hook thread to write packet. */
+		/* Hook event to write packet. */
 		if (ei->on_write_q == 0) {
 			listnode_add(ei->eigrp->oi_write_q, ei);
 			ei->on_write_q = 1;
@@ -782,10 +783,10 @@ void eigrp_hello_send(eigrp_interface_t *ei, uint8_t flags,
 
 		if (ei->eigrp->t_write == NULL) {
 			if (flags & EIGRP_HELLO_GRACEFUL_SHUTDOWN) {
-				thread_execute(eigrpd_thread, eigrp_packet_write,
+				event_execute(eigrpd_event, eigrp_packet_write,
 					       ei->eigrp, ei->eigrp->fd);
 			} else {
-				EIGRP_THREAD_ADD_WRITE(ei->eigrp);
+				EIGRP_EVENT_ADD_WRITE(ei->eigrp);
 			}
 		}
 	}
