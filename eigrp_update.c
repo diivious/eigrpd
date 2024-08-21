@@ -870,7 +870,7 @@ void eigrp_update_send_GR_event(struct event *event)
 
 	/* if it wasn't last chunk, schedule this event again */
 	if (nbr->nbr_gr_packet_type != EIGRP_PACKET_PART_LAST) {
-		event_execute(eigrpd_event, eigrp_update_send_GR_event, nbr, 0);
+	    event_execute(eigrpd_event, eigrp_update_send_GR_event, nbr, 0, NULL);
 	}
 
 	return;
@@ -940,7 +940,7 @@ void eigrp_update_send_GR(eigrp_neighbor_t *nbr, enum GR_type gr_type,
 	nbr->nbr_gr_packet_type = EIGRP_PACKET_PART_FIRST;
 
 	/* execute packet sending in event */
-	event_execute(eigrpd_event, eigrp_update_send_GR_event, nbr, 0);
+	event_execute(eigrpd_event, eigrp_update_send_GR_event, nbr, 0, NULL);
 }
 
 /**

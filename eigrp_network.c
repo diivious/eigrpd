@@ -241,13 +241,11 @@ static void eigrp_network_run_interface(eigrp_instance_t *eigrp, struct prefix *
 					struct interface *ifp)
 {
 	eigrp_interface_t *ei;
-	struct listnode *cnode;
 	struct connected *co;
 
 	/* if interface prefix is match specified prefix,
 	   then create socket and join multicast group. */
-	for (ALL_LIST_ELEMENTS_RO(ifp->connected, cnode, co)) {
-
+	frr_each (if_connected, ifp->connected, co) {
 		if (CHECK_FLAG(co->flags, ZEBRA_IFA_SECONDARY))
 			continue;
 
@@ -255,6 +253,9 @@ static void eigrp_network_run_interface(eigrp_instance_t *eigrp, struct prefix *
 		    && eigrp_network_match_iface(co->address, p)) {
 
 			ei = eigrp_intf_new(eigrp, ifp, co->address);
+
+			/* Relate eigrp interface to eigrp instance. */
+			ei->eigrp = eigrp;
 
 			/* if router_id is not configured, dont bring up
 			 * interfaces.

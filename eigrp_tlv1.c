@@ -340,10 +340,8 @@ static eigrp_route_descriptor_t *eigrp_tlv1_decoder(eigrp_instance_t *eigrp,
 	switch (type) {
 	case EIGRP_TLV_IPv4_EXT:
 		bytes += eigrp_tlv1_external_decode(pkt, &route->extdata);
-
-		// fall though to internal processing to get metric and
-		// route
-		__attribute__((fallthrough));
+		bytes += eigrp_tlv1_addr_decode(pkt, &route->dest);
+		break;
 
 	case EIGRP_TLV_IPv4_INT:
 		bytes += eigrp_tlv1_metric_decode(pkt, &route->metric);

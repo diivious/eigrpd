@@ -784,7 +784,7 @@ void eigrp_hello_send(eigrp_interface_t *ei, uint8_t flags,
 		if (ei->eigrp->t_write == NULL) {
 			if (flags & EIGRP_HELLO_GRACEFUL_SHUTDOWN) {
 				event_execute(eigrpd_event, eigrp_packet_write,
-					       ei->eigrp, ei->eigrp->fd);
+					      ei->eigrp, ei->eigrp->fd, NULL);
 			} else {
 				EIGRP_EVENT_ADD_WRITE(ei->eigrp);
 			}

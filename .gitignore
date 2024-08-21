@@ -1,2 +1,11 @@
+.deps
+.dirstamp
 eigrpd
 eigrpd.conf
+eigrpd.xref
+eigrp_cli_clippy.c
+eigrp_vty_clippy.c
+*.o
+.#*
+*#
+*~
