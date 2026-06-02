@@ -45,8 +45,16 @@ static struct stream *eigrp_packet_recv(eigrp_instance_t *eigrp, int fd,
 					struct interface **ifp,
 					struct stream *s);
 static int eigrp_verify_header(struct stream *s, eigrp_interface_t *ei,
-			       struct ip *addr, struct eigrp_header *header);
+			       struct ip *addr, struct eigrp_header *header,
+			       uint16_t length);
 static int eigrp_check_network_mask(eigrp_interface_t *ei, struct in_addr mask);
+static int eigrp_packet_auth_header_validate(eigrp_interface_t *ei,
+					     struct eigrp_header *eigrph,
+					     uint16_t length);
+static int eigrp_packet_auth_digest_validate(eigrp_interface_t *ei,
+					     eigrp_neighbor_t *nbr,
+					     struct eigrp_header *eigrph,
+					     uint16_t length);
 
 static int eigrp_retrans_count_exceeded(eigrp_packet_t *packet,
 					eigrp_neighbor_t *nbr)
@@ -265,6 +273,7 @@ void eigrp_packet_read(struct event *event)
 	struct in_addr srcaddr;
 	uint16_t opcode = 0;
 	uint16_t length = 0;
+	uint16_t ip_header_len = 0;
 
 	/* first of all get interface pointer. */
 	eigrp = EVENT_ARG(event);
@@ -283,9 +292,17 @@ void eigrp_packet_read(struct event *event)
 	   because this is at the beginning of the stream data buffer. */
 	iph = (struct ip *)STREAM_DATA(ibuf);
 
-	// Substract IPv4 header size from EIGRP Packet itself
+	// Subtract IPv4 header size from the EIGRP payload length.
 	if (iph->ip_v == 4) {
-		length = (iph->ip_len) - 20U;
+		ip_header_len = iph->ip_hl * 4U;
+		if (iph->ip_len < ip_header_len + EIGRP_HEADER_LEN) {
+			zlog_warn(
+				"eigrp_packet_read: discarding runt EIGRP packet from %pI4 length %u",
+				&iph->ip_src, iph->ip_len);
+			return;
+		}
+
+		length = iph->ip_len - ip_header_len;
 		// DVS: get it into a workable form, but this is an ugly hack
 		//      cleaning these up as I get ipv6 fixed
 		src.afi = AF_INET;
@@ -345,7 +362,7 @@ void eigrp_packet_read(struct event *event)
 	/* Advance from IP header to EIGRP header (iph->ip_hl has been verified
 	   by eigrp_packet_recv() to be correct). */
 
-	stream_forward_getp(ibuf, (iph->ip_hl * 4));
+	stream_forward_getp(ibuf, ip_header_len);
 	eigrph = (struct eigrp_header *)stream_pnt(ibuf);
 
 	if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV) && IS_DEBUG_EIGRP_TRANSMIT(0, PACKET_DETAIL))
@@ -380,7 +397,7 @@ void eigrp_packet_read(struct event *event)
 	}
 
 	/* Verify more EIGRP header fields. */
-	ret = eigrp_verify_header(ibuf, ei, iph, eigrph);
+	ret = eigrp_verify_header(ibuf, ei, iph, eigrph, length);
 	if (ret < 0) {
 		if (IS_DEBUG_EIGRP_TRANSMIT(0, RECV))
 			zlog_debug(
@@ -403,21 +420,29 @@ void eigrp_packet_read(struct event *event)
 	/* Read rest of the packet and call each sort of packet routine. */
 	stream_forward_getp(ibuf, EIGRP_HEADER_LEN);
 
-	 /*
-	 * handle case where neigbor is sending hello, could be first time we
-	 * have seen this neghbor, if so create the need data structures
+	/*
+	 * Handle Hello before the normal neighbor-required opcodes.  Check the
+	 * authentication digest before allowing Hello processing to create or
+	 * update neighbor state.
 	 */
+	nbr = eigrp_nbr_lookup(ei, eigrph, &src);
 	if (opcode == EIGRP_OPC_HELLO) {
-	    eigrp_hello_receive(eigrp, eigrph, &src, ei, ibuf, length);
+		if (eigrp_packet_auth_digest_validate(ei, nbr, eigrph, length) < 0)
+			return;
+
+		eigrp_hello_receive(eigrp, eigrph, &src, ei, ibuf, length);
+		return;
 	}
 
 	/* neighbor must be valid, if not ignore this packet until/unless
 	 * neigbor says hello frist.  mannors you know...
 	 */
-	nbr = eigrp_nbr_lookup(ei, eigrph, &src);
 	if (!nbr) {
 		return;
 	}
+
+	if (eigrp_packet_auth_digest_validate(ei, nbr, eigrph, length) < 0)
+		return;
 
 	if (ntohl(eigrph->ack)) {
 		eigrp_packet_ack(eigrp, eigrph, nbr);
@@ -495,6 +520,17 @@ static struct stream *eigrp_packet_recv(eigrp_instance_t *eigrp, int fd,
 	sockopt_iphdrincl_swab_systoh(iph);
 
 	ip_len = iph->ip_len;
+
+	if (iph->ip_v == 4) {
+		uint16_t ip_header_len = iph->ip_hl * 4U;
+
+		if (iph->ip_hl < 5 || ip_header_len > (uint16_t)ret) {
+			zlog_warn(
+				"eigrp_packet_recv: discarding packet with invalid IPv4 header length %u",
+				(uint8_t)(iph->ip_hl * 4U));
+			return NULL;
+		}
+	}
 
 #if defined(__FreeBSD__) && (__FreeBSD_version < 1000000)
 	/*
@@ -700,10 +736,236 @@ void eigrp_packet_free(eigrp_packet_t *packet)
 	XFREE(MTYPE_EIGRP_PACKET, packet);
 }
 
+/* Return authentication TLV when present and validate TLV framing. */
+static int eigrp_packet_auth_tlv_find(struct eigrp_header *eigrph,
+				      uint16_t length,
+				      struct eigrp_tlv_hdr_type **auth_tlv,
+				      bool *auth_first)
+{
+	uint16_t offset;
+
+	*auth_tlv = NULL;
+	*auth_first = false;
+
+	if (length < EIGRP_HEADER_LEN)
+		return -1;
+
+	offset = EIGRP_HEADER_LEN;
+	while (offset < length) {
+		struct eigrp_tlv_hdr_type *tlv;
+		uint16_t tlv_type;
+		uint16_t tlv_length;
+
+		if ((length - offset) < EIGRP_TLV_HDR_SIZE)
+			return -1;
+
+		tlv = (struct eigrp_tlv_hdr_type *)((uint8_t *)eigrph + offset);
+		tlv_type = ntohs(tlv->type);
+		tlv_length = ntohs(tlv->length);
+
+		if (tlv_length < EIGRP_TLV_HDR_SIZE || tlv_length > (length - offset))
+			return -1;
+
+		if (tlv_type == EIGRP_TLV_AUTH) {
+			*auth_tlv = tlv;
+			*auth_first = (offset == EIGRP_HEADER_LEN);
+		}
+
+		offset += tlv_length;
+	}
+
+	return 0;
+}
+
+static int eigrp_packet_auth_tlv_validate(eigrp_interface_t *ei,
+					  struct eigrp_tlv_hdr_type *auth_tlv,
+					  uint16_t length)
+{
+	uint16_t auth_type;
+	uint16_t auth_length;
+
+	if (length < EIGRP_AUTH_MD5_TLV_SIZE)
+		return -1;
+
+	auth_type = ntohs(((struct TLV_MD5_Authentication_Type *)auth_tlv)->auth_type);
+	auth_length = ntohs(((struct TLV_MD5_Authentication_Type *)auth_tlv)->auth_length);
+
+	if (auth_type != ei->params.auth_type) {
+		zlog_warn("interface %s: EIGRP authentication type mismatch: received %u expected %u",
+			  EIGRP_INTF_NAME(ei), auth_type, ei->params.auth_type);
+		return -1;
+	}
+
+	switch (auth_type) {
+	case EIGRP_AUTH_TYPE_MD5:
+		if (length != EIGRP_AUTH_MD5_TLV_SIZE
+		    || auth_length != EIGRP_AUTH_TYPE_MD5_LEN)
+			return -1;
+		return 0;
+	case EIGRP_AUTH_TYPE_SHA256:
+		if (length != EIGRP_AUTH_SHA256_TLV_SIZE
+		    || auth_length != EIGRP_AUTH_TYPE_SHA256_LEN)
+			return -1;
+		return 0;
+	default:
+		zlog_warn("interface %s: unsupported EIGRP authentication type %u",
+			  EIGRP_INTF_NAME(ei), auth_type);
+		return -1;
+	}
+}
+
+static int eigrp_packet_auth_header_validate(eigrp_interface_t *ei,
+					     struct eigrp_header *eigrph,
+					     uint16_t length)
+{
+	struct eigrp_tlv_hdr_type *auth_tlv;
+	bool auth_first;
+	int ret;
+
+	ret = eigrp_packet_auth_tlv_find(eigrph, length, &auth_tlv, &auth_first);
+	if (ret < 0) {
+		zlog_warn("interface %s: malformed EIGRP TLV framing",
+			  EIGRP_INTF_NAME(ei));
+		return -1;
+	}
+
+	if (ei->params.auth_type == EIGRP_AUTH_TYPE_NONE) {
+		if (auth_tlv) {
+			zlog_warn("interface %s: EIGRP authentication TLV received on unauthenticated interface",
+				  EIGRP_INTF_NAME(ei));
+			return -1;
+		}
+		return 0;
+	}
+
+	if (!ei->params.auth_keychain) {
+		zlog_warn("interface %s: EIGRP authentication configured without keychain",
+			  EIGRP_INTF_NAME(ei));
+		return -1;
+	}
+
+	if (!auth_tlv) {
+		zlog_warn("interface %s: EIGRP authenticated interface received packet without auth TLV",
+			  EIGRP_INTF_NAME(ei));
+		return -1;
+	}
+
+	if (!auth_first) {
+		zlog_warn("interface %s: EIGRP authentication TLV is not first TLV",
+			  EIGRP_INTF_NAME(ei));
+		return -1;
+	}
+
+	return eigrp_packet_auth_tlv_validate(ei, auth_tlv, ntohs(auth_tlv->length));
+}
+
+static uint8_t eigrp_packet_auth_flags_get(struct eigrp_header *eigrph)
+{
+	if (eigrph->opcode == EIGRP_OPC_HELLO)
+		return EIGRP_AUTH_BASIC_HELLO_FLAG;
+
+	if (eigrph->opcode == EIGRP_OPC_UPDATE
+	    && (ntohl(eigrph->flags) & EIGRP_INIT_FLAG))
+		return EIGRP_AUTH_UPDATE_INIT_FLAG;
+
+	return EIGRP_AUTH_UPDATE_FLAG;
+}
+
+static int eigrp_packet_auth_digest_validate(eigrp_interface_t *ei,
+					     eigrp_neighbor_t *nbr,
+					     struct eigrp_header *eigrph,
+					     uint16_t length)
+{
+	struct eigrp_tlv_hdr_type *auth_tlv;
+	struct stream *auth_stream;
+	eigrp_neighbor_t tmp_nbr;
+	bool auth_first;
+	int ret;
+
+	if (ei->params.auth_type == EIGRP_AUTH_TYPE_NONE)
+		return 0;
+
+	ret = eigrp_packet_auth_tlv_find(eigrph, length, &auth_tlv, &auth_first);
+	if (ret < 0 || !auth_tlv || !auth_first)
+		return -1;
+
+	if (ei->params.auth_type == EIGRP_AUTH_TYPE_SHA256) {
+		zlog_warn("interface %s: EIGRP SHA256 authentication receive validation is not implemented",
+			  EIGRP_INTF_NAME(ei));
+		return -1;
+	}
+
+	if (ei->params.auth_type != EIGRP_AUTH_TYPE_MD5)
+		return -1;
+
+	memset(&tmp_nbr, 0, sizeof(tmp_nbr));
+	if (!nbr) {
+		tmp_nbr.ei = ei;
+		nbr = &tmp_nbr;
+	}
+
+	auth_stream = stream_new(length);
+	stream_put(auth_stream, eigrph, length);
+
+	ret = eigrp_check_md5_digest(
+		auth_stream,
+		(struct TLV_MD5_Authentication_Type *)(STREAM_DATA(auth_stream)
+							   + EIGRP_HEADER_LEN),
+		nbr, eigrp_packet_auth_flags_get(eigrph));
+
+	stream_free(auth_stream);
+	if (!ret) {
+		zlog_warn("interface %s: EIGRP MD5 authentication failed",
+			  EIGRP_INTF_NAME(ei));
+		return -1;
+	}
+
+	return 0;
+}
+
 /* EIGRP Header verification. */
 static int eigrp_verify_header(struct stream *ibuf, eigrp_interface_t *ei,
-			       struct ip *iph, struct eigrp_header *eigrph)
+			       struct ip *iph, struct eigrp_header *eigrph,
+			       uint16_t length)
 {
+	uint16_t checksum;
+
+	(void)ibuf;
+
+	if (length < EIGRP_HEADER_LEN) {
+		zlog_warn("interface %s: EIGRP packet too short: %u",
+			  EIGRP_INTF_NAME(ei), length);
+		return -1;
+	}
+
+	if (eigrph->version != EIGRP_HEADER_VERSION) {
+		zlog_warn("interface %s: unsupported EIGRP header version %u",
+			  EIGRP_INTF_NAME(ei), eigrph->version);
+		return -1;
+	}
+
+	if (ntohs(eigrph->ASNumber) != ei->eigrp->AS) {
+		zlog_warn("interface %s: EIGRP AS mismatch: received %u expected %u",
+			  EIGRP_INTF_NAME(ei), ntohs(eigrph->ASNumber), ei->eigrp->AS);
+		return -1;
+	}
+
+	if (ntohs(eigrph->vrid) != ei->eigrp->vrid) {
+		zlog_warn("interface %s: EIGRP VRID mismatch: received %u expected %u",
+			  EIGRP_INTF_NAME(ei), ntohs(eigrph->vrid), ei->eigrp->vrid);
+		return -1;
+	}
+
+	checksum = in_cksum(eigrph, length);
+	if (checksum != 0) {
+		zlog_warn("interface %s: EIGRP checksum failed from %pI4",
+			  EIGRP_INTF_NAME(ei), &iph->ip_src);
+		return -1;
+	}
+
+	if (eigrp_packet_auth_header_validate(ei, eigrph, length) < 0)
+		return -1;
+
 	/* Check network mask, Silently discarded. */
 	if (!eigrp_check_network_mask(ei, iph->ip_src)) {
 		zlog_warn(
@@ -711,11 +973,6 @@ static int eigrp_verify_header(struct stream *ibuf, eigrp_interface_t *ei,
 			EIGRP_INTF_NAME(ei), &iph->ip_src);
 		return -1;
 	}
-	//
-	//  /* Check authentication. The function handles logging actions, where
-	//  required. */
-	//  if (! eigrp_check_auth(ei, eigrph))
-	//    return -1;
 
 	return 0;
 }

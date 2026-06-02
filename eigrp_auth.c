@@ -99,6 +99,7 @@ int eigrp_check_md5_digest(struct stream *s,
 	size_t backup_end;
 	struct TLV_MD5_Authentication_Type *auth_TLV;
 	struct eigrp_header *eigrph;
+	uint16_t saved_checksum;
 
 	if (ntohl(nbr->crypt_seqnum) > ntohl(authTLV->key_sequence)) {
 		zlog_warn(
@@ -109,6 +110,7 @@ int eigrp_check_md5_digest(struct stream *s,
 	}
 
 	eigrph = (struct eigrp_header *)s->data;
+	saved_checksum = eigrph->checksum;
 	eigrph->checksum = 0;
 
 	auth_TLV = (struct TLV_MD5_Authentication_Type *)(s->data
@@ -128,6 +130,8 @@ int eigrp_check_md5_digest(struct stream *s,
 		zlog_warn(
 			"Interface %s: Expected key value not found in config",
 			nbr->ei->ifp->name);
+		memcpy(auth_TLV->digest, orig, EIGRP_AUTH_TYPE_MD5_LEN);
+		eigrph->checksum = saved_checksum;
 		return 0;
 	}
 
@@ -161,6 +165,9 @@ int eigrp_check_md5_digest(struct stream *s,
 	MD5Final(digest, &ctx);
 
 	/* compare the two */
+	memcpy(auth_TLV->digest, orig, EIGRP_AUTH_TYPE_MD5_LEN);
+	eigrph->checksum = saved_checksum;
+
 	if (memcmp(orig, digest, EIGRP_AUTH_TYPE_MD5_LEN) != 0) {
 		zlog_warn("interface %s: eigrp_check_md5 checksum mismatch",
 			  EIGRP_INTF_NAME(nbr->ei));
