@@ -87,26 +87,31 @@ void eigrp_reply_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 
 	while (pkt->endp > pkt->getp) {
 		route = (nbr->tlv_decoder)(eigrp, nbr, pkt, length);
-		prefix = route->prefix;
+		if (!route)
+			break;
 
-		// should hsve got route off the packet, but one never knowd
-		if (route) {
-			msg.packet_type = EIGRP_OPC_REPLY;
-			msg.eigrp = eigrp;
-			msg.data_type = EIGRP_INT;
-			msg.adv_router = nbr;
-			msg.route = route;
-			msg.metrics = route->metric;
-			msg.prefix = prefix;
-			eigrp_fsm_event(&msg);
-
-		} else {
-			// Destination must exists
-			zlog_err("%s: Received prefix %s which we do not know about",
-				 __PRETTY_FUNCTION__,
-				 eigrp_print_prefix(prefix->destination));
+		prefix = eigrp_topology_table_lookup_ipv4(eigrp->topology_table,
+						       &route->dest);
+		if (!prefix) {
+			zlog_debug("EIGRP REPLY: Neighbor(%s) sent unknown prefix %s",
+				   eigrp_print_addr(&nbr->src),
+				   eigrp_print_prefix(&route->dest));
+			eigrp_route_descriptor_free(route);
 			continue;
 		}
+		route->prefix = prefix;
+
+		// should have got route off the packet, but one never knows
+		msg.packet_type = EIGRP_OPC_REPLY;
+		msg.eigrp = eigrp;
+		msg.data_type = (route->type == EIGRP_TLV_IPv4_EXT)
+					? EIGRP_EXT
+					: EIGRP_INT;
+		msg.adv_router = nbr;
+		msg.route = route;
+		msg.metrics = route->metric;
+		msg.prefix = prefix;
+		eigrp_fsm_event(&msg);
 	}
 	eigrp_hello_send_ack(nbr);
 }

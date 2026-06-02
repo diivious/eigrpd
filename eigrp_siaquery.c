@@ -23,6 +23,7 @@ void eigrp_siaquery_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 			    eigrp_interface_t *ei, int length)
 {
 	eigrp_fsm_action_message_t msg;
+	eigrp_prefix_descriptor_t *prefix;
 	eigrp_route_descriptor_t *route;
 
 	/* increment statistics. */
@@ -35,21 +36,31 @@ void eigrp_siaquery_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 	while (pkt->endp > pkt->getp) {
 		route = (nbr->tlv_decoder)(eigrp, nbr, pkt, length);
 
-		// should have got route off the packet, but one never know
-		if (route) {
-			msg.packet_type = EIGRP_OPC_SIAQUERY;
-			msg.eigrp = eigrp;
-			msg.data_type = EIGRP_INT;
-			msg.adv_router = nbr;
-			msg.route = route;
-			msg.metrics = route->metric;
-			msg.prefix = route->prefix;
-			eigrp_fsm_event(&msg);
-		} else {
-			// neighbor sent corrupted packet - flush remaining
-			// packet
+		// should have got route off the packet, but one never knows
+		if (!route)
 			break;
+
+		prefix = eigrp_topology_table_lookup_ipv4(eigrp->topology_table,
+						       &route->dest);
+		if (!prefix) {
+			zlog_debug("EIGRP SIA-QUERY: Neighbor(%s) sent unknown prefix %s",
+				   eigrp_print_addr(&nbr->src),
+				   eigrp_print_prefix(&route->dest));
+			eigrp_route_descriptor_free(route);
+			continue;
 		}
+		route->prefix = prefix;
+
+		msg.packet_type = EIGRP_OPC_SIAQUERY;
+		msg.eigrp = eigrp;
+		msg.data_type = (route->type == EIGRP_TLV_IPv4_EXT)
+					? EIGRP_EXT
+					: EIGRP_INT;
+		msg.adv_router = nbr;
+		msg.route = route;
+		msg.metrics = route->metric;
+		msg.prefix = prefix;
+		eigrp_fsm_event(&msg);
 	}
 
 	eigrp_hello_send_ack(nbr);

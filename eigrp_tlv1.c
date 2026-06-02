@@ -12,6 +12,8 @@
  * to the system (meaning a delay is a delay and you dont have to worry about
  * conversion)
  */
+#include <string.h>
+
 #include "eigrpd/eigrpd.h"
 #include "eigrpd/eigrp_types.h"
 #include "eigrpd/eigrp_structs.h"
@@ -77,6 +79,7 @@ typedef struct eigrp_tlv1_internal_ipv4 {
 typedef struct eigrp_tlv1_external_ipv4 {
 	EIGRP_TLV_HDR
 	EIGRP_TLV1_IPV4_NEXTHOP
+	EIGRP_TLV1_EXTDATA
 	EIGRP_TLV1_METRIC
 
 	// destination address
@@ -88,9 +91,48 @@ typedef struct eigrp_tlv1_extdata {
 	EIGRP_TLV1_EXTDATA
 } __attribute__((packed)) eigrp_tlv1_extdata_t;
 
-#define EIGRP_IPV4_MIN_TLV                                                     \
+#define EIGRP_TLV1_DEST_PREFIX_SIZE 1
+#define EIGRP_IPV4_INT_MIN_TLV                                                \
 	(EIGRP_TLV_HDR_SIZE + EIGRP_TLV1_IPV4_NEXTHOP_SIZE                     \
-	 + EIGRP_TLV1_METRIC_SIZE)
+	 + EIGRP_TLV1_METRIC_SIZE + EIGRP_TLV1_DEST_PREFIX_SIZE)
+#define EIGRP_IPV4_EXT_MIN_TLV                                                \
+	(EIGRP_TLV_HDR_SIZE + EIGRP_TLV1_IPV4_NEXTHOP_SIZE                     \
+	 + EIGRP_TLV1_EXTDATA_SIZE + EIGRP_TLV1_METRIC_SIZE                    \
+	 + EIGRP_TLV1_DEST_PREFIX_SIZE)
+
+static size_t eigrp_tlv1_stream_remaining(eigrp_stream_t *pkt)
+{
+	if (pkt->endp <= pkt->getp)
+		return 0;
+
+	return pkt->endp - pkt->getp;
+}
+
+static bool eigrp_tlv1_stream_has(eigrp_stream_t *pkt, size_t needed)
+{
+	return eigrp_tlv1_stream_remaining(pkt) >= needed;
+}
+
+static uint16_t eigrp_tlv1_ipv4_prefix_bytes(uint8_t prefixlen)
+{
+	if (prefixlen == 0)
+		return 0;
+
+	return ((prefixlen - 1) / 8) + 1;
+}
+
+static void eigrp_tlv1_decode_abort(eigrp_stream_t *pkt)
+{
+	stream_set_getp(pkt, stream_get_endp(pkt));
+}
+
+static void eigrp_tlv1_decode_skip(eigrp_stream_t *pkt, size_t tlv_end)
+{
+	if (tlv_end <= stream_get_endp(pkt))
+		stream_set_getp(pkt, tlv_end);
+	else
+		eigrp_tlv1_decode_abort(pkt);
+}
 
 /**
  * extract the external route information provide by the
@@ -99,6 +141,9 @@ typedef struct eigrp_tlv1_extdata {
 static uint16_t eigrp_tlv1_external_decode(eigrp_stream_t *pkt,
 					   eigrp_extdata_t *extdata)
 {
+	if (!eigrp_tlv1_stream_has(pkt, EIGRP_TLV1_EXTDATA_SIZE))
+		return 0;
+
 	extdata->orig = stream_getl(pkt);
 	extdata->as = stream_getl(pkt);
 	extdata->tag = stream_getl(pkt);
@@ -107,7 +152,7 @@ static uint16_t eigrp_tlv1_external_decode(eigrp_stream_t *pkt,
 	extdata->protocol = stream_getc(pkt);
 	extdata->flags = stream_getc(pkt);
 
-	return (EIGRP_TLV1_EXTDATA_SIZE);
+	return EIGRP_TLV1_EXTDATA_SIZE;
 }
 
 static uint16_t eigrp_tlv1_external_encode(eigrp_stream_t *pkt,
@@ -121,7 +166,7 @@ static uint16_t eigrp_tlv1_external_encode(eigrp_stream_t *pkt,
 	stream_putc(pkt, extdata->protocol);
 	stream_putc(pkt, extdata->flags);
 
-	return (EIGRP_TLV1_EXTDATA_SIZE);
+	return EIGRP_TLV1_EXTDATA_SIZE;
 }
 
 /**
@@ -130,27 +175,29 @@ static uint16_t eigrp_tlv1_external_encode(eigrp_stream_t *pkt,
 static uint16_t eigrp_tlv1_metric_decode(eigrp_stream_t *pkt,
 					 eigrp_metrics_t *metric)
 {
+	if (!eigrp_tlv1_stream_has(pkt, EIGRP_TLV1_METRIC_SIZE))
+		return 0;
 
-	/* TLV1.2 provides metric in 32bit form, need to scale  */
+	/* TLV1.2 provides metric in 32bit form, need to scale */
 	metric->delay = eigrp_scaled_to_delay(stream_getl(pkt));
 	metric->bandwidth = stream_getl(pkt);
-	metric->mtu[0] = stream_getc(pkt);
-	metric->mtu[1] = stream_getc(pkt);
 	metric->mtu[2] = stream_getc(pkt);
+	metric->mtu[1] = stream_getc(pkt);
+	metric->mtu[0] = stream_getc(pkt);
 	metric->hop_count = stream_getc(pkt);
 	metric->reliability = stream_getc(pkt);
 	metric->load = stream_getc(pkt);
 	metric->tag = stream_getc(pkt);
 	metric->flags = stream_getc(pkt);
 
-	return (EIGRP_TLV1_METRIC_SIZE);
+	return EIGRP_TLV1_METRIC_SIZE;
 }
 
 static uint16_t eigrp_tlv1_metric_encode(eigrp_stream_t *pkt,
 					 eigrp_metrics_t *metric)
 {
 	/*
-	 * TLV1.2 supports classic metrics, need to scale it down to 32 bits
+	 * TLV1.2 supports classic metrics, need to scale it down to 32 bits.
 	 */
 	stream_putl(pkt, eigrp_delay_to_scaled(metric->delay));
 
@@ -164,122 +211,99 @@ static uint16_t eigrp_tlv1_metric_encode(eigrp_stream_t *pkt,
 	stream_putc(pkt, metric->tag);
 	stream_putc(pkt, metric->flags);
 
-	return (EIGRP_TLV1_METRIC_SIZE);
+	return EIGRP_TLV1_METRIC_SIZE;
 }
 
 static uint16_t eigrp_tlv1_addr_decode(eigrp_stream_t *pkt,
 				       struct prefix *dest)
 {
-	unsigned char prefixpart[4];
+	uint8_t addr[4] = {0, 0, 0, 0};
+	uint8_t prefixlen;
+	uint16_t addr_len;
 
+	if (!eigrp_tlv1_stream_has(pkt, EIGRP_TLV1_DEST_PREFIX_SIZE))
+		return 0;
 
-	// DVS: wont work for v6
-	dest->family = AF_INET;
-	dest->prefixlen = stream_getc(pkt);
-
-	dest->prefixlen = (dest->prefixlen + 7) / 8;
-	switch (dest->prefixlen) {
-	case 1:
-		prefixpart[0] = stream_getc(pkt);
-		prefixpart[1] = 0;
-		prefixpart[2] = 0;
-		prefixpart[3] = 0;
-		break;
-
-	case 2:
-		prefixpart[0] = stream_getc(pkt);
-		prefixpart[1] = stream_getc(pkt);
-		prefixpart[2] = 0;
-		prefixpart[3] = 0;
-		break;
-
-	case 3:
-		prefixpart[0] = stream_getc(pkt);
-		prefixpart[1] = stream_getc(pkt);
-		prefixpart[2] = stream_getc(pkt);
-		prefixpart[3] = 0;
-		break;
-
-	case 4:
-		prefixpart[0] = stream_getc(pkt);
-		prefixpart[1] = stream_getc(pkt);
-		prefixpart[2] = stream_getc(pkt);
-		prefixpart[3] = stream_getc(pkt);
-		break;
-
-	default:
-		zlog_err("%s: Unexpected prefix length: %d",
-			 __PRETTY_FUNCTION__, dest->prefixlen);
+	prefixlen = stream_getc(pkt);
+	if (prefixlen > IPV4_MAX_BITLEN) {
+		zlog_err("%s: Unexpected IPv4 prefix length: %u", __func__,
+			 prefixlen);
 		return 0;
 	}
 
-	dest->u.prefix4.s_addr = ((prefixpart[3] << 24) | (prefixpart[2] << 16)
-				  | (prefixpart[1] << 8) | (prefixpart[0]));
+	addr_len = eigrp_tlv1_ipv4_prefix_bytes(prefixlen);
+	if (!eigrp_tlv1_stream_has(pkt, addr_len))
+		return 0;
 
-	return (dest->prefixlen + 1);
+	for (uint16_t i = 0; i < addr_len; i++)
+		addr[i] = stream_getc(pkt);
+
+	dest->family = AF_INET;
+	dest->prefixlen = prefixlen;
+	memcpy(&dest->u.prefix4.s_addr, addr, sizeof(addr));
+
+	return EIGRP_TLV1_DEST_PREFIX_SIZE + addr_len;
 }
 
 static uint16_t eigrp_tlv1_addr_encode(eigrp_stream_t *pkt,
 				       eigrp_route_descriptor_t *route)
 {
-    struct prefix *dest = route->prefix->destination; // DVS: move to route->dest
-	uint16_t prefixlen;
+	struct prefix *dest = route->prefix->destination;
+	uint8_t addr[4];
+	uint16_t addr_len;
 
-	stream_putc(pkt, dest->prefixlen);
-	prefixlen = (dest->prefixlen + 7) / 8;
-	stream_putc(pkt, dest->u.prefix4.s_addr & 0xFF);
-
-	/* OK, i could add "((fallthrough)) to each of these, but thats less
-	 * readable than replicating the lines. Plus the optimize will blow all
-	 * this out anywat
-	 */
-	switch (prefixlen) {
-	case 4:
-		stream_putc(pkt, (dest->u.prefix4.s_addr >> 24) & 0xFF);
-		stream_putc(pkt, (dest->u.prefix4.s_addr >> 16) & 0xFF);
-		stream_putc(pkt, (dest->u.prefix4.s_addr >> 8) & 0xFF);
-		stream_putc(pkt, (dest->u.prefix4.s_addr) & 0xFF);
-		break;
-	case 3:
-		stream_putc(pkt, (dest->u.prefix4.s_addr >> 16) & 0xFF);
-		stream_putc(pkt, (dest->u.prefix4.s_addr >> 8) & 0xFF);
-		stream_putc(pkt, (dest->u.prefix4.s_addr) & 0xFF);
-		break;
-	case 2:
-		stream_putc(pkt, (dest->u.prefix4.s_addr >> 8) & 0xFF);
-		stream_putc(pkt, (dest->u.prefix4.s_addr) & 0xFF);
-		break;
-	case 1:
-		stream_putc(pkt, (dest->u.prefix4.s_addr) & 0xFF);
-		break;
-	default:
-		zlog_err("%s: Unexpected prefix length: %d",
-			 __PRETTY_FUNCTION__, prefixlen);
+	if (dest->family != AF_INET || dest->prefixlen > IPV4_MAX_BITLEN) {
+		zlog_err("%s: Unexpected IPv4 prefix length: %u", __func__,
+			 dest->prefixlen);
 		return 0;
 	}
 
-	return (prefixlen + 1);
+	addr_len = eigrp_tlv1_ipv4_prefix_bytes(dest->prefixlen);
+	memcpy(addr, &dest->u.prefix4.s_addr, sizeof(addr));
+
+	stream_putc(pkt, dest->prefixlen);
+	for (uint16_t i = 0; i < addr_len; i++)
+		stream_putc(pkt, addr[i]);
+
+	return EIGRP_TLV1_DEST_PREFIX_SIZE + addr_len;
 }
 
 static uint16_t eigrp_tlv1_nexthop_decode(eigrp_instance_t *eigrp,
 					  eigrp_stream_t *pkt,
 					  eigrp_route_descriptor_t *route)
 {
+	if (!eigrp_tlv1_stream_has(pkt, EIGRP_TLV1_IPV4_NEXTHOP_SIZE))
+		return 0;
 
-	// if doing no-nexthop-self, then use the of the source peer
+	/* if doing no-nexthop-self, then use the source peer */
 	if (/*eigrp->no_nextop_self == */ FALSE) {
 		route->nexthop.ip.v4.s_addr = stream_getl(pkt);
 	} else {
 		route->nexthop.ip.v4.s_addr = 0L;
 	}
-	return (EIGRP_TLV1_IPV4_NEXTHOP_SIZE);
+	return EIGRP_TLV1_IPV4_NEXTHOP_SIZE;
 }
 
 static uint16_t eigrp_tlv1_nexthop_encode(eigrp_stream_t *pkt,
 					  eigrp_route_descriptor_t *route)
 {
 	stream_putl(pkt, route->nexthop.ip.v4.s_addr);
-	return (EIGRP_TLV1_IPV4_NEXTHOP_SIZE);
+	return EIGRP_TLV1_IPV4_NEXTHOP_SIZE;
+}
+
+static uint16_t eigrp_tlv1_route_tlv_type(eigrp_route_descriptor_t *route)
+{
+	switch (route->type) {
+	case EIGRP_TLV_IPv4_INT:
+	case EIGRP_TLV_IPv4_EXT:
+		return route->type;
+	case EIGRP_INT:
+		return EIGRP_TLV_IPv4_INT;
+	case EIGRP_EXT:
+		return EIGRP_TLV_IPv4_EXT;
+	default:
+		return 0;
+	}
 }
 
 /**
@@ -291,70 +315,131 @@ static eigrp_route_descriptor_t *eigrp_tlv1_decoder(eigrp_instance_t *eigrp,
 						    uint16_t pktlen)
 {
 	eigrp_route_descriptor_t *route = NULL;
+	size_t tlv_start = stream_get_getp(pkt);
+	size_t tlv_end;
+	size_t packet_end;
+	size_t remaining;
 	uint16_t type, length;
-	uint16_t bytes = 0;
+	uint16_t bytes = EIGRP_TLV_HDR_SIZE;
+	uint16_t decoded;
+	uint16_t min_length;
+
+	(void)pktlen;
+
+	remaining = eigrp_tlv1_stream_remaining(pkt);
+	if (remaining < EIGRP_TLV_HDR_SIZE) {
+		eigrp_tlv1_decode_abort(pkt);
+		return NULL;
+	}
 
 	type = stream_getw(pkt);
 	length = stream_getw(pkt);
 
-	/* lets be sure we have at least enough info in the packet to
-	 * process one TLV.  if not, then no point in even trying
-	 */
-	if ((length > pktlen) || (length < EIGRP_IPV4_MIN_TLV)) {
-		if (IS_DEBUG_EIGRP_PACKET(0, RECV)) {
-			zlog_debug("EIGRP TLV: Neighbor(%s) corrupt packet",
-				   eigrp_print_addr(&nbr->src));
-		}
-		return NULL;
-	}
-
-	/* allocate buffer */
-	route = eigrp_route_descriptor_new(nbr->ei);
-	if (!route) {
-		return NULL;
-	}
-
-	route->type = (type == EIGRP_TLV_IPv4_EXT) ? EIGRP_EXT : EIGRP_INT;
-
-	/* decode nexthop */
-	bytes += eigrp_tlv1_nexthop_decode(eigrp, pkt, route);
-
-	/* figure out what type of TLV we are processing */
 	switch (type) {
-	case EIGRP_TLV_IPv4_EXT:
-		bytes += eigrp_tlv1_external_decode(pkt, &route->extdata);
-		bytes += eigrp_tlv1_addr_decode(pkt, &route->dest);
-		break;
-
 	case EIGRP_TLV_IPv4_INT:
-		bytes += eigrp_tlv1_metric_decode(pkt, &route->metric);
-
-		/* metric and (optional) external info has been
-		 * processed, now lets collect all the destination(s).
-		 *
-		 * NOTE:
-		 *    While the RFC calls out for the ability to send
-		 * multiple destinations in one TLV, its never been
-		 * implemented.
-		 *
-		 * BOGO: we should consider adding this at some pooint,
-		 * but this is classic metrics, so its likely to never
-		 * get implemented. For now, I am going to ignore any
-		 * additional destintations afer the first one.
-		 */
-		bytes += eigrp_tlv1_addr_decode(pkt, &route->dest);
+		min_length = EIGRP_IPV4_INT_MIN_TLV;
 		break;
-
+	case EIGRP_TLV_IPv4_EXT:
+		min_length = EIGRP_IPV4_EXT_MIN_TLV;
+		break;
 	default:
+		if (length >= EIGRP_TLV_HDR_SIZE && length <= remaining)
+			eigrp_tlv1_decode_skip(pkt, tlv_start + length);
+		else
+			eigrp_tlv1_decode_abort(pkt);
+
 		if (IS_DEBUG_EIGRP_PACKET(0, RECV)) {
 			zlog_debug(
 				"EIGRP TLV: Neighbor(%s): invalid TLV_type(%u)",
 				eigrp_print_addr(&nbr->src), type);
 		}
+		return NULL;
+	}
+
+	if (length < min_length || length > remaining) {
+		if (IS_DEBUG_EIGRP_PACKET(0, RECV)) {
+			zlog_debug(
+				"EIGRP TLV: Neighbor(%s) corrupt packet type=%u length=%u remaining=%zu",
+				eigrp_print_addr(&nbr->src), type, length, remaining);
+		}
+		eigrp_tlv1_decode_abort(pkt);
+		return NULL;
+	}
+
+	tlv_end = tlv_start + length;
+	packet_end = stream_get_endp(pkt);
+	stream_set_endp(pkt, tlv_end);
+
+	/* allocate buffer */
+	route = eigrp_route_descriptor_new(nbr->ei);
+	if (!route) {
+		stream_set_endp(pkt, packet_end);
+		eigrp_tlv1_decode_skip(pkt, tlv_end);
+		return NULL;
+	}
+
+	route->type = type;
+
+	/* decode nexthop */
+	bytes += eigrp_tlv1_nexthop_decode(eigrp, pkt, route);
+	if (bytes != EIGRP_TLV_HDR_SIZE + EIGRP_TLV1_IPV4_NEXTHOP_SIZE)
+		goto malformed;
+
+	/* figure out what type of TLV we are processing */
+	switch (type) {
+	case EIGRP_TLV_IPv4_EXT:
+		bytes += eigrp_tlv1_external_decode(pkt, &route->extdata);
+		if (bytes != EIGRP_TLV_HDR_SIZE + EIGRP_TLV1_IPV4_NEXTHOP_SIZE
+			     + EIGRP_TLV1_EXTDATA_SIZE)
+			goto malformed;
+
+		bytes += eigrp_tlv1_metric_decode(pkt, &route->metric);
+		if (bytes != EIGRP_TLV_HDR_SIZE + EIGRP_TLV1_IPV4_NEXTHOP_SIZE
+			     + EIGRP_TLV1_EXTDATA_SIZE + EIGRP_TLV1_METRIC_SIZE)
+			goto malformed;
+
+		decoded = eigrp_tlv1_addr_decode(pkt, &route->dest);
+		if (!decoded)
+			goto malformed;
+		bytes += decoded;
+		break;
+
+	case EIGRP_TLV_IPv4_INT:
+		bytes += eigrp_tlv1_metric_decode(pkt, &route->metric);
+		if (bytes != EIGRP_TLV_HDR_SIZE + EIGRP_TLV1_IPV4_NEXTHOP_SIZE
+			     + EIGRP_TLV1_METRIC_SIZE)
+			goto malformed;
+
+		/*
+		 * RFC 7868 allows more than one destination in the TLV. This
+		 * implementation currently consumes one route descriptor and skips
+		 * any remaining destinations so the next decoder pass starts on the
+		 * next TLV boundary.
+		 */
+		decoded = eigrp_tlv1_addr_decode(pkt, &route->dest);
+		if (!decoded)
+			goto malformed;
+		bytes += decoded;
 		break;
 	}
 
-	return (route);
+	if (bytes > length || bytes == EIGRP_TLV_HDR_SIZE)
+		goto malformed;
+
+	stream_set_endp(pkt, packet_end);
+	eigrp_tlv1_decode_skip(pkt, tlv_end);
+	return route;
+
+malformed:
+	if (IS_DEBUG_EIGRP_PACKET(0, RECV)) {
+		zlog_debug(
+			"EIGRP TLV: Neighbor(%s) malformed TLV type=%u length=%u decoded=%u",
+			eigrp_print_addr(&nbr->src), type, length, bytes);
+	}
+	eigrp_route_descriptor_free(route);
+	stream_set_endp(pkt, packet_end);
+	eigrp_tlv1_decode_abort(pkt);
+	return NULL;
 }
 
 static uint16_t eigrp_tlv1_encoder(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
@@ -362,10 +447,11 @@ static uint16_t eigrp_tlv1_encoder(eigrp_instance_t *eigrp, eigrp_neighbor_t *nb
 				   eigrp_route_descriptor_t *route)
 {
 	eigrp_interface_t *ei = nbr->ei;
-	size_t tlv_start = stream_get_getp(pkt);
+	size_t tlv_start = stream_get_endp(pkt);
 	size_t tlv_end;
-	uint16_t type, length = 0;
-
+	uint16_t type;
+	uint16_t length;
+	uint16_t encoded;
 
 	/* Filtering
 	 * TODO: Work in progress
@@ -379,50 +465,51 @@ static uint16_t eigrp_tlv1_encoder(eigrp_instance_t *eigrp, eigrp_neighbor_t *nb
 		}
 	}
 
-	// need to find a better way to handle - use of stream_put is awarkward
-	//
-	// most likely i will convert stream data pointer to packed overlay
-	// structure.
-	// 
-	type = route->type;
+	type = eigrp_tlv1_route_tlv_type(route);
+	if (!type) {
+		if (IS_DEBUG_EIGRP_PACKET(0, RECV)) {
+			zlog_debug("Neighbor(%s): invalid TLV_type(%u)",
+				   eigrp_print_addr(&nbr->src), route->type);
+		}
+		return 0;
+	}
+
 	stream_putw(pkt, type);
-	length += 2;
+	stream_putw(pkt, 0);
 
-	stream_putw(pkt, length);
-	length += 2;
-
-	// encode nexthop
-	length += eigrp_tlv1_nexthop_encode(pkt, route);
+	/* encode nexthop */
+	eigrp_tlv1_nexthop_encode(pkt, route);
 
 	switch (type) {
 	case EIGRP_TLV_IPv4_EXT:
-		length += eigrp_tlv1_external_encode(pkt, &route->extdata);
-		length += eigrp_tlv1_metric_encode(pkt, &route->metric);
-		length += eigrp_tlv1_addr_encode(pkt, route);
+		eigrp_tlv1_external_encode(pkt, &route->extdata);
+		eigrp_tlv1_metric_encode(pkt, &route->metric);
+		encoded = eigrp_tlv1_addr_encode(pkt, route);
 		break;
 
 	case EIGRP_TLV_IPv4_INT:
-		length += eigrp_tlv1_metric_encode(pkt, &route->metric);
-		length += eigrp_tlv1_addr_encode(pkt, route);
+		eigrp_tlv1_metric_encode(pkt, &route->metric);
+		encoded = eigrp_tlv1_addr_encode(pkt, route);
 		break;
 
 	default:
-		if (IS_DEBUG_EIGRP_PACKET(0, RECV)) {
-			zlog_debug("Neighbor(%s): invalid TLV_type(%u)",
-				   eigrp_print_addr(&nbr->src), type);
-		}
+		encoded = 0;
 		break;
 	}
 
-	// now the fix up...
-	tlv_end = stream_get_endp(pkt);
+	if (!encoded) {
+		stream_set_endp(pkt, tlv_start);
+		return 0;
+	}
 
-	stream_set_getp(pkt, tlv_start);
-	stream_putw(pkt, type);
+	tlv_end = stream_get_endp(pkt);
+	length = tlv_end - tlv_start;
+
+	stream_set_endp(pkt, tlv_start + 2);
 	stream_putw(pkt, length);
 	stream_set_endp(pkt, tlv_end);
 
-	return (length);
+	return length;
 }
 
 void eigrp_tlv1_init(eigrp_neighbor_t *nbr)

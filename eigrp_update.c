@@ -259,7 +259,9 @@ void eigrp_update_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 				struct eigrp_fsm_action_message msg;
 				msg.packet_type = EIGRP_OPC_UPDATE;
 				msg.eigrp = eigrp;
-				msg.data_type = EIGRP_INT;
+				msg.data_type = (route->type == EIGRP_TLV_IPv4_EXT)
+							? EIGRP_EXT
+							: EIGRP_INT;
 				msg.adv_router = nbr;
 				msg.metrics = route->metric;
 				msg.route = route;
@@ -273,7 +275,9 @@ void eigrp_update_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 				prefix->destination = (struct prefix *)prefix_ipv4_new();
 				prefix_copy(prefix->destination, &route->dest);
 				prefix->state = EIGRP_FSM_STATE_PASSIVE;
-				prefix->nt = EIGRP_TOPOLOGY_TYPE_REMOTE;
+				prefix->nt = (route->type == EIGRP_TLV_IPv4_EXT)
+						     ? EIGRP_TOPOLOGY_TYPE_REMOTE_EXTERNAL
+						     : EIGRP_TOPOLOGY_TYPE_REMOTE;
 
 				route->adv_router = nbr;
 				route->reported_metric = prefix->reported_metric;
