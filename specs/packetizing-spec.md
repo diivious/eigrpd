@@ -502,7 +502,7 @@ Do not add legacy aliases or parallel old/new packet paths.
 
 These should be answered before deep code work:
 
-1. What are the final EIGRP-owned names for NDB and RDB structures in this codebase?
+1. Current code still uses `eigrp_prefix_descriptor_t` and `eigrp_route_descriptor_t` for topology prefix/route records. Their lifecycle APIs are owned by topology and named `eigrp_topology_prefix_create/free()` and `eigrp_topology_route_create/free()`. A later typedef rename to NDB/RDB terminology can be reviewed separately.
 2. Should interface peer type be cached on the interface or calculated during each packetizer pass?
 3. Where should packet refcount ownership live: inside `eigrp_packet_t`, or in a small wrapper object owned by reliable transport?
 4. Should startup full-table UPDATEs use the same packetizer queue from day one, or be migrated after topology-change packetizing is stable?

@@ -23,16 +23,28 @@
 #include "eigrpd/eigrp_fsm.h"
 #include "eigrpd/eigrp_packetizer.h"
 
-void eigrp_reply_send(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
-		      eigrp_prefix_descriptor_t *prefix)
+void eigrp_reply_send_route(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
+			   eigrp_prefix_descriptor_t *prefix,
+			   eigrp_route_descriptor_t *route, uint32_t flags)
 {
 	eigrp_packetizer_work_t *work;
+
+	if (!eigrp || !nbr || !prefix)
+		return;
 
 	work = eigrp_packetizer_work_new(EIGRP_OPC_REPLY);
 	work->nbr = nbr;
 	work->prefix = prefix;
+	work->route = route;
 	work->owner = prefix;
+	work->flags = flags;
 	eigrp_packetizer_enqueue(eigrp, work);
+}
+
+void eigrp_reply_send(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
+		      eigrp_prefix_descriptor_t *prefix)
+{
+	eigrp_reply_send_route(eigrp, nbr, prefix, NULL, 0);
 }
 
 /*EIGRP REPLY read function*/
@@ -61,7 +73,7 @@ void eigrp_reply_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 			zlog_debug("EIGRP REPLY: Neighbor(%s) sent unknown prefix %s",
 				   eigrp_print_addr(&nbr->src),
 				   eigrp_print_prefix(&route->dest));
-			eigrp_route_descriptor_free(route);
+			eigrp_topology_route_free(route);
 			continue;
 		}
 		route->prefix = prefix;

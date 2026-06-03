@@ -30,6 +30,31 @@ static bool eigrp_packetizer_opcode_valid(uint8_t opcode)
 	}
 }
 
+
+static eigrp_route_descriptor_t *
+eigrp_packetizer_poison_route_create(eigrp_prefix_descriptor_t *prefix)
+{
+	eigrp_route_descriptor_t *route;
+
+	if (!prefix || !prefix->destination)
+		return NULL;
+
+	route = eigrp_topology_route_create(NULL);
+	if (!route)
+		return NULL;
+
+	route->prefix = prefix;
+	route->dest = *prefix->destination;
+	route->type = (prefix->nt == EIGRP_TOPOLOGY_TYPE_REMOTE_EXTERNAL)
+			      ? EIGRP_TLV_IPv4_EXT
+			      : EIGRP_TLV_IPv4_INT;
+	route->metric = prefix->reported_metric;
+	route->metric.delay = EIGRP_MAX_METRIC;
+	route->metric.flags = 0;
+
+	return route;
+}
+
 static void eigrp_packetizer_neighbor_stat(eigrp_neighbor_t *nbr,
 					   uint8_t opcode)
 {
@@ -63,6 +88,9 @@ static void eigrp_packetizer_neighbor_route_send(eigrp_instance_t *eigrp,
 	eigrp_packet_t *packet;
 	eigrp_route_descriptor_t *route;
 	struct list *successors = NULL;
+	bool free_route = false;
+	uint32_t sequence;
+	uint16_t tlv_length;
 	uint16_t length = EIGRP_HEADER_LEN;
 
 	if (!eigrp || !nbr || !nbr->ei || !prefix)
@@ -72,9 +100,9 @@ static void eigrp_packetizer_neighbor_route_send(eigrp_instance_t *eigrp,
 		return;
 
 	ei = nbr->ei;
+	sequence = eigrp_packet_sequence_reserve(eigrp);
 	packet = eigrp_packet_new(EIGRP_PACKET_MTU(ei->ifp->mtu), nbr);
-	eigrp_packet_header_init(work->opcode, eigrp, packet->s, 0,
-				 eigrp->sequence_number, 0);
+	eigrp_packet_header_init(work->opcode, eigrp, packet->s, 0, sequence, 0);
 
 	if (ei->params.auth_type == EIGRP_AUTH_TYPE_MD5
 	    && ei->params.auth_keychain != NULL)
@@ -83,22 +111,32 @@ static void eigrp_packetizer_neighbor_route_send(eigrp_instance_t *eigrp,
 	route = work->route;
 	if (!route) {
 		successors = eigrp_topology_get_successor(prefix);
-		if (!successors) {
-			eigrp_packet_free(packet);
-			return;
+		if (successors)
+			route = listnode_head(successors);
+
+		if (!route) {
+			route = eigrp_packetizer_poison_route_create(prefix);
+			free_route = true;
 		}
 
-		route = listnode_head(successors);
 		if (!route) {
-			list_delete(&successors);
+			if (successors)
+				list_delete(&successors);
 			eigrp_packet_free(packet);
 			return;
 		}
 	}
 
-	length += nbr->tlv_encoder(eigrp, nbr, packet->s, route);
+	tlv_length = nbr->tlv_encoder(eigrp, nbr, packet->s, route);
 	if (successors)
 		list_delete(&successors);
+	if (free_route)
+		eigrp_topology_route_free(route);
+	if (!tlv_length) {
+		eigrp_packet_free(packet);
+		return;
+	}
+	length += tlv_length;
 
 	if (ei->params.auth_type == EIGRP_AUTH_TYPE_MD5
 	    && ei->params.auth_keychain != NULL)
@@ -107,7 +145,8 @@ static void eigrp_packetizer_neighbor_route_send(eigrp_instance_t *eigrp,
 	eigrp_packet_checksum(ei, packet->s, length);
 	packet->length = length;
 	eigrp_addr_copy(&packet->dst, &nbr->src);
-	packet->sequence_number = eigrp->sequence_number;
+	packet->sequence_number = sequence;
+	packet->sequence_reserved = true;
 
 	eigrp_packet_enqueue(nbr->retrans_queue, packet);
 	eigrp_packetizer_neighbor_stat(nbr, work->opcode);
@@ -141,6 +180,7 @@ static void eigrp_packetizer_query_interface_send(eigrp_instance_t *eigrp,
 	eigrp_packet_t *packet;
 	struct listnode *node, *nnode;
 	struct list *successors;
+	uint32_t sequence;
 	uint16_t length = EIGRP_HEADER_LEN;
 	uint16_t eigrp_mtu;
 
@@ -165,9 +205,9 @@ static void eigrp_packetizer_query_interface_send(eigrp_instance_t *eigrp,
 	}
 
 	eigrp_mtu = EIGRP_PACKET_MTU(ei->ifp->mtu);
+	sequence = eigrp_packet_sequence_reserve(eigrp);
 	packet = eigrp_packet_new(eigrp_mtu, NULL);
-	eigrp_packet_header_init(work->opcode, eigrp, packet->s, 0,
-				 eigrp->sequence_number, 0);
+	eigrp_packet_header_init(work->opcode, eigrp, packet->s, 0, sequence, 0);
 
 	if (ei->params.auth_type == EIGRP_AUTH_TYPE_MD5
 	    && ei->params.auth_keychain != NULL)
@@ -188,8 +228,8 @@ static void eigrp_packetizer_query_interface_send(eigrp_instance_t *eigrp,
 	eigrp_packet_checksum(ei, packet->s, length);
 	packet->length = length;
 	packet->dst.ip.v4.s_addr = htonl(EIGRP_MULTICAST_ADDRESS);
-	packet->sequence_number = eigrp->sequence_number;
-	eigrp->sequence_number++;
+	packet->sequence_number = sequence;
+	packet->sequence_reserved = true;
 
 	{
 		bool initial_multicast_send = false;
@@ -310,6 +350,15 @@ eigrp_packetizer_work_t *eigrp_packetizer_work_new(uint8_t opcode)
 
 void eigrp_packetizer_work_free(eigrp_packetizer_work_t *work)
 {
+	if (!work)
+		return;
+
+	if ((work->flags & EIGRP_PACKETIZER_WORK_F_OWN_ROUTE) && work->route)
+		eigrp_topology_route_free(work->route);
+
+	if ((work->flags & EIGRP_PACKETIZER_WORK_F_OWN_PREFIX) && work->prefix)
+		eigrp_topology_prefix_free(work->prefix);
+
 	XFREE(MTYPE_EIGRP_PACKETIZER_WORK, work);
 }
 

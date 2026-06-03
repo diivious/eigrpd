@@ -47,7 +47,7 @@ void eigrp_siaquery_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 			zlog_debug("EIGRP SIA-QUERY: Neighbor(%s) sent unknown prefix %s",
 				   eigrp_print_addr(&nbr->src),
 				   eigrp_print_prefix(&route->dest));
-			eigrp_route_descriptor_free(route);
+			eigrp_topology_route_free(route);
 			continue;
 		}
 		route->prefix = prefix;

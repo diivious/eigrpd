@@ -271,7 +271,7 @@ void eigrp_update_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 
 			} else {
 				/*Here comes topology information save*/
-				prefix = eigrp_prefix_descriptor_new();
+				prefix = eigrp_topology_prefix_create();
 				prefix->serno = eigrp->serno;
 				prefix->destination = (struct prefix *)prefix_ipv4_new();
 				prefix_copy(prefix->destination, &route->dest);

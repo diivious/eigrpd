@@ -238,7 +238,7 @@ eigrp_get_fsm_event(eigrp_fsm_action_message_t *msg)
 	enum metric_change change;
 
 	if (route == NULL) {
-		route = eigrp_route_descriptor_new(msg->adv_router->ei);
+		route = eigrp_topology_route_create(msg->adv_router->ei);
 		route->adv_router = msg->adv_router;
 		route->prefix = prefix;
 		msg->route = route;

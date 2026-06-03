@@ -666,8 +666,12 @@ void eigrp_packet_send_reliably(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr)
 		eigrp_packet_output_enqueue(eigrp, nbr->ei, duplicate);
 		eigrp_packet_retransmit_timer_start(nbr);
 
-		/*Increment sequence number counter*/
-		nbr->ei->eigrp->sequence_number++;
+		if (!packet->sequence_reserved) {
+			nbr->ei->eigrp->sequence_number++;
+			if (nbr->ei->eigrp->sequence_number == 0)
+				nbr->ei->eigrp->sequence_number = 1;
+			packet->sequence_reserved = true;
+		}
 	}
 }
 
@@ -681,6 +685,24 @@ void eigrp_packet_checksum(eigrp_interface_t *ei, struct stream *s,
 
 	/* Calculate checksum. */
 	eigrph->checksum = in_cksum(eigrph, length);
+}
+
+
+uint32_t eigrp_packet_sequence_reserve(eigrp_instance_t *eigrp)
+{
+	uint32_t sequence;
+
+	if (!eigrp)
+		return 0;
+
+	if (eigrp->sequence_number == 0)
+		eigrp->sequence_number = 1;
+
+	sequence = eigrp->sequence_number++;
+	if (eigrp->sequence_number == 0)
+		eigrp->sequence_number = 1;
+
+	return sequence;
 }
 
 /* Make EIGRP header. */
@@ -1108,6 +1130,7 @@ eigrp_packet_t *eigrp_packet_duplicate(eigrp_packet_t *old,
 	new->retrans_counter = old->retrans_counter;
 	new->dst = old->dst;
 	new->sequence_number = old->sequence_number;
+	new->sequence_reserved = old->sequence_reserved;
 	stream_copy(new->s, old->s);
 
 	return new;

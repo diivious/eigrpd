@@ -254,6 +254,7 @@ typedef struct eigrp_packet {
 	/*neighbor details for sendng packet*/
 	eigrp_neighbor_t *nbr;
 	uint32_t sequence_number;
+	bool sequence_reserved;
 
 	/* EIGRP packet length. */
 	uint16_t length;

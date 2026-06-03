@@ -364,6 +364,37 @@ dump        - debug dump and packet/structure print helpers
 
 These boundaries are a first pass. They may be refined as code is reviewed.
 
+### 11.1 Topology Object Lifecycle Naming
+
+Topology-owned prefix and route descriptor allocation/free functions belong to the topology module.
+
+Use topology-module names for lifecycle operations:
+
+```c
+eigrp_topology_prefix_create();
+eigrp_topology_prefix_free();
+eigrp_topology_route_create();
+eigrp_topology_route_free();
+```
+
+Do not use descriptor-first lifecycle names for these objects:
+
+```c
+eigrp_prefix_descriptor_new();
+eigrp_prefix_descriptor_free();
+eigrp_route_descriptor_new();
+eigrp_route_descriptor_free();
+```
+
+Reason:
+
+```text
+- prefix and route descriptors are topology-owned objects
+- lifecycle functions should expose the owning module
+- this keeps the eigrp_<object>_<action>() rule consistent
+- no alias wrappers should be left behind
+```
+
 ## 12. Packetization Design Rules
 
 Packet encode/decode must be:

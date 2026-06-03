@@ -44,6 +44,7 @@ extern eigrp_packet_t *eigrp_packet_duplicate(eigrp_packet_t *,
 					      eigrp_neighbor_t *);
 extern void eigrp_packet_free(eigrp_packet_t *);
 extern void eigrp_packet_delete(eigrp_interface_t *);
+extern uint32_t eigrp_packet_sequence_reserve(eigrp_instance_t *);
 extern void eigrp_packet_header_init(int, eigrp_instance_t *, struct stream *,
 				     uint32_t, uint32_t, uint32_t);
 extern void eigrp_packet_checksum(eigrp_interface_t *, struct stream *,
@@ -118,6 +119,9 @@ extern uint32_t eigrp_query_send_all(eigrp_instance_t *);
  */
 extern void eigrp_reply_send(eigrp_instance_t *, eigrp_neighbor_t *,
 			     eigrp_prefix_descriptor_t *);
+extern void eigrp_reply_send_route(eigrp_instance_t *, eigrp_neighbor_t *,
+				   eigrp_prefix_descriptor_t *,
+				   eigrp_route_descriptor_t *, uint32_t);
 extern void eigrp_reply_receive(eigrp_instance_t *, eigrp_neighbor_t *,
 				eigrp_header_t *, struct stream *,
 				eigrp_interface_t *, int);

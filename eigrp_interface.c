@@ -271,7 +271,7 @@ int eigrp_intf_up(eigrp_instance_t *eigrp, eigrp_interface_t *ei)
 	metric.tag = 0;
 
 	/*Add connected route to topology table*/
-	route = eigrp_route_descriptor_new(ei);
+	route = eigrp_topology_route_create(ei);
 	route->type = EIGRP_TLV_IPv4_INT;
 
 	route->reported_metric = metric;
@@ -288,7 +288,7 @@ int eigrp_intf_up(eigrp_instance_t *eigrp, eigrp_interface_t *ei)
 	prefix = eigrp_topology_table_lookup_ipv4(eigrp->topology_table, &dest_addr);
 
 	if (prefix == NULL) {
-		prefix = eigrp_prefix_descriptor_new();
+		prefix = eigrp_topology_prefix_create();
 		prefix->serno = eigrp->serno;
 		prefix->destination = (struct prefix *)prefix_ipv4_new();
 		prefix_copy(prefix->destination, &dest_addr);

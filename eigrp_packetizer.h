@@ -8,6 +8,9 @@
 
 #include "eigrpd/eigrp_types.h"
 
+#define EIGRP_PACKETIZER_WORK_F_OWN_PREFIX 0x00000001U
+#define EIGRP_PACKETIZER_WORK_F_OWN_ROUTE  0x00000002U
+
 typedef struct eigrp_packetizer_work {
 	uint8_t opcode;
 	eigrp_prefix_descriptor_t *prefix;

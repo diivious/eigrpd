@@ -1,0 +1,7 @@
+# EIGRP v2 HELLO header fixture, AS 100.
+# version opcode checksum flags sequence ack vrid as
+02 05 00 00
+00 00 00 00
+00 00 00 00
+00 00 00 00
+00 00 00 64

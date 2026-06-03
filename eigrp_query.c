@@ -19,6 +19,47 @@
 #include "eigrpd/eigrp_fsm.h"
 #include "eigrpd/eigrp_packetizer.h"
 
+
+static void eigrp_query_unknown_reply_send(eigrp_instance_t *eigrp,
+					eigrp_neighbor_t *nbr,
+					eigrp_route_descriptor_t *query_route)
+{
+	eigrp_prefix_descriptor_t *prefix;
+	eigrp_route_descriptor_t *reply_route;
+
+	if (!eigrp || !nbr || !query_route)
+		return;
+
+	prefix = eigrp_topology_prefix_create();
+	if (!prefix)
+		return;
+
+	prefix->destination = (struct prefix *)prefix_ipv4_new();
+	if (!prefix->destination) {
+		eigrp_topology_prefix_free(prefix);
+		return;
+	}
+	prefix_copy(prefix->destination, &query_route->dest);
+
+	reply_route = eigrp_topology_route_create(nbr->ei);
+	if (!reply_route) {
+		eigrp_topology_prefix_free(prefix);
+		return;
+	}
+
+	reply_route->type = query_route->type;
+	reply_route->dest = query_route->dest;
+	reply_route->prefix = prefix;
+	reply_route->adv_router = nbr;
+	reply_route->metric = query_route->metric;
+	reply_route->metric.delay = EIGRP_MAX_METRIC;
+	reply_route->metric.flags = 0;
+
+	eigrp_reply_send_route(eigrp, nbr, prefix, reply_route,
+			      EIGRP_PACKETIZER_WORK_F_OWN_PREFIX |
+			      EIGRP_PACKETIZER_WORK_F_OWN_ROUTE);
+}
+
 uint32_t eigrp_query_send_all(eigrp_instance_t *eigrp)
 {
 	eigrp_packetizer_work_t *work;
@@ -77,7 +118,8 @@ void eigrp_query_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 			zlog_debug("EIGRP QUERY: Neighbor(%s) sent unknown prefix %s",
 				   eigrp_print_addr(&nbr->src),
 				   eigrp_print_prefix(&route->dest));
-			eigrp_route_descriptor_free(route);
+			eigrp_query_unknown_reply_send(eigrp, nbr, route);
+			eigrp_topology_route_free(route);
 			continue;
 		}
 		route->prefix = prefix;

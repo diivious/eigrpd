@@ -38,7 +38,7 @@ static int eigrp_route_descriptor_cmp(eigrp_route_descriptor_t *,
 /*
  * Returns new topology route
  */
-eigrp_route_descriptor_t *eigrp_route_descriptor_new(eigrp_interface_t *intf)
+eigrp_route_descriptor_t *eigrp_topology_route_create(eigrp_interface_t *intf)
 {
 	eigrp_route_descriptor_t *new;
 
@@ -73,6 +73,30 @@ void eigrp_route_descriptor_add(eigrp_instance_t *eigrp,
 	list_delete(&l);
 }
 
+
+void eigrp_topology_prefix_free(eigrp_prefix_descriptor_t *pe)
+{
+	eigrp_route_descriptor_t *route;
+	struct listnode *node, *nnode;
+
+	if (!pe)
+		return;
+
+	if (pe->entries) {
+		for (ALL_LIST_ELEMENTS(pe->entries, node, nnode, route))
+			eigrp_topology_route_free(route);
+		list_delete(&pe->entries);
+	}
+
+	if (pe->rij)
+		list_delete(&pe->rij);
+
+	if (pe->destination)
+		prefix_free(&pe->destination);
+
+	XFREE(MTYPE_EIGRP_PREFIX_DESCRIPTOR, pe);
+}
+
 /*
  * Topology entry comparison
  */
@@ -90,7 +114,7 @@ static int eigrp_route_descriptor_cmp(eigrp_route_descriptor_t *route1,
 /*
  * Frees topology route
  */
-void eigrp_route_descriptor_free(eigrp_route_descriptor_t *route)
+void eigrp_topology_route_free(eigrp_route_descriptor_t *route)
 {
 	XFREE(MTYPE_EIGRP_ROUTE_DESCRIPTOR, route);
 }
@@ -103,7 +127,7 @@ void eigrp_route_descriptor_free(eigrp_route_descriptor_t *route)
  * Returns new created toplogy node
  * cmp - assigned function for comparing topology entry
  */
-eigrp_prefix_descriptor_t *eigrp_prefix_descriptor_new(void)
+eigrp_prefix_descriptor_t *eigrp_topology_prefix_create(void)
 {
 	eigrp_prefix_descriptor_t *new;
 	new = XCALLOC(MTYPE_EIGRP_PREFIX_DESCRIPTOR,

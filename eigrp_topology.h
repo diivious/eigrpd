@@ -19,20 +19,21 @@
 #define _ZEBRA_EIGRP_TOPOLOGY_H
 
 /* EIGRP Route Descriptor related functions. */
-extern eigrp_route_descriptor_t *eigrp_route_descriptor_new(eigrp_interface_t *);
+extern eigrp_route_descriptor_t *eigrp_topology_route_create(eigrp_interface_t *);
 extern void eigrp_route_descriptor_add(eigrp_instance_t *,
 				       eigrp_prefix_descriptor_t *,
 				       eigrp_route_descriptor_t *);
 extern void eigrp_route_descriptor_delete(eigrp_instance_t *,
 					  eigrp_prefix_descriptor_t *,
 					  eigrp_route_descriptor_t *);
-void eigrp_route_descriptor_free(eigrp_route_descriptor_t *);
+void eigrp_topology_route_free(eigrp_route_descriptor_t *);
 
 /* EIGRP Topology table related functions. */
 extern struct route_table *eigrp_topology_new(void);
 extern void eigrp_topology_init(struct route_table *table);
 
-extern eigrp_prefix_descriptor_t *eigrp_prefix_descriptor_new(void);
+extern eigrp_prefix_descriptor_t *eigrp_topology_prefix_create(void);
+extern void eigrp_topology_prefix_free(eigrp_prefix_descriptor_t *);
 
 extern void eigrp_topology_free(eigrp_instance_t *eigrp, struct route_table *table);
 extern void eigrp_prefix_descriptor_add(struct route_table *table,
