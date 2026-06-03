@@ -23,10 +23,12 @@ eigrpd_eigrpd_SOURCES = \
 	eigrpd/eigrp_network.c \
 	eigrpd/eigrp_northbound.c \
 	eigrpd/eigrp_packet.c \
+	eigrpd/eigrp_packetizer.c \
 	eigrpd/eigrp_query.c \
 	eigrpd/eigrp_reply.c \
 	eigrpd/eigrp_siaquery.c \
 	eigrpd/eigrp_siareply.c \
+	eigrpd/eigrp_southbound.c \
 	eigrpd/eigrp_snmp.c \
 	eigrpd/eigrp_tlv1.c \
 	eigrpd/eigrp_tlv2.c \
@@ -63,7 +65,9 @@ noinst_HEADERS += \
 	eigrpd/eigrp_neighbor.h \
 	eigrpd/eigrp_network.h \
 	eigrpd/eigrp_packet.h \
+	eigrpd/eigrp_packetizer.h \
 	eigrpd/eigrp_snmp.h \
+	eigrpd/eigrp_southbound.h \
 	eigrpd/eigrp_structs.h \
 	eigrpd/eigrp_types.h \
 	eigrpd/eigrp_vrf.h \

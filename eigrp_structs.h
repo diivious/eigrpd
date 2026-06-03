@@ -99,6 +99,8 @@ struct eigrp_instance {
 				       by last update*/
 	struct list *topology_changes;
 
+	eigrp_work_queue_t *packetizer_queue;
+
 	/*Neighbor self*/
 	eigrp_neighbor_t *neighbor_self;
 

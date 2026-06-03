@@ -38,6 +38,7 @@ typedef struct eigrp_metrics eigrp_metrics_t;
 typedef struct eigrp_prefix_descriptor eigrp_prefix_descriptor_t;
 typedef struct eigrp_route_descriptor eigrp_route_descriptor_t;
 typedef struct eigrp_fsm_action_message eigrp_fsm_action_message_t;
+typedef struct eigrp_work_queue eigrp_work_queue_t;
 
 // basic packet processor definitions
 typedef struct eigrp_packet eigrp_packet_t;

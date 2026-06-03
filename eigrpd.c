@@ -19,6 +19,7 @@
 #include "eigrpd/eigrp_filter.h"
 #include "eigrpd/eigrp_errors.h"
 #include "eigrpd/eigrp_zebra.h"
+#include "eigrpd/eigrp_packetizer.h"
 
 DEFINE_MGROUP(EIGRPD, "eigrpd");
 DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_TOP, "EIGRP structure");
@@ -153,6 +154,7 @@ static eigrp_instance_t *eigrp_new(uint16_t as, vrf_id_t vrf_id)
 	eigrp->serno = 0;
 	eigrp->serno_last_update = 0;
 	eigrp->topology_changes = list_new();
+	eigrp_packetizer_init(eigrp);
 
 	eigrp->list[EIGRP_FILTER_IN] = NULL;
 	eigrp->list[EIGRP_FILTER_OUT] = NULL;
@@ -263,6 +265,7 @@ void eigrp_finish_final(eigrp_instance_t *eigrp)
 
 	EVENT_OFF(eigrp->t_write);
 	EVENT_OFF(eigrp->t_read);
+	eigrp_packetizer_finish(eigrp);
 	close(eigrp->fd);
 
 	list_delete(&eigrp->eiflist);

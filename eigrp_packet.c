@@ -624,6 +624,36 @@ eigrp_packet_t *eigrp_packet_new(size_t size, eigrp_neighbor_t *nbr)
 	return new;
 }
 
+void eigrp_packet_output_enqueue(eigrp_instance_t *eigrp, eigrp_interface_t *ei,
+				      eigrp_packet_t *packet)
+{
+	if (!eigrp || !ei || !packet)
+		return;
+
+	eigrp_packet_enqueue(ei->obuf, packet);
+
+	if (ei->on_write_q == 0) {
+		listnode_add(eigrp->oi_write_q, ei);
+		ei->on_write_q = 1;
+	}
+	EIGRP_EVENT_ADD_WRITE(eigrp);
+}
+
+void eigrp_packet_retransmit_timer_start(eigrp_neighbor_t *nbr)
+{
+	eigrp_packet_t *packet;
+
+	if (!nbr || !nbr->retrans_queue)
+		return;
+
+	packet = eigrp_packet_queue_next(nbr->retrans_queue);
+	if (!packet)
+		return;
+
+	event_add_timer(eigrpd_event, eigrp_packet_unack_retrans, nbr,
+			 EIGRP_PACKET_RETRANS_TIME, &packet->t_retrans_timer);
+}
+
 void eigrp_packet_send_reliably(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr)
 {
 	eigrp_packet_t *packet;
@@ -633,23 +663,11 @@ void eigrp_packet_send_reliably(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr)
 	if (packet) {
 		eigrp_packet_t *duplicate;
 		duplicate = eigrp_packet_duplicate(packet, nbr);
-		/* Add packet to the top of the interface output queue*/
-		eigrp_packet_enqueue(nbr->ei->obuf, duplicate);
-
-		/*Start retransmission timer*/
-		event_add_timer(eigrpd_event, eigrp_packet_unack_retrans, nbr,
-				 EIGRP_PACKET_RETRANS_TIME,
-				 &packet->t_retrans_timer);
+		eigrp_packet_output_enqueue(eigrp, nbr->ei, duplicate);
+		eigrp_packet_retransmit_timer_start(nbr);
 
 		/*Increment sequence number counter*/
 		nbr->ei->eigrp->sequence_number++;
-
-		/* Hook event to write packet. */
-		if (nbr->ei->on_write_q == 0) {
-			listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
-			nbr->ei->on_write_q = 1;
-		}
-		EIGRP_EVENT_ADD_WRITE(nbr->ei->eigrp);
 	}
 }
 
@@ -1010,9 +1028,8 @@ void eigrp_packet_unack_retrans(struct event *event)
 	if (packet) {
 		eigrp_packet_t *duplicate;
 		duplicate = eigrp_packet_duplicate(packet, nbr);
-
-		/* Add packet to the top of the interface output queue*/
-		eigrp_packet_enqueue(nbr->ei->obuf, duplicate);
+		eigrp_addr_copy(&duplicate->dst, &nbr->src);
+		eigrp_packet_output_enqueue(nbr->ei->eigrp, nbr->ei, duplicate);
 
 		packet->retrans_counter++;
 		if (packet->retrans_counter == EIGRP_PACKET_RETRANS_MAX) {
@@ -1025,12 +1042,6 @@ void eigrp_packet_unack_retrans(struct event *event)
 				 EIGRP_PACKET_RETRANS_TIME,
 				 &packet->t_retrans_timer);
 
-		/* Hook event to write packet. */
-		if (nbr->ei->on_write_q == 0) {
-			listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
-			nbr->ei->on_write_q = 1;
-		}
-		EIGRP_EVENT_ADD_WRITE(nbr->ei->eigrp);
 	}
 
 	return;
@@ -1047,8 +1058,8 @@ void eigrp_packet_unack_multicast_retrans(struct event *event)
 	if (packet) {
 		eigrp_packet_t *duplicate;
 		duplicate = eigrp_packet_duplicate(packet, nbr);
-		/* Add packet to the top of the interface output queue*/
-		eigrp_packet_enqueue(nbr->ei->obuf, duplicate);
+		eigrp_addr_copy(&duplicate->dst, &nbr->src);
+		eigrp_packet_output_enqueue(nbr->ei->eigrp, nbr->ei, duplicate);
 
 		packet->retrans_counter++;
 		if (packet->retrans_counter == EIGRP_PACKET_RETRANS_MAX) {
@@ -1061,12 +1072,6 @@ void eigrp_packet_unack_multicast_retrans(struct event *event)
 				 nbr, EIGRP_PACKET_RETRANS_TIME,
 				 &packet->t_retrans_timer);
 
-		/* Hook event to write packet. */
-		if (nbr->ei->on_write_q == 0) {
-			listnode_add(nbr->ei->eigrp->oi_write_q, nbr->ei);
-			nbr->ei->on_write_q = 1;
-		}
-		EIGRP_EVENT_ADD_WRITE(nbr->ei->eigrp);
 	}
 
 	return;

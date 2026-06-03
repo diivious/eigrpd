@@ -17,6 +17,7 @@
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
+#include "eigrpd/eigrp_packetizer.h"
 
 /* EIGRP SIA-REPLY read function */
 void eigrp_siareply_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
@@ -62,54 +63,15 @@ void eigrp_siareply_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 	eigrp_hello_send_ack(nbr);
 }
 
-void eigrp_siareply_send(eigrp_instance_t *eigrp,
-			 eigrp_neighbor_t *nbr,
+void eigrp_siareply_send(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 			 eigrp_prefix_descriptor_t *prefix)
 {
-	eigrp_packet_t *packet;
-	eigrp_route_descriptor_t *route;
-	uint16_t length = EIGRP_HEADER_LEN;
-	struct list *successors;
+	eigrp_packetizer_work_t *work;
 
-	packet = eigrp_packet_new(EIGRP_PACKET_MTU(nbr->ei->ifp->mtu), nbr);
-
-	/* Prepare EIGRP INIT UPDATE header */
-	eigrp_packet_header_init(EIGRP_OPC_SIAREPLY, nbr->ei->eigrp, packet->s, 0,
-				 nbr->ei->eigrp->sequence_number, 0);
-
-	// encode Authentication TLV, if needed
-	if (nbr->ei->params.auth_type == EIGRP_AUTH_TYPE_MD5
-	    && nbr->ei->params.auth_keychain != NULL) {
-		length += eigrp_add_authTLV_MD5_encode(packet->s, nbr->ei);
-	}
-
-	// grab the route from the prefix so we can get the metrics we need
-	successors = eigrp_topology_get_successor(prefix);
-	assert(successors); // If this is NULL somebody poked us in the eye.
-	route = listnode_head(successors);
-	length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, route);
-
-	if ((nbr->ei->params.auth_type == EIGRP_AUTH_TYPE_MD5)
-	    && (nbr->ei->params.auth_keychain != NULL)) {
-		eigrp_make_md5_digest(nbr->ei, packet->s, EIGRP_AUTH_UPDATE_FLAG);
-	}
-
-	/* EIGRP Checksum */
-	eigrp_packet_checksum(nbr->ei, packet->s, length);
-
-	packet->length = length;
-	eigrp_addr_copy(&packet->dst, &nbr->src);
-
-	/*This ack number we await from neighbor*/
-	packet->sequence_number = nbr->ei->eigrp->sequence_number;
-
-	if (nbr->state == EIGRP_NEIGHBOR_UP) {
-		/*Put packet to retransmission queue*/
-		eigrp_packet_enqueue(nbr->retrans_queue, packet);
-
-		if (nbr->retrans_queue->count == 1) {
-			eigrp_packet_send_reliably(eigrp, nbr);
-		}
-	} else
-		eigrp_packet_free(packet);
+	work = eigrp_packetizer_work_new(EIGRP_OPC_SIAREPLY);
+	work->nbr = nbr;
+	work->prefix = prefix;
+	work->owner = prefix;
+	eigrp_packetizer_enqueue(eigrp, work);
 }
+

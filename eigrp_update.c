@@ -21,6 +21,7 @@
 #include "eigrpd/eigrp_packet.h"
 #include "eigrpd/eigrp_auth.h"
 #include "eigrpd/eigrp_fsm.h"
+#include "eigrpd/eigrp_packetizer.h"
 
 #include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_dump.h"
@@ -621,29 +622,52 @@ void eigrp_update_send(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 	ei->eigrp->sequence_number = seq_no++;
 }
 
-void eigrp_update_send_all(eigrp_instance_t *eigrp, eigrp_interface_t *exception)
+
+static eigrp_neighbor_t *eigrp_update_encoder_neighbor(eigrp_interface_t *ei)
+{
+	eigrp_neighbor_t *nbr;
+	struct listnode *node;
+
+	for (ALL_LIST_ELEMENTS_RO(ei->nbrs, node, nbr)) {
+		if (nbr->state == EIGRP_NEIGHBOR_UP)
+			return nbr;
+	}
+
+	return NULL;
+}
+
+void eigrp_update_packetize_all(eigrp_instance_t *eigrp, eigrp_interface_t *exception)
 {
 	eigrp_interface_t *iface;
 	eigrp_neighbor_t *nbr;
-
-	struct listnode *node, *nnode, *node2, *nnode2;
+	struct listnode *node, *node2, *nnode2;
 	eigrp_prefix_descriptor_t *prefix;
 
 	for (ALL_LIST_ELEMENTS_RO(eigrp->eiflist, node, iface)) {
-		if (iface != exception) {
-		    /* iterate over all neighbors on eigrp interface */
-		    for (ALL_LIST_ELEMENTS_RO(iface->nbrs, nnode, nbr)) {
+		if (iface == exception)
+			continue;
+
+		nbr = eigrp_update_encoder_neighbor(iface);
+		if (nbr)
 			eigrp_update_send(eigrp, nbr, iface);
-		    }
-		}
 	}
 
 	for (ALL_LIST_ELEMENTS(eigrp->topology_changes, node2, nnode2, prefix)) {
 		if (prefix->req_action & EIGRP_FSM_NEED_UPDATE) {
 			prefix->req_action &= ~EIGRP_FSM_NEED_UPDATE;
-			listnode_delete(eigrp->topology_changes, prefix);
+			if (!prefix->req_action)
+				listnode_delete(eigrp->topology_changes, prefix);
 		}
 	}
+}
+
+void eigrp_update_send_all(eigrp_instance_t *eigrp, eigrp_interface_t *exception)
+{
+	eigrp_packetizer_work_t *work;
+
+	work = eigrp_packetizer_work_new(EIGRP_OPC_UPDATE);
+	work->exception = exception;
+	eigrp_packetizer_enqueue(eigrp, work);
 }
 
 /**

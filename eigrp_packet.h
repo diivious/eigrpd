@@ -56,6 +56,9 @@ extern void eigrp_packet_enqueue(eigrp_packet_queue_t *, eigrp_packet_t *);
 extern void eigrp_packet_queue_free(eigrp_packet_queue_t *);
 extern void eigrp_packet_queue_reset(eigrp_packet_queue_t *);
 
+extern void eigrp_packet_output_enqueue(eigrp_instance_t *, eigrp_interface_t *,
+				       eigrp_packet_t *);
+extern void eigrp_packet_retransmit_timer_start(eigrp_neighbor_t *);
 extern void eigrp_packet_send_reliably(eigrp_instance_t *, eigrp_neighbor_t *);
 
 extern void eigrp_packet_unack_retrans(struct event *);
@@ -91,6 +94,7 @@ extern void eigrp_update_receive(eigrp_instance_t *, eigrp_neighbor_t *,
 				 eigrp_header_t *, struct stream *,
 				 eigrp_interface_t *, int);
 extern void eigrp_update_send_all(eigrp_instance_t *, eigrp_interface_t *);
+extern void eigrp_update_packetize_all(eigrp_instance_t *, eigrp_interface_t *);
 extern void eigrp_update_send_init(eigrp_instance_t *, eigrp_neighbor_t *);
 extern void eigrp_update_send_EOT(eigrp_neighbor_t *);
 extern void eigrp_update_send_GR_event(struct event *);
@@ -104,7 +108,6 @@ extern void eigrp_update_send_process_GR(eigrp_instance_t *, enum GR_type,
 /*
  * These externs are found in eigrp_query.c
  */
-extern void eigrp_query_send(eigrp_instance_t *, eigrp_interface_t *);
 extern void eigrp_query_receive(eigrp_instance_t *, eigrp_neighbor_t *,
 				eigrp_header_t *, struct stream *,
 				eigrp_interface_t *, int);
