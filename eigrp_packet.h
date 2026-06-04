@@ -65,11 +65,16 @@ extern void eigrp_packet_send_reliably(eigrp_instance_t *, eigrp_neighbor_t *);
 extern void eigrp_packet_unack_retrans(struct event *);
 extern void eigrp_packet_unack_multicast_retrans(struct event *);
 
-/**
- * Found in eigrp-tlv*.c for peer versioning of TLV decoding
- */
-extern void eigrp_tlv1_init(eigrp_neighbor_t *);
-extern void eigrp_tlv2_init(eigrp_neighbor_t *);
+extern eigrp_route_descriptor_t *eigrp_packet_decoder_safe(
+	eigrp_instance_t *, eigrp_neighbor_t *, eigrp_stream_t *, uint16_t);
+extern uint16_t eigrp_packet_encoder_safe(eigrp_instance_t *,
+					 eigrp_interface_t *, eigrp_neighbor_t *,
+					 eigrp_stream_t *,
+					 eigrp_route_descriptor_t *);
+extern uint16_t eigrp_packet_encoder_both(eigrp_instance_t *,
+					 eigrp_interface_t *, eigrp_neighbor_t *,
+					 eigrp_stream_t *,
+					 eigrp_route_descriptor_t *);
 
 /*
  * untill there is reason to have their own header, these externs are found in

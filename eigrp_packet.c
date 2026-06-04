@@ -56,6 +56,59 @@ static int eigrp_packet_auth_digest_validate(eigrp_interface_t *ei,
 					     struct eigrp_header *eigrph,
 					     uint16_t length);
 
+
+eigrp_route_descriptor_t *eigrp_packet_decoder_safe(eigrp_instance_t *eigrp,
+						    eigrp_neighbor_t *nbr,
+						    eigrp_stream_t *pkt,
+						    uint16_t pktlen)
+{
+	(void)eigrp;
+	(void)nbr;
+	(void)pktlen;
+	if (pkt)
+		stream_set_getp(pkt, stream_get_endp(pkt));
+	return NULL;
+}
+
+uint16_t eigrp_packet_encoder_safe(eigrp_instance_t *eigrp,
+					  eigrp_interface_t *ei,
+					  eigrp_neighbor_t *nbr,
+					  eigrp_stream_t *pkt,
+					  eigrp_route_descriptor_t *route)
+{
+	(void)eigrp;
+	(void)ei;
+	(void)nbr;
+	(void)pkt;
+	(void)route;
+	return 0;
+}
+
+uint16_t eigrp_packet_encoder_both(eigrp_instance_t *eigrp,
+					  eigrp_interface_t *ei,
+					  eigrp_neighbor_t *nbr,
+					  eigrp_stream_t *pkt,
+					  eigrp_route_descriptor_t *route)
+{
+	size_t start;
+	uint16_t len1;
+	uint16_t len2;
+
+	if (!eigrp || !pkt || !route)
+		return 0;
+
+	start = stream_get_endp(pkt);
+	len1 = eigrp->tlv1_codec.encoder(eigrp, ei, nbr, pkt, route);
+	len2 = eigrp->tlv2_codec.encoder(eigrp, ei, nbr, pkt, route);
+
+	if (!len1 || !len2) {
+		stream_set_endp(pkt, start);
+		return 0;
+	}
+
+	return len1 + len2;
+}
+
 static int eigrp_retrans_count_exceeded(eigrp_packet_t *packet,
 					eigrp_neighbor_t *nbr)
 {

@@ -1,0 +1,80 @@
+# SPDX-License-Identifier: ISC
+#
+# Copyright (C) 2026 Donnie V. Savage
+#
+# Source-level guards for the TLV codec vector design.
+
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[4]
+
+
+def read(path: str) -> str:
+    return (ROOT / path).read_text()
+
+
+def all_production_source() -> str:
+    chunks = []
+    for path in ROOT.rglob("*"):
+        if path.suffix not in {".c", ".h"}:
+            continue
+        if any(part in {".git", "testcases"} for part in path.parts):
+            continue
+        chunks.append(path.read_text())
+    return "\n".join(chunks)
+
+
+def test_instance_owns_tlv_codecs():
+    structs = read("eigrp_structs.h")
+
+    assert "eigrp_tlv_codec_t tlv1_codec;" in structs
+    assert "eigrp_tlv_codec_t tlv2_codec;" in structs
+
+
+def test_neighbor_owns_tlv_version_and_unicast_vectors():
+    neighbor = read("eigrp_neighbor.h")
+
+    assert "uint8_t tlv_version;" in neighbor
+    assert "eigrp_packet_decoder_t decoder;" in neighbor
+    assert "eigrp_packet_encoder_t encoder;" in neighbor
+    assert "bound_interface_codec" not in all_production_source()
+
+
+def test_interface_owns_aggregate_encoder_and_peer_counts():
+    structs = read("eigrp_structs.h")
+
+    assert "uint16_t tlv1_peer_count;" in structs
+    assert "uint16_t tlv2_peer_count;" in structs
+    assert "eigrp_packet_encoder_t encoder;" in structs
+
+
+def test_runtime_path_uses_single_interface_encoder_vector():
+    source = all_production_source()
+
+    assert "ei->encoder[" not in source
+    assert "encoder->next" not in source
+    assert "ei->encoder(eigrp, ei, NULL" in source
+    assert "nbr->encoder(eigrp, ei, nbr" in source
+
+
+def test_packet_owns_safe_and_both_vectors():
+    packet = read("eigrp_packet.c")
+
+    assert "eigrp_packet_encoder_safe" in packet
+    assert "eigrp_packet_decoder_safe" in packet
+    assert "eigrp_packet_encoder_both" in packet
+    assert "eigrp->tlv1_codec.encoder" in packet
+    assert "eigrp->tlv2_codec.encoder" in packet
+
+
+def test_tlv_modules_export_init_and_bind_without_leaking_wire_types():
+    tlv1_h = read("eigrp_tlv1.h")
+    tlv2_h = read("eigrp_tlv2.h")
+
+    for header in (tlv1_h, tlv2_h):
+        assert "eigrp_tlv_codec_t" in header
+        assert "neighbor_bind" in header
+        assert "interface_bind" in header
+        assert "struct eigrp_tlv1" not in header
+        assert "struct eigrp_tlv2" not in header

@@ -23,20 +23,22 @@
 
 DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_NEIGHBOR, "EIGRP neighbor");
 
-static inline eigrp_route_descriptor_t *
-eigrp_tlv_decoder_safe(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
-		       eigrp_stream_t *pkt, uint16_t pktlen)
+
+void eigrp_neighbor_encoder_bind(eigrp_neighbor_t *nbr, eigrp_tlv_codec_t *codec)
 {
-	return NULL;
-}
-static inline uint16_t eigrp_tlv_encoder_safe(eigrp_instance_t *eigrp,
-					      eigrp_neighbor_t *nbr,
-					      eigrp_stream_t *pkt,
-					      eigrp_route_descriptor_t *route)
-{
-	return 0;
+	if (!nbr || !codec || !codec->encoder)
+		return;
+
+	nbr->encoder = codec->encoder;
 }
 
+void eigrp_neighbor_decoder_bind(eigrp_neighbor_t *nbr, eigrp_tlv_codec_t *codec)
+{
+	if (!nbr || !codec || !codec->decoder)
+		return;
+
+	nbr->decoder = codec->decoder;
+}
 
 /**
  * initalize neighbor
@@ -55,8 +57,9 @@ static void eigrp_nbr_init(eigrp_neighbor_t *nbr, eigrp_addr_t *src)
 
 	nbr->v_holddown = EIGRP_HOLD_INTERVAL_DEFAULT;
 
-	nbr->tlv_decoder = (eigrp_tlv_decoder_t)&eigrp_tlv_decoder_safe;
-	nbr->tlv_encoder = (eigrp_tlv_encoder_t)&eigrp_tlv_encoder_safe;
+	nbr->tlv_version = 0;
+	nbr->decoder = eigrp_packet_decoder_safe;
+	nbr->encoder = eigrp_packet_encoder_safe;
 
 	//  if (IS_DEBUG_EIGRP_EVENT)
 	//    zlog_debug("NSM[%s:%s]: start", EIGRP_INTF_NAME (nbr->oi),
@@ -189,7 +192,7 @@ void holddown_timer_expired(struct event *event)
 	zlog_info("Neighbor %s (%s) is down: holding time expired",
 		  eigrp_print_addr(&nbr->src),
 		  ifindex2ifname(nbr->ei->ifp->ifindex, eigrp->vrf_id));
-	nbr->state = EIGRP_NEIGHBOR_DOWN;
+	eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
 	eigrp_nbr_delete(nbr);
 
 	return;
@@ -202,7 +205,20 @@ uint8_t eigrp_nbr_state_get(eigrp_neighbor_t *nbr)
 
 void eigrp_nbr_state_set(eigrp_neighbor_t *nbr, uint8_t state)
 {
+	uint8_t old_state;
+
+	if (!nbr)
+		return;
+
+	old_state = nbr->state;
+
+	if (old_state == EIGRP_NEIGHBOR_UP && state != EIGRP_NEIGHBOR_UP)
+		eigrp_interface_encoder_unbind(nbr->ei, nbr->tlv_version);
+
 	nbr->state = state;
+
+	if (state == EIGRP_NEIGHBOR_UP && old_state != EIGRP_NEIGHBOR_UP)
+		eigrp_interface_encoder_bind(nbr->ei, nbr->tlv_version);
 
 	if (eigrp_nbr_state_get(nbr) == EIGRP_NEIGHBOR_DOWN) {
 		// reset all the seq/ack counters
@@ -332,7 +348,7 @@ void eigrp_nbr_hard_restart(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 	eigrp_hello_send(nbr->ei, EIGRP_HELLO_GRACEFUL_SHUTDOWN_NBR, &nbr->src);
 
 	/* set neighbor to DOWN */
-	nbr->state = EIGRP_NEIGHBOR_DOWN;
+	eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
 
 	/* delete neighbor */
 	eigrp_nbr_delete(nbr);

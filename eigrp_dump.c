@@ -151,6 +151,8 @@ void show_ip_eigrp_interface_detail(struct vty *vty, eigrp_instance_t *eigrp,
 		"Out-of-sequence rcvd: ", 0);
 	vty_out(vty, "%-2s %s %s %s \n", "", "Authentication mode is ", "not",
 		"set");
+	vty_out(vty, "%-2s TLV peers: v1 %u, v2 %u\n", "",
+		ei->tlv1_peer_count, ei->tlv2_peer_count);
 	vty_out(vty, "%-2s %s \n", "", "Use multicast");
 }
 
@@ -183,6 +185,7 @@ void show_ip_eigrp_neighbor_sub(struct vty *vty, eigrp_neighbor_t *nbr,
 		vty_out(vty, "    Version %u.%u/%u.%u", nbr->os_rel_major,
 			nbr->os_rel_minor, nbr->tlv_rel_major,
 			nbr->tlv_rel_minor);
+		vty_out(vty, ", TLV version: %u", nbr->tlv_version);
 		vty_out(vty, ", Retrans: %lu, Retries: %lu",
 			nbr->retrans_queue->count, 0UL);
 		vty_out(vty, ", %s\n", eigrp_nbr_state_str(nbr));

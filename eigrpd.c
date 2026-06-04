@@ -20,6 +20,8 @@
 #include "eigrpd/eigrp_errors.h"
 #include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_packetizer.h"
+#include "eigrpd/eigrp_tlv1.h"
+#include "eigrpd/eigrp_tlv2.h"
 
 DEFINE_MGROUP(EIGRPD, "eigrpd");
 DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_TOP, "EIGRP structure");
@@ -118,6 +120,9 @@ static eigrp_instance_t *eigrp_new(uint16_t as, vrf_id_t vrf_id)
 	eigrp->k_values[3] = EIGRP_K4_DEFAULT;
 	eigrp->k_values[4] = EIGRP_K5_DEFAULT;
 	eigrp->k_values[5] = EIGRP_K6_DEFAULT;
+
+	eigrp_tlv1_init(&eigrp->tlv1_codec);
+	eigrp_tlv2_init(&eigrp->tlv2_codec);
 
 	/* init internal data structures */
 	eigrp->eiflist = list_new();

@@ -101,6 +101,10 @@ struct eigrp_instance {
 
 	eigrp_work_queue_t *packetizer_queue;
 
+	/* Local TLV codecs used for neighbor/interface bind and mixed encode. */
+	eigrp_tlv_codec_t tlv1_codec;
+	eigrp_tlv_codec_t tlv2_codec;
+
 	/*Neighbor self*/
 	eigrp_neighbor_t *neighbor_self;
 
@@ -196,11 +200,9 @@ typedef struct eigrp_interface {
 
 	/* EIGRP Interface Properties */
 	eigrp_intf_params_t params;
-	struct {
-		bool mixed;
-		uint8_t v1;
-		uint8_t v2;
-	} version;
+	uint16_t tlv1_peer_count;
+	uint16_t tlv2_peer_count;
+	eigrp_packet_encoder_t encoder;
 
 	/* Neighbor information. */
 	struct list *nbrs; /* EIGRP Neighbor List */

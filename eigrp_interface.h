@@ -34,6 +34,9 @@ extern uint8_t eigrp_default_iftype(struct interface *);
 extern void eigrp_intf_free(eigrp_instance_t *, eigrp_interface_t *, int);
 extern int eigrp_intf_down(eigrp_interface_t *);
 extern const char *eigrp_intf_name_string(eigrp_interface_t *);
+extern void eigrp_interface_encoder_bind(eigrp_interface_t *, uint8_t);
+extern void eigrp_interface_encoder_unbind(eigrp_interface_t *, uint8_t);
+extern void eigrp_interface_encoder_clear(eigrp_interface_t *);
 
 extern int eigrp_intf_ipmulticast(eigrp_instance_t *, struct prefix *,
 				  unsigned int);

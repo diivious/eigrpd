@@ -21,6 +21,7 @@
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_tlv1.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
@@ -442,16 +443,18 @@ malformed:
 	return NULL;
 }
 
-static uint16_t eigrp_tlv1_encoder(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
-				   eigrp_stream_t *pkt,
+static uint16_t eigrp_tlv1_encoder(eigrp_instance_t *eigrp, eigrp_interface_t *ei,
+				   eigrp_neighbor_t *nbr, eigrp_stream_t *pkt,
 				   eigrp_route_descriptor_t *route)
 {
-	eigrp_interface_t *ei = nbr->ei;
 	size_t tlv_start = stream_get_endp(pkt);
 	size_t tlv_end;
 	uint16_t type;
 	uint16_t length;
 	uint16_t encoded;
+
+	if (!ei && nbr)
+		ei = nbr->ei;
 
 	/* Filtering
 	 * TODO: Work in progress
@@ -512,9 +515,29 @@ static uint16_t eigrp_tlv1_encoder(eigrp_instance_t *eigrp, eigrp_neighbor_t *nb
 	return length;
 }
 
-void eigrp_tlv1_init(eigrp_neighbor_t *nbr)
+void eigrp_tlv1_init(eigrp_tlv_codec_t *codec)
 {
-	// setup vectors for processing Version 1 TLVs
-	nbr->tlv_decoder = &eigrp_tlv1_decoder;
-	nbr->tlv_encoder = &eigrp_tlv1_encoder;
+	if (!codec)
+		return;
+
+	codec->decoder = eigrp_tlv1_decoder;
+	codec->encoder = eigrp_tlv1_encoder;
+}
+
+void eigrp_tlv1_neighbor_bind(eigrp_neighbor_t *nbr, eigrp_tlv_codec_t *codec)
+{
+	if (!nbr || !codec)
+		return;
+
+	nbr->tlv_version = EIGRP_TLV_32B_VERSION;
+	eigrp_neighbor_decoder_bind(nbr, codec);
+	eigrp_neighbor_encoder_bind(nbr, codec);
+}
+
+void eigrp_tlv1_interface_bind(eigrp_interface_t *ei, eigrp_tlv_codec_t *codec)
+{
+	if (!ei || !codec || !codec->encoder)
+		return;
+
+	ei->encoder = codec->encoder;
 }

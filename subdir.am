@@ -69,6 +69,8 @@ noinst_HEADERS += \
 	eigrpd/eigrp_snmp.h \
 	eigrpd/eigrp_southbound.h \
 	eigrpd/eigrp_structs.h \
+	eigrpd/eigrp_tlv1.h \
+	eigrpd/eigrp_tlv2.h \
 	eigrpd/eigrp_types.h \
 	eigrpd/eigrp_vrf.h \
 	eigrpd/eigrp_vty.h \

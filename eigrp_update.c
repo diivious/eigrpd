@@ -245,7 +245,7 @@ void eigrp_update_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 
 	/*If there is topology information*/
 	while (pkt->endp > pkt->getp) {
-		route = (nbr->tlv_decoder)(eigrp, nbr, pkt, length);
+		route = (nbr->decoder)(eigrp, nbr, pkt, length);
 
 		// should have got route off the packet, but one never knows
 		if (route) {
@@ -502,7 +502,7 @@ void eigrp_update_send_EOT(eigrp_neighbor_t *nbr)
 			if (eigrp_update_prefix_apply(eigrp, ei, EIGRP_FILTER_OUT, dest_addr))
 				continue;
 			else {
-				length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, route);
+				length += (nbr->encoder)(eigrp, ei, nbr, packet->s, route);
 			}
 		}
 	}
@@ -521,6 +521,7 @@ void eigrp_update_send(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 	uint8_t has_tlv;
 	uint32_t seq_no = eigrp->sequence_number;
 	uint16_t eigrp_mtu = EIGRP_PACKET_MTU(ei->ifp->mtu);
+	uint16_t tlv_length;
 	uint16_t length = EIGRP_HEADER_LEN;
 
 	struct listnode *node, *nnode;
@@ -580,17 +581,10 @@ void eigrp_update_send(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 			// prefix->reported_metric.delay = EIGRP_MAX_METRIC;
 			continue;
 		} else {
-			/* DVS:
-			 * OK. baby steps.  Fist lets get it working as if we
-			 * are TLV1. Once we step up to TLV2, we will ahve
-			 * account fot eh fact that some of Cisco router are
-			 * legacy 32bit.
-			 *
-			 * To do this we meed to check the interface and either
-			 * encode only 64bit, or both 32 and 64 bit versions of
-			 * the tlv.
-			 */
-			length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, route);
+			tlv_length = ei->encoder(eigrp, ei, NULL, packet->s, route);
+			if (!tlv_length)
+				continue;
+			length += tlv_length;
 			has_tlv = 1;
 		}
 	}
@@ -773,7 +767,7 @@ static void eigrp_update_send_GR_part(eigrp_neighbor_t *nbr)
 			route = listnode_head(successors);
 
 			/* sending route which wasn't filtered */
-			length += (nbr->tlv_encoder)(eigrp, nbr, packet->s, route);
+			length += (nbr->encoder)(eigrp, ei, nbr, packet->s, route);
 			send_prefixes++;
 		}
 

@@ -18,6 +18,8 @@
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_tlv1.h"
+#include "eigrpd/eigrp_tlv2.h"
 #include "eigrpd/eigrp_auth.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
@@ -183,31 +185,21 @@ static void eigrp_sw_version_decode(eigrp_neighbor_t *nbr,
 {
 	struct TLV_Software_Type *version = (struct TLV_Software_Type *)tlv;
 
+	(void)new;
+
 	nbr->os_rel_major = version->vender_major;
 	nbr->os_rel_minor = version->vender_minor;
 	nbr->tlv_rel_major = version->eigrp_major;
 	nbr->tlv_rel_minor = version->eigrp_minor;
 
-	/* ok, we know know the kind of neighbors we have. If not a double wide,
-	 * then then you are classic - nonne other are supported
+	/*
+	 * TLV major version 2 peers use multiprotocol/wide TLVs. Any other
+	 * currently supported peer uses classic TLV1 encoding.
 	 */
-	if (nbr->tlv_rel_major == EIGRP_TLV_64B_VERSION) {
-		eigrp_tlv2_init(nbr);
-		if (new)
-			ei->version.v2++;
-	} else {
-		eigrp_tlv1_init(nbr);
-		if (new)
-			ei->version.v1++;
-	}
-
-	/* quick check to see if we need to send V1 and V2 TLVs */
-	ei->version.mixed = (ei->version.v1 && ei->version.v2);
-
-	// DVS: Temp until I code V2 packet processor
-	eigrp_tlv1_init(nbr);
-
-	return;
+	if (nbr->tlv_rel_major == EIGRP_TLV_64B_VERSION)
+		eigrp_tlv2_neighbor_bind(nbr, &ei->eigrp->tlv2_codec);
+	else
+		eigrp_tlv1_neighbor_bind(nbr, &ei->eigrp->tlv1_codec);
 }
 
 /**
@@ -232,7 +224,7 @@ static void eigrp_peer_termination_decode(eigrp_instance_t *eigrp,
 			  eigrp_print_addr(&nbr->src),
 			  ifindex2ifname(nbr->ei->ifp->ifindex, eigrp->vrf_id));
 		/* set neighbor to DOWN */
-		nbr->state = EIGRP_NEIGHBOR_DOWN;
+		eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
 		/* delete neighbor */
 		eigrp_nbr_delete(nbr);
 	}

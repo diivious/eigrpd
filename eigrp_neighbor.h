@@ -24,12 +24,13 @@ typedef struct eigrp_neighbor {
 	uint8_t os_rel_major; // system version - just for show
 	uint8_t os_rel_minor; // system version - just for show
 
-	/* TLV decoders for this peer - version dependent */
+	/* TLV version and packet vectors for this neighbor. */
 	uint8_t tlv_rel_major; // eigrp version - tells us what TLV format to use
 	uint8_t tlv_rel_minor; // eigrp version - tells us what TLV format to use
+	uint8_t tlv_version;
 
-	eigrp_tlv_decoder_t tlv_decoder;
-	eigrp_tlv_encoder_t tlv_encoder;
+	eigrp_packet_decoder_t decoder;
+	eigrp_packet_encoder_t encoder;
 
 	uint8_t K1;
 	uint8_t K2;
@@ -87,6 +88,8 @@ extern int eigrp_neighborship_check(eigrp_neighbor_t *,
 				    struct TLV_Parameter_Type *tlv);
 extern void eigrp_nbr_state_update(eigrp_neighbor_t *);
 extern void eigrp_nbr_state_set(eigrp_neighbor_t *, uint8_t state);
+extern void eigrp_neighbor_encoder_bind(eigrp_neighbor_t *, eigrp_tlv_codec_t *);
+extern void eigrp_neighbor_decoder_bind(eigrp_neighbor_t *, eigrp_tlv_codec_t *);
 extern uint8_t eigrp_nbr_state_get(eigrp_neighbor_t *);
 extern int eigrp_nbr_count_get(eigrp_instance_t *);
 extern const char *eigrp_nbr_state_str(eigrp_neighbor_t *);

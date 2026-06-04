@@ -44,13 +44,17 @@ typedef struct eigrp_work_queue eigrp_work_queue_t;
 typedef struct eigrp_packet eigrp_packet_t;
 typedef struct eigrp_tlv_header eigrp_tlv_header_t;
 
-typedef eigrp_route_descriptor_t *(*eigrp_tlv_decoder_t)(eigrp_instance_t *eigrp,
-							 eigrp_neighbor_t *nbr,
-							 eigrp_stream_t *pkt,
-							 uint16_t pktlen);
-typedef uint16_t (*eigrp_tlv_encoder_t)(eigrp_instance_t *eigrp,
-					eigrp_neighbor_t *nbr,
-					eigrp_stream_t *pkt,
-					eigrp_route_descriptor_t *route);
+typedef eigrp_route_descriptor_t *(*eigrp_packet_decoder_t)(
+	eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr, eigrp_stream_t *pkt,
+	uint16_t pktlen);
+
+typedef uint16_t (*eigrp_packet_encoder_t)(
+	eigrp_instance_t *eigrp, eigrp_interface_t *ei, eigrp_neighbor_t *nbr,
+	eigrp_stream_t *pkt, eigrp_route_descriptor_t *route);
+
+typedef struct eigrp_tlv_codec {
+	eigrp_packet_encoder_t encoder;
+	eigrp_packet_decoder_t decoder;
+} eigrp_tlv_codec_t;
 
 #endif /* _ZEBRA_EIGRP_TYPES_H_ */

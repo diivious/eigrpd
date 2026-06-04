@@ -63,7 +63,7 @@ void eigrp_reply_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 	nbr->recv_sequence_number = ntohl(eigrph->sequence);
 
 	while (pkt->endp > pkt->getp) {
-		route = (nbr->tlv_decoder)(eigrp, nbr, pkt, length);
+		route = (nbr->decoder)(eigrp, nbr, pkt, length);
 		if (!route)
 			break;
 

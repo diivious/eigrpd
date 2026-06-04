@@ -127,7 +127,7 @@ static void eigrp_packetizer_neighbor_route_send(eigrp_instance_t *eigrp,
 		}
 	}
 
-	tlv_length = nbr->tlv_encoder(eigrp, nbr, packet->s, route);
+	tlv_length = nbr->encoder(eigrp, ei, nbr, packet->s, route);
 	if (successors)
 		list_delete(&successors);
 	if (free_route)
@@ -181,6 +181,7 @@ static void eigrp_packetizer_query_interface_send(eigrp_instance_t *eigrp,
 	struct listnode *node, *nnode;
 	struct list *successors;
 	uint32_t sequence;
+	uint16_t tlv_length;
 	uint16_t length = EIGRP_HEADER_LEN;
 	uint16_t eigrp_mtu;
 
@@ -213,8 +214,13 @@ static void eigrp_packetizer_query_interface_send(eigrp_instance_t *eigrp,
 	    && ei->params.auth_keychain != NULL)
 		length += eigrp_add_authTLV_MD5_encode(packet->s, ei);
 
-	length += nbr->tlv_encoder(eigrp, nbr, packet->s, route);
+	tlv_length = ei->encoder(eigrp, ei, NULL, packet->s, route);
 	list_delete(&successors);
+	if (!tlv_length) {
+		eigrp_packet_free(packet);
+		return;
+	}
+	length += tlv_length;
 
 	for (ALL_LIST_ELEMENTS(ei->nbrs, node, nnode, nbr)) {
 		if (nbr->state == EIGRP_NEIGHBOR_UP)

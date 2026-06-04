@@ -150,14 +150,14 @@ Preferred model:
 
 ```text
 DUAL/topology marks work.
-Packetizer chooses wire format and interface destination.
+Packetizer chooses interface/neighbor destination. The selected encoder vector owns the route TLV wire format.
 ```
 
 ### 6.2 No Early Interface Decision for NDB
 
 NDB work must not decide TLV1/TLV2/both at enqueue time.
 
-The packetizer owns that decision because peer capability is interface-sensitive.
+The selected encoder is interface-sensitive and is maintained on the interface by neighbor bind/unbind events. The packetizer must use the selected vector instead of recalculating TLV format from the neighbor list.
 
 ### 6.3 RDB Interface Context
 
@@ -205,61 +205,241 @@ There is no public packetizer `wakeup` API. Scheduling is an internal side effec
 
 ## 7. Packetizer Processing Rules
 
-### 7.1 NDB Processing
+### 7.1 Runtime Encoder/Decoder Rule
+
+Packetizer and receive-path code must not branch on TLV version.
+
+The selected function vector is the branch.
+
+```c
+ei->encoder(eigrp, ei, NULL, packet, route);
+nbr->encoder(eigrp, ei, nbr, packet, route);
+nbr->decoder(eigrp, nbr, packet, packet_len);
+```
+
+Runtime paths:
+
+```text
+interface-wide / multicast route packet
+  -> ei->encoder(...)
+
+neighbor-targeted first-build unicast route packet
+  -> nbr->encoder(...)
+
+receive path
+  -> nbr->decoder(...)
+```
+
+A multicast packet that is later retransmitted as unicast must not be re-encoded with `nbr->encoder`. Retransmission resends the already-built immutable packet only to the neighbor(s) that have not acknowledged it.
+
+### 7.2 Native Data Boundary
+
+Packetizer work items carry native EIGRP data, not prebuilt TLVs.
+
+The encoder receives native topology objects such as prefix/route descriptors and writes the correct wire TLV representation into the packet buffer.
+
+The decoder receives packet bytes and emits native EIGRP data, such as prefix/route descriptors.
+
+TLV1 and TLV2 wire structures must not leak into packetizer, topology, DUAL, CLI, or reliable transport code.
+
+### 7.3 NDB Processing
 
 For NDB work:
 
 ```text
 for each EIGRP interface:
   validate interface is active/eligible
-  inspect peer capability on that interface
-  decide TLV1, TLV2, TLV1+TLV2, or no packet
   apply split horizon / poison reverse / pending-neighbor rules
-  build one packet locked to that interface
-  queue packet to that interface packet queue
+  call ei->encoder(...)
+  queue packet only if encoder produced packet content
 ```
+
+The packetizer does not decide `tlv1`, `tlv2`, `both`, or `none` with local `if/else` logic. That decision is represented by the interface encoder vector.
 
 One NDB work item may produce zero, one, or many interface-specific packets.
 
-### 7.2 RDB Processing
+### 7.4 RDB Processing
 
 For RDB work:
 
 ```text
 validate route descriptor still exists
 validate interface/neighbor context still exists
-inspect peer capability for that interface/neighbor
-build packet locked to the relevant interface
-queue packet to that interface packet queue
+apply split horizon / poison reverse / pending-neighbor rules
+if neighbor-targeted:
+  call nbr->encoder(...)
+else:
+  call ei->encoder(...)
+queue packet only if encoder produced packet content
 ```
 
-An RDB work item normally produces packet output for one interface.
+An RDB work item normally produces packet output for one interface or one neighbor.
 
-### 7.3 Interface Peer Type
+### 7.5 Encoder/Decoder Ownership
 
-Each EIGRP interface needs a packetizing view of its peer capabilities.
+Packet code owns safe and aggregate packet-level vectors:
 
-Suggested conceptual values:
+```c
+eigrp_packet_encoder_safe()
+eigrp_packet_decoder_safe()
+eigrp_packet_encoder_both()
+```
+
+`eigrp_packet_encoder_safe()` writes no route TLVs and returns safely.
+
+`eigrp_packet_decoder_safe()` emits no native route data and advances the packet cursor to a safe stop point so receive loops cannot spin on undecodable data.
+
+`eigrp_packet_encoder_both()` is used by mixed interfaces. It calls the instance TLV codec vectors for TLV1 and TLV2. It must not require TLV1/TLV2 private wire types to leak outside their modules.
+
+The EIGRP instance owns the local/self TLV codecs used for bind operations and mixed-interface encoding:
+
+```c
+typedef struct eigrp_tlv_codec {
+	eigrp_packet_encoder_t encoder;
+	eigrp_packet_decoder_t decoder;
+} eigrp_tlv_codec_t;
+
+struct eigrp {
+	eigrp_tlv_codec_t tlv1_codec;
+	eigrp_tlv_codec_t tlv2_codec;
+};
+```
+
+Instance initialization installs the codec vectors once:
+
+```c
+eigrp_tlv1_init(&eigrp->tlv1_codec);
+eigrp_tlv2_init(&eigrp->tlv2_codec);
+```
+
+`eigrp->tlv1_codec` and `eigrp->tlv2_codec` are not neighbor state. They are the local codec vectors used to bind neighbors/interfaces and to encode both TLV families for mixed interfaces.
+
+TLV1 code owns the real TLV1 wire implementation:
 
 ```text
-none
-  no eligible peers need this work on this interface
-
-tlv1
-  eligible peers need classic TLV encoding
-
-tlv2
-  eligible peers can use multiprotocol/wide TLV encoding
-
-tlv1_tlv2
-  mixed peer capability exists; packet must carry both encodings
+eigrp_tlv1.c / eigrp_tlv1.h
+  private TLV1 encoder
+  private TLV1 decoder
+  public TLV1 init/bind APIs
 ```
 
-The exact enum name can be chosen during code implementation.
+TLV2 code owns the real TLV2 wire implementation:
 
-The packetizer must calculate this from current neighbor state, not stale queue state.
+```text
+eigrp_tlv2.c / eigrp_tlv2.h
+  private TLV2 encoder
+  private TLV2 decoder
+  public TLV2 init/bind APIs
+```
 
-### 7.4 Packet Immutability
+The public TLV init APIs install private TLV encode/decode functions into `eigrp_tlv_codec_t`. The public bind APIs copy the selected codec vectors into neighbor/interface dispatch slots. Callers do not call private TLV encode/decode functions directly.
+
+### 7.6 Neighbor Codec State
+
+Code and CLI should use `neighbor`, not `peer`, to match the existing codebase.
+
+A neighbor has exactly one negotiated TLV version. A neighbor is never mixed.
+
+Required neighbor state:
+
+```c
+uint8_t tlv_version;
+eigrp_packet_encoder_t encoder;
+eigrp_packet_decoder_t decoder;
+```
+
+Neighbor lifecycle:
+
+```text
+neighbor create
+  tlv_version = EIGRP_TLV_VERSION_NONE
+  encoder = eigrp_packet_encoder_safe
+  decoder = eigrp_packet_decoder_safe
+
+neighbor up / TLV version detected
+  tlv_version = EIGRP_TLV_VERSION_1 or EIGRP_TLV_VERSION_2
+  bind neighbor encoder/decoder through eigrp_tlv1_* or eigrp_tlv2_* public API
+
+neighbor down/free
+  unbind the interface using nbr->tlv_version before clearing/freeing the neighbor
+  free/reset neighbor state
+```
+
+There is no separate `bound_interface_codec` field. The interface bind contributed by a neighbor always matches `nbr->tlv_version`. Teardown order must preserve `nbr->tlv_version` until after interface unbind completes.
+
+### 7.7 Interface Aggregate Encoder State
+
+An interface owns the aggregate outbound route encoder for all fully up neighbors on that interface.
+
+Required interface state:
+
+```c
+uint16_t tlv1_peer_count;
+uint16_t tlv2_peer_count;
+eigrp_packet_encoder_t encoder;
+```
+
+The peer counts count only neighbors that are fully up and eligible for route packet encoding. Pending/discovery neighbors do not count.
+
+Interface lifecycle:
+
+```text
+interface up/create
+  tlv1_peer_count = 0
+  tlv2_peer_count = 0
+  encoder = eigrp_packet_encoder_safe
+
+neighbor up on interface
+  eigrp_interface_encoder_bind(ei, nbr->tlv_version)
+
+neighbor down on interface
+  eigrp_interface_encoder_unbind(ei, nbr->tlv_version)
+
+interface down/free
+  clear interface encoder state unconditionally
+```
+
+Interface bind/unbind primitives own count changes and aggregate encoder selection.
+
+Conceptual bind result:
+
+```text
+no counted neighbors
+  encoder = eigrp_packet_encoder_safe
+
+only TLV1 counted neighbors
+  encoder = TLV1 interface encoder
+
+only TLV2 counted neighbors
+  encoder = TLV2 interface encoder
+
+both TLV1 and TLV2 counted neighbors
+  encoder = eigrp_packet_encoder_both
+```
+
+The runtime packetizer path remains a single vector call:
+
+```c
+ei->encoder(eigrp, ei, NULL, packet, route);
+```
+
+Do not replace this with encoder arrays, linked encoder lists, or packetizer-side TLV branching.
+
+### 7.8 CLI Debug State Rule
+
+CLI show commands read the owning structure. They must not recompute codec state on the fly.
+
+```text
+show interface
+  reads interface-owned TLV peer counts and aggregate encoder state
+
+show neighbor
+  reads neighbor-owned tlv_version, encoder, and decoder state
+```
+
+This makes CLI output useful for catching bind/unbind count drift instead of hiding it by recomputing from neighbor walks.
+
+### 7.9 Packet Immutability
 
 After the packetizer builds an `eigrp_packet`, the packet is immutable.
 
@@ -472,6 +652,40 @@ eigrp_packet_t *eigrp_packet_queue_dequeue(eigrp_packet_queue_t *queue);
 bool eigrp_packet_queue_empty(eigrp_packet_queue_t *queue);
 ```
 
+### 13.4 `eigrp_packet.[c|h]` Codec Vectors
+
+Owns packet-level safe and aggregate encoder/decoder helpers:
+
+```c
+int eigrp_packet_encoder_safe(...);
+int eigrp_packet_decoder_safe(...);
+int eigrp_packet_encoder_both(...);
+```
+
+`eigrp_packet_encoder_both()` is the mixed-interface aggregate encoder. It calls `eigrp->tlv1_codec.encoder` and `eigrp->tlv2_codec.encoder` against native route data and the same packet buffer.
+
+### 13.5 `eigrp_tlv1.[c|h]` and `eigrp_tlv2.[c|h]`
+
+Own the private TLV-specific wire encode/decode functions and expose public init/bind APIs.
+
+Required API shape is conceptual; exact signatures may be adjusted to existing type names:
+
+```c
+void eigrp_tlv1_init(eigrp_tlv_codec_t *codec);
+void eigrp_tlv1_neighbor_bind(eigrp_neighbor_t *nbr, eigrp_tlv_codec_t *codec);
+void eigrp_tlv1_interface_bind(eigrp_interface_t *ei, eigrp_tlv_codec_t *codec);
+
+void eigrp_tlv2_init(eigrp_tlv_codec_t *codec);
+void eigrp_tlv2_neighbor_bind(eigrp_neighbor_t *nbr, eigrp_tlv_codec_t *codec);
+void eigrp_tlv2_interface_bind(eigrp_interface_t *ei, eigrp_tlv_codec_t *codec);
+```
+
+TLV init installs private encode/decode functions into the instance codec table.
+
+Neighbor bind sets `nbr->tlv_version`, `nbr->encoder`, and `nbr->decoder` from the selected instance codec.
+
+Interface bind installs the TLV-specific encoder vector from the selected instance codec for the TLV1-only or TLV2-only aggregate interface state.
+
 ## 14. Implementation Notes
 
 Initial implementation should favor correctness over optimization.
@@ -490,7 +704,7 @@ Optimizations can come later:
 
 ```text
 coalescing many NDBs into fewer packets
-interface peer type caching
+interface encoder selection shortcuts if profiling proves a need
 shared immutable packet buffers where provably safe
 reduced wakeups
 packet packing by opcode/type/capability
@@ -503,6 +717,5 @@ Do not add legacy aliases or parallel old/new packet paths.
 These should be answered before deep code work:
 
 1. Current code still uses `eigrp_prefix_descriptor_t` and `eigrp_route_descriptor_t` for topology prefix/route records. Their lifecycle APIs are owned by topology and named `eigrp_topology_prefix_create/free()` and `eigrp_topology_route_create/free()`. A later typedef rename to NDB/RDB terminology can be reviewed separately.
-2. Should interface peer type be cached on the interface or calculated during each packetizer pass?
-3. Where should packet refcount ownership live: inside `eigrp_packet_t`, or in a small wrapper object owned by reliable transport?
-4. Should startup full-table UPDATEs use the same packetizer queue from day one, or be migrated after topology-change packetizing is stable?
+2. Where should packet refcount ownership live: inside `eigrp_packet_t`, or in a small wrapper object owned by reliable transport?
+3. Should startup full-table UPDATEs use the same packetizer queue from day one, or be migrated after topology-change packetizing is stable?

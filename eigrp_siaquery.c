@@ -35,7 +35,7 @@ void eigrp_siaquery_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 
 	// process all TLVs in the packet
 	while (pkt->endp > pkt->getp) {
-		route = (nbr->tlv_decoder)(eigrp, nbr, pkt, length);
+		route = (nbr->decoder)(eigrp, nbr, pkt, length);
 
 		// should have got route off the packet, but one never knows
 		if (!route)

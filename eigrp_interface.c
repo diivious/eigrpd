@@ -18,6 +18,8 @@
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
+#include "eigrpd/eigrp_tlv1.h"
+#include "eigrpd/eigrp_tlv2.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
@@ -26,6 +28,80 @@
 
 DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_INTF,      "EIGRP interface");
 DEFINE_MTYPE_STATIC(EIGRPD, EIGRP_INTF_INFO, "EIGRP Interface Information");
+
+
+void eigrp_interface_encoder_clear(eigrp_interface_t *ei)
+{
+	if (!ei)
+		return;
+
+	ei->tlv1_peer_count = 0;
+	ei->tlv2_peer_count = 0;
+	ei->encoder = eigrp_packet_encoder_safe;
+}
+
+static void eigrp_interface_encoder_select(eigrp_interface_t *ei)
+{
+	if (!ei)
+		return;
+
+	if (ei->tlv1_peer_count && ei->tlv2_peer_count) {
+		ei->encoder = eigrp_packet_encoder_both;
+		return;
+	}
+
+	if (ei->tlv1_peer_count) {
+		eigrp_tlv1_interface_bind(ei, &ei->eigrp->tlv1_codec);
+		return;
+	}
+
+	if (ei->tlv2_peer_count) {
+		eigrp_tlv2_interface_bind(ei, &ei->eigrp->tlv2_codec);
+		return;
+	}
+
+	ei->encoder = eigrp_packet_encoder_safe;
+}
+
+void eigrp_interface_encoder_bind(eigrp_interface_t *ei, uint8_t tlv_version)
+{
+	if (!ei)
+		return;
+
+	switch (tlv_version) {
+	case EIGRP_TLV_32B_VERSION:
+		ei->tlv1_peer_count++;
+		break;
+	case EIGRP_TLV_64B_VERSION:
+		ei->tlv2_peer_count++;
+		break;
+	default:
+		return;
+	}
+
+	eigrp_interface_encoder_select(ei);
+}
+
+void eigrp_interface_encoder_unbind(eigrp_interface_t *ei, uint8_t tlv_version)
+{
+	if (!ei)
+		return;
+
+	switch (tlv_version) {
+	case EIGRP_TLV_32B_VERSION:
+		if (ei->tlv1_peer_count)
+			ei->tlv1_peer_count--;
+		break;
+	case EIGRP_TLV_64B_VERSION:
+		if (ei->tlv2_peer_count)
+			ei->tlv2_peer_count--;
+		break;
+	default:
+		return;
+	}
+
+	eigrp_interface_encoder_select(ei);
+}
 
 static void eigrp_intf_stream_set(eigrp_interface_t *ei)
 {
@@ -92,6 +168,7 @@ eigrp_interface_t *eigrp_intf_new(eigrp_instance_t *eigrp, struct interface *ifp
 	ei->nbrs = list_new();
 
 	ei->crypt_seqnum = time(NULL);
+	eigrp_interface_encoder_clear(ei);
 
 	/* Initialize lists */
 	for (i = 0; i < EIGRP_FILTER_MAX; i++) {
@@ -350,6 +427,7 @@ int eigrp_intf_down(eigrp_interface_t *ei)
 	for (ALL_LIST_ELEMENTS(ei->nbrs, node, nnode, nbr)) {
 		eigrp_nbr_delete(nbr);
 	}
+	eigrp_interface_encoder_clear(ei);
 
 	return 1;
 }

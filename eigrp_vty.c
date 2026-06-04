@@ -339,7 +339,7 @@ DEFPY (clear_ip_eigrp_neighbors,
 						       eigrp->vrf_id));
 
 				/* set neighbor to DOWN */
-				nbr->state = EIGRP_NEIGHBOR_DOWN;
+				eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
 				/* delete neighbor */
 				eigrp_nbr_delete(nbr);
 			}
@@ -400,7 +400,7 @@ DEFPY (clear_ip_eigrp_neighbors_int,
 					       eigrp->vrf_id));
 
 			/* set neighbor to DOWN */
-			nbr->state = EIGRP_NEIGHBOR_DOWN;
+			eigrp_nbr_state_set(nbr, EIGRP_NEIGHBOR_DOWN);
 			/* delete neighbor */
 			eigrp_nbr_delete(nbr);
 		}
