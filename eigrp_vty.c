@@ -13,21 +13,33 @@
  *   Martin Kontsek
  *   Lukas Koribsky
  */
+#include <zebra.h>
+
+#include "memory.h"
+#include "frrevent.h"
+#include "prefix.h"
+#include "table.h"
+#include "vty.h"
+#include "command.h"
+#include "plist.h"
+#include "log.h"
+#include "zclient.h"
+#include "keychain.h"
+#include "linklist.h"
+#include "distribute.h"
+
 #include "eigrpd/eigrpd.h"
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"
 #include "eigrpd/eigrp_packet.h"
 #include "eigrpd/eigrp_topology.h"
+#include "eigrpd/eigrp_zebra.h"
 #include "eigrpd/eigrp_vty.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_dump.h"
-
-#include "zclient.h"
-
-#ifndef VTYSH_EXTRACT_PL
+#include "eigrpd/eigrp_const.h"
 #include "eigrpd/eigrp_vty_clippy.c"
-#endif
 
 static void eigrp_vty_display_prefix_entry(struct vty *vty, eigrp_instance_t *eigrp,
 					   eigrp_prefix_descriptor_t *pe,
@@ -270,14 +282,14 @@ DEFPY (show_ip_eigrp_neighbors,
 	eigrp_instance_t *eigrp;
 
 	if (vrf && strncmp(vrf, "all", sizeof("all")) == 0) {
-		struct vrf *vrf;
+		struct vrf *vrf_iter;
 
-		RB_FOREACH (vrf, vrf_name_head, &vrfs_by_name) {
-			eigrp = eigrp_lookup(vrf->vrf_id);
+		RB_FOREACH (vrf_iter, vrf_name_head, &vrfs_by_name) {
+			eigrp = eigrp_lookup(vrf_iter->vrf_id);
 			if (!eigrp)
 				continue;
 
-			vty_out(vty, "VRF %s:\n", vrf->name);
+			vty_out(vty, "VRF %s:\n", vrf_iter->name);
 
 			eigrp_neighbors_helper(vty, eigrp, ifname, detail);
 		}

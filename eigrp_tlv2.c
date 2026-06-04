@@ -17,6 +17,7 @@
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_fsm.h"
 #include "eigrpd/eigrp_metric.h"
+#include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_dump.h"
 
 /* Multiprotocol TLV header extension: AFI, TID, and RID. */

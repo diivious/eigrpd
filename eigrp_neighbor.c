@@ -16,6 +16,7 @@
 #include "eigrpd/eigrpd.h"
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_neighbor.h"
+#include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_packet.h"
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
@@ -177,7 +178,7 @@ void eigrp_nbr_delete(eigrp_neighbor_t *nbr)
 	event_cancel_event(eigrpd_event, nbr);
 	eigrp_packet_queue_free(nbr->multicast_queue);
 	eigrp_packet_queue_free(nbr->retrans_queue);
-	EVENT_OFF(nbr->t_holddown);
+	event_cancel(&nbr->t_holddown);
 
 	if (nbr->ei)
 		listnode_delete(nbr->ei->nbrs, nbr);
@@ -236,7 +237,7 @@ void eigrp_nbr_state_set(eigrp_neighbor_t *nbr, uint8_t state)
 
 		// hold time..
 		nbr->v_holddown = EIGRP_HOLD_INTERVAL_DEFAULT;
-		EVENT_OFF(nbr->t_holddown);
+		event_cancel(&nbr->t_holddown);
 
 		/* out with the old */
 		if (nbr->multicast_queue)
@@ -278,7 +279,7 @@ void eigrp_nbr_state_update(eigrp_neighbor_t *nbr)
 	switch (nbr->state) {
 	case EIGRP_NEIGHBOR_DOWN: {
 		/*Start Hold Down Timer for neighbor*/
-		//     EVENT_OFF(nbr->t_holddown);
+		//     event_cancel(&nbr->t_holddown);
 		//     EVENT_TIMER_ON(eigrpd_event, nbr->t_holddown,
 		//     holddown_timer_expired,
 		//     nbr, nbr->v_holddown);
@@ -286,14 +287,14 @@ void eigrp_nbr_state_update(eigrp_neighbor_t *nbr)
 	}
 	case EIGRP_NEIGHBOR_PENDING: {
 		/*Reset Hold Down Timer for neighbor*/
-		EVENT_OFF(nbr->t_holddown);
+		event_cancel(&nbr->t_holddown);
 		event_add_timer(eigrpd_event, holddown_timer_expired, nbr,
 				 nbr->v_holddown, &nbr->t_holddown);
 		break;
 	}
 	case EIGRP_NEIGHBOR_UP: {
 		/*Reset Hold Down Timer for neighbor*/
-		EVENT_OFF(nbr->t_holddown);
+		event_cancel(&nbr->t_holddown);
 		event_add_timer(eigrpd_event, holddown_timer_expired, nbr,
 				 nbr->v_holddown, &nbr->t_holddown);
 		break;

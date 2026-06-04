@@ -824,7 +824,7 @@ void eigrp_packet_free(eigrp_packet_t *packet)
 	if (packet->s)
 		stream_free(packet->s);
 
-	EVENT_OFF(packet->t_retrans_timer);
+	event_cancel(&packet->t_retrans_timer);
 
 	XFREE(MTYPE_EIGRP_PACKET, packet);
 }

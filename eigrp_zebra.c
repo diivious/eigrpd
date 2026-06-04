@@ -9,6 +9,22 @@
  *   Peter Orsag
  *   Peter Paluch
  */
+#include <zebra.h>
+
+#include "frrevent.h"
+#include "command.h"
+#include "network.h"
+#include "prefix.h"
+#include "routemap.h"
+#include "table.h"
+#include "stream.h"
+#include "memory.h"
+#include "zclient.h"
+#include "filter.h"
+#include "plist.h"
+#include "log.h"
+#include "nexthop.h"
+
 #include "eigrpd/eigrpd.h"
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_interface.h"
@@ -20,7 +36,7 @@
 #include "eigrpd/eigrp_metric.h"
 
 /* Zebra structure to hold current status. */
-struct zclient *zclient = NULL;
+struct zclient *eigrp_zclient = NULL;
 
 /* eigrpd privileges */
 zebra_capabilities_t _caps_p[] = {
@@ -40,7 +56,7 @@ struct zebra_privs_t eigrpd_privs = {
 	.cap_num_i = 0};
 
 /* For registering events. */
-extern struct event_loop *eigrpd_event;
+extern struct event_loop *master;
 struct in_addr router_id_zebra;
 
 /* Router-id update message from zebra. */
@@ -169,10 +185,10 @@ void eigrp_zebra_route_add(eigrp_instance_t *eigrp, struct prefix *p,
 	struct listnode *node;
 	int count = 0;
 
-	if (!zclient->redist[AFI_IP][ZEBRA_ROUTE_EIGRP])
+	if (!eigrp_zclient->redist[AFI_IP][ZEBRA_ROUTE_EIGRP])
 		return;
 
-	memset(&api, 0, sizeof(api));
+	zapi_route_init(&api);
 	api.vrf_id = eigrp->vrf_id;
 	api.type = ZEBRA_ROUTE_EIGRP;
 	api.safi = SAFI_UNICAST;
@@ -187,6 +203,7 @@ void eigrp_zebra_route_add(eigrp_instance_t *eigrp, struct prefix *p,
 		if (count >= MULTIPATH_NUM)
 			break;
 		api_nh = &api.nexthops[count];
+		zapi_nexthop_init(api_nh);
 		api_nh->vrf_id = eigrp->vrf_id;
 		if (te->adv_router->src.ip.v4.s_addr) {
 			api_nh->gate.ipv4 = te->adv_router->src.ip.v4;
@@ -203,22 +220,22 @@ void eigrp_zebra_route_add(eigrp_instance_t *eigrp, struct prefix *p,
 		zlog_debug("Zebra: Route add %s", eigrp_print_prefix(p));
 	}
 
-	zclient_route_send(ZEBRA_ROUTE_ADD, zclient, &api);
+	zclient_route_send(ZEBRA_ROUTE_ADD, eigrp_zclient, &api);
 }
 
 void eigrp_zebra_route_delete(eigrp_instance_t *eigrp, struct prefix *p)
 {
 	struct zapi_route api;
 
-	if (!zclient->redist[AFI_IP][ZEBRA_ROUTE_EIGRP])
+	if (!eigrp_zclient->redist[AFI_IP][ZEBRA_ROUTE_EIGRP])
 		return;
 
-	memset(&api, 0, sizeof(api));
+	zapi_route_init(&api);
 	api.vrf_id = eigrp->vrf_id;
 	api.type = ZEBRA_ROUTE_EIGRP;
 	api.safi = SAFI_UNICAST;
 	memcpy(&api.prefix, p, sizeof(*p));
-	zclient_route_send(ZEBRA_ROUTE_DELETE, zclient, &api);
+	zclient_route_send(ZEBRA_ROUTE_DELETE, eigrp_zclient, &api);
 
 	if (IS_DEBUG_EIGRP(zebra, ZEBRA_REDISTRIBUTE)) {
 		zlog_debug("Zebra: Route del %s", eigrp_print_prefix(p));
@@ -230,9 +247,9 @@ void eigrp_zebra_route_delete(eigrp_instance_t *eigrp, struct prefix *p)
 static int eigrp_is_type_redistributed(int type, vrf_id_t vrf_id)
 {
 	return ((DEFAULT_ROUTE_TYPE(type))
-			? vrf_bitmap_check(zclient->default_information[AFI_IP],
+			? vrf_bitmap_check(&eigrp_zclient->default_information[AFI_IP],
 					   vrf_id)
-			: vrf_bitmap_check(zclient->redist[AFI_IP][type],
+			: vrf_bitmap_check(&eigrp_zclient->redist[AFI_IP][type],
 					   vrf_id));
 }
 
@@ -251,7 +268,7 @@ int eigrp_redistribute_set(eigrp_instance_t *eigrp, int type,
 
 	eigrp->dmetric[type] = metric;
 
-	zclient_redistribute(ZEBRA_REDISTRIBUTE_ADD, zclient, AFI_IP, type, 0,
+	zclient_redistribute(ZEBRA_REDISTRIBUTE_ADD, eigrp_zclient, AFI_IP, type, 0,
 			     eigrp->vrf_id);
 
 	++eigrp->redistribute;
@@ -264,7 +281,7 @@ int eigrp_redistribute_unset(eigrp_instance_t *eigrp, int type)
 
 	if (eigrp_is_type_redistributed(type, eigrp->vrf_id)) {
 		memset(&eigrp->dmetric[type], 0, sizeof(struct eigrp_metrics));
-		zclient_redistribute(ZEBRA_REDISTRIBUTE_DELETE, zclient, AFI_IP,
+		zclient_redistribute(ZEBRA_REDISTRIBUTE_DELETE, eigrp_zclient, AFI_IP,
 				     type, 0, eigrp->vrf_id);
 		--eigrp->redistribute;
 	}
@@ -283,9 +300,19 @@ static zclient_handler *const eigrp_handlers[] = {
 
 void eigrp_zebra_init(void)
 {
-	zclient = zclient_new(eigrpd_event, &zclient_options_default, eigrp_handlers,
+	eigrp_zclient = zclient_new(master, &zclient_options_default, eigrp_handlers,
 			      array_size(eigrp_handlers));
 
-	zclient_init(zclient, ZEBRA_ROUTE_EIGRP, 0, &eigrpd_privs);
-	zclient->zebra_connected = eigrp_zebra_connected;
+	zclient_init(eigrp_zclient, ZEBRA_ROUTE_EIGRP, 0, &eigrpd_privs);
+	eigrp_zclient->zebra_connected = eigrp_zebra_connected;
+}
+
+void eigrp_zebra_stop(void)
+{
+	if (!eigrp_zclient)
+		return;
+
+	zclient_stop(eigrp_zclient);
+	zclient_free(eigrp_zclient);
+	eigrp_zclient = NULL;
 }

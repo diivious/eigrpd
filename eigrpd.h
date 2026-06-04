@@ -45,6 +45,9 @@ typedef struct eigrpd {
 	/* EIGRP parent event. */
 	struct event_loop *event;
 
+	/* Current FRR daemon event-loop name. */
+	struct event_loop *master;
+
 	/* Zebra interface list. */
 	struct list *iflist;
 
@@ -58,7 +61,8 @@ typedef struct eigrpd {
 } eigrpd_t;
 
 /* Extern variables. */
-extern struct zclient *zclient;
+extern struct zclient *eigrp_zclient;
+extern struct event_loop *master;
 extern struct event_loop *eigrpd_event;
 extern struct eigrpd *eigrp_om;
 extern struct zebra_privs_t eigrpd_privs;

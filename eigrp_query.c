@@ -11,6 +11,7 @@
  */
 #include "eigrpd/eigrpd.h"
 #include "eigrpd/eigrp_structs.h"
+#include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_topology.h"
 #include "eigrpd/eigrp_interface.h"
 #include "eigrpd/eigrp_neighbor.h"

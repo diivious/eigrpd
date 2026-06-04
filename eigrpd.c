@@ -30,7 +30,6 @@ DEFINE_QOBJ_TYPE(eigrp_instance);
 static struct eigrpd eigrpd;
 struct eigrpd *eigrp_om;
 
-extern struct zclient *zclient;
 extern struct in_addr router_id_zebra;
 
 /*
@@ -224,7 +223,6 @@ eigrp_instance_t *eigrp_get(uint16_t as, vrf_id_t vrf_id)
 void eigrp_terminate(void)
 {
 	eigrp_instance_t *eigrp;
-	struct listnode *node, *nnode;
 
 	/* shutdown already in progress */
 	if (CHECK_FLAG(eigrp_om->options, EIGRPD_SHUTDOWN))
@@ -232,9 +230,13 @@ void eigrp_terminate(void)
 
 	SET_FLAG(eigrp_om->options, EIGRPD_SHUTDOWN);
 
-	for (ALL_LIST_ELEMENTS(eigrp_om->eigrp, node, nnode, eigrp))
+	while (listcount(eigrp_om->eigrp)) {
+		eigrp = listnode_head(eigrp_om->eigrp);
 		eigrp_finish(eigrp);
+	}
 
+	eigrp_zebra_stop();
+	vrf_terminate();
 	frr_fini();
 }
 
@@ -244,13 +246,8 @@ void eigrp_finish(eigrp_instance_t *eigrp)
 
 	/* eigrp being shut-down? If so, was this the last eigrp instance? */
 	if (CHECK_FLAG(eigrp_om->options, EIGRPD_SHUTDOWN)
-	    && (listcount(eigrp_om->eigrp) == 0)) {
-		if (zclient) {
-			zclient_stop(zclient);
-			zclient_free(zclient);
-		}
-		exit(0);
-	}
+	    && (listcount(eigrp_om->eigrp) == 0))
+		return;
 
 	return;
 }
@@ -268,8 +265,8 @@ void eigrp_finish_final(eigrp_instance_t *eigrp)
 		eigrp_intf_free(eigrp, ei, INTERFACE_DOWN_BY_FINAL);
 	}
 
-	EVENT_OFF(eigrp->t_write);
-	EVENT_OFF(eigrp->t_read);
+	event_cancel(&eigrp->t_write);
+	event_cancel(&eigrp->t_read);
 	eigrp_packetizer_finish(eigrp);
 	close(eigrp->fd);
 

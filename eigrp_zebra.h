@@ -16,7 +16,10 @@
 #include "lib/zclient.h"
 #include "lib/libfrr.h"
 
+extern struct zclient *eigrp_zclient;
+
 extern void eigrp_zebra_init(void);
+extern void eigrp_zebra_stop(void);
 
 extern void eigrp_zebra_route_add(eigrp_instance_t *eigrp, struct prefix *p,
 				  struct list *successors, uint32_t distance);

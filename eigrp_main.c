@@ -13,6 +13,31 @@
  *   Martin Kontsek
  *   Lukas Koribsky
  */
+#include <zebra.h>
+#include <lib/version.h>
+
+#include "getopt.h"
+#include "frrevent.h"
+#include "prefix.h"
+#include "linklist.h"
+#include "if.h"
+#include "vector.h"
+#include "vty.h"
+#include "command.h"
+#include "filter.h"
+#include "plist.h"
+#include "stream.h"
+#include "log.h"
+#include "memory.h"
+#include "privs.h"
+#include "sigevent.h"
+#include "zclient.h"
+#include "keychain.h"
+#include "distribute.h"
+#include "libfrr.h"
+#include "routemap.h"
+#include "libagentx.h"
+
 #include "eigrpd/eigrpd.h"
 #include "eigrpd/eigrp_structs.h"
 #include "eigrpd/eigrp_dump.h"
@@ -29,17 +54,14 @@
 #include "eigrpd/eigrp_cli.h"
 #include "eigrpd/eigrp_yang.h"
 
-#include "zclient.h"
-#include "routemap.h"
-#include "libfrr.h"
-
-#include <lib/version.h>
-#include "lib/keychain.h"
-
 /* EIGRPd options. */
 struct option longopts[] = {{0}};
 
-/* Master of events. */
+/* Master of events.  master is the current FRR integration name.
+ * eigrpd_event is kept as an EIGRP-local compatibility alias for the
+ * existing packet/timer code in this tree.
+ */
+struct event_loop *master;
 struct event_loop *eigrpd_event;
 
 /* Forward declaration of daemon info structure. */
@@ -55,11 +77,13 @@ static void sighup(void)
 }
 
 /* SIGINT / SIGTERM handler. */
-static void sigint(void)
+static FRR_NORETURN void sigint(void)
 {
 	zlog_notice("Terminating on signal");
+	keychain_terminate();
+	route_map_finish();
+	prefix_list_reset();
 	eigrp_terminate();
-
 	exit(0);
 }
 
@@ -94,16 +118,17 @@ static const struct frr_yang_module_info *const eigrpd_yang_modules[] = {
 	&frr_interface_info,
 	&frr_route_map_info,
 	&frr_vrf_info,
+	&ietf_key_chain_info,
+	&ietf_key_chain_deviation_info,
 };
 
-FRR_DAEMON_INFO(eigrpd, EIGRP, .vty_port = EIGRP_VTY_PORT,
-
+FRR_DAEMON_INFO(eigrpd, EIGRP,
+		.vty_port = EIGRP_VTY_PORT,
 		.proghelp = "Implementation of the EIGRP routing protocol.",
-
 		.signals = eigrp_signals,
 		.n_signals = array_size(eigrp_signals),
-
-		.privs = &eigrpd_privs, .yang_modules = eigrpd_yang_modules,
+		.privs = &eigrpd_privs,
+		.yang_modules = eigrpd_yang_modules,
 		.n_yang_modules = array_size(eigrpd_yang_modules),
 );
 
@@ -134,18 +159,20 @@ int main(int argc, char **argv, char **envp)
 	/* EIGRP frr event init. */
 	eigrp_init();
 	eigrp_om->event = frr_init();
+	eigrp_om->master = eigrp_om->event;
+	master = eigrp_om->event;
 	eigrpd_event = eigrp_om->event;
+	libagentx_init();
 
 	eigrp_error_init();
 	eigrp_vrf_init();
 
-	/*EIGRPd init*/
+	/* EIGRPd init. */
 	eigrp_intf_init();
 	eigrp_zebra_init();
 	eigrp_debug_init();
 
-	/* Get configuration file. */
-	/* EIGRP VTY inits */
+	/* EIGRP VTY inits. */
 	eigrp_vty_init();
 	keychain_init();
 	eigrp_vty_show_init();
@@ -160,7 +187,7 @@ int main(int argc, char **argv, char **envp)
 	access_list_add_hook(eigrp_distribute_update_all_wrapper);
 	access_list_delete_hook(eigrp_distribute_update_all_wrapper);
 
-	/* Prefix list initialize.*/
+	/* Prefix list initialize. */
 	prefix_list_init();
 	prefix_list_add_hook(eigrp_distribute_update_all);
 	prefix_list_delete_hook(eigrp_distribute_update_all);
@@ -170,13 +197,14 @@ int main(int argc, char **argv, char **envp)
 	 * Routemaps in EIGRP are not yet functional.
 	 */
 	route_map_init();
-	/*eigrp_route_map_init();
-	  route_map_add_hook (eigrp_rmap_update);
-	  route_map_delete_hook (eigrp_rmap_update);*/
-	/*if_rmap_init (EIGRP_NODE); */
+	/* eigrp_route_map_init();
+	 * route_map_add_hook(eigrp_rmap_update);
+	 * route_map_delete_hook(eigrp_rmap_update);
+	 */
+	/* if_rmap_init(EIGRP_NODE); */
 
 	frr_config_fork();
-	frr_run(eigrpd_event);
+	frr_run(master);
 
 	/* Not reached. */
 	return 0;

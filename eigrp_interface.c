@@ -418,7 +418,7 @@ int eigrp_intf_down(eigrp_interface_t *ei)
 
 	/* Shutdown packet reception and sending */
 	if (ei->t_hello)
-		EVENT_OFF(ei->t_hello);
+		event_cancel(&ei->t_hello);
 
 	eigrp_intf_stream_unset(ei);
 
@@ -478,7 +478,7 @@ void eigrp_intf_free(eigrp_instance_t *eigrp, eigrp_interface_t *ei, int source)
 	eigrp_prefix_descriptor_t *pe;
 
 	if (source == INTERFACE_DOWN_BY_VTY) {
-		EVENT_OFF(ei->t_hello);
+		event_cancel(&ei->t_hello);
 		eigrp_hello_send(ei, EIGRP_HELLO_GRACEFUL_SHUTDOWN, NULL);
 	}
 

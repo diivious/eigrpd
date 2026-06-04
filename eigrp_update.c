@@ -784,7 +784,7 @@ static void eigrp_update_send_GR_part(eigrp_neighbor_t *nbr)
 			/* prepare message for FSM */
 			eigrp_fsm_action_message_t fsm_msg;
 
-			eigrp_route_descriptor_t *route =
+			eigrp_route_descriptor_t *fsm_route =
 				eigrp_prefix_descriptor_lookup(prefix->entries,
 							       nbr);
 
@@ -795,7 +795,7 @@ static void eigrp_update_send_GR_part(eigrp_neighbor_t *nbr)
 			fsm_msg.metrics = prefix->reported_metric;
 			/* Set delay to MAX */
 			fsm_msg.metrics.delay = EIGRP_MAX_METRIC;
-			fsm_msg.route = route;
+			fsm_msg.route = fsm_route;
 			fsm_msg.prefix = prefix;
 
 			/* send message to FSM */

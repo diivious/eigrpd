@@ -52,11 +52,11 @@
 #define EIGRP_TLV1_EXTDATA                                                     \
 	uint32_t orig;                                                         \
 	uint32_t as;                                                           \
-	uint32_t tag;                                                          \
+	uint32_t external_tag;                                                 \
 	uint32_t metric;                                                       \
 	uint16_t reserved;                                                     \
 	uint8_t protocol;                                                      \
-	uint8_t flags;
+	uint8_t external_flags;
 #define EIGRP_TLV1_EXTDATA_SIZE 20
 
 /**
