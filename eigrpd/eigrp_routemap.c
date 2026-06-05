@@ -33,7 +33,7 @@ void eigrp_intf_rmap_update(struct if_rmap *if_rmap)
 	struct route_map *rmap;
 	eigrp_instance_t *e;
 
-	ifp = if_lookup_by_name(if_rmap->ifname);
+	ifp = if_lookup_by_name(if_rmap->ifname, VRF_DEFAULT);
 	if (ifp == NULL)
 		return;
 
@@ -79,7 +79,7 @@ void eigrp_routemap_update_redistribute(void)
 	int i;
 	eigrp_instance_t *e;
 
-	e = eigrp_lookup();
+	e = eigrp_lookup(VRF_DEFAULT);
 
 	if (e) {
 		for (i = 0; i < ZEBRA_ROUTE_MAX; i++) {
@@ -108,7 +108,7 @@ static int eigrp_route_match_add(struct vty *vty, struct route_map_index *index,
 {
 	enum rmap_compile_rets ret;
 
-	ret = route_map_add_match(index, command, arg, type);
+	ret = route_map_add_match(index, command, arg, RMAP_EVENT_MATCH_ADDED);
 	switch (ret) {
 	case RMAP_RULE_MISSING:
 		vty_out(vty, "%% Can't find rule.\n");
@@ -133,7 +133,7 @@ static int eigrp_route_match_delete(struct vty *vty,
 {
 	enum rmap_compile_rets ret;
 
-	ret = route_map_delete_match(index, command, arg, type);
+	ret = route_map_delete_match(index, command, arg, RMAP_EVENT_MATCH_DELETED);
 	switch (ret) {
 	case RMAP_RULE_MISSING:
 		vty_out(vty, "%% Can't find rule.\n");
@@ -214,7 +214,7 @@ static int eigrp_route_set_delete(struct vty *vty,
 void eigrp_route_map_update(const char *notused)
 {
 	int i;
-	eigrp_instance_t *eigrp = eigrp_lookup();
+	eigrp_instance_t *eigrp = eigrp_lookup(VRF_DEFAULT);
 
 	if (eigrp) {
 		for (i = 0; i < ZEBRA_ROUTE_MAX; i++) {
@@ -241,7 +241,7 @@ static enum route_map_cmd_result_t route_match_metric(void *rule,
 	//  struct listnode *node, *node2, *nnode, *nnode2;
 	//  eigrp_instance_t *e;
 	//
-	//  e = eigrp_lookup();
+	//  e = eigrp_lookup(VRF_DEFAULT);
 	//
 	//  if (type == RMAP_EIGRP)
 	//    {
@@ -526,12 +526,14 @@ static enum route_map_cmd_result_t route_match_tag(void *rule,
 /* Route map `match tag' match statement. `arg' is TAG value */
 static void *route_match_tag_compile(const char *arg)
 {
+	(void)arg;
 	//  unsigned short *tag;
 	//
 	//  tag = XMALLOC (MTYPE_ROUTE_MAP_COMPILED, sizeof(unsigned short));
 	//  *tag = atoi (arg);
 	//
 	//  return tag;
+	return NULL;
 }
 
 /* Free route map's compiled `match tag' value. */
@@ -578,6 +580,7 @@ static enum route_map_cmd_result_t route_set_metric(void *rule,
 /* set metric compilation. */
 static void *route_set_metric_compile(const char *arg)
 {
+	(void)arg;
 	//  int len;
 	//  const char *pnt;
 	//  int type;
@@ -623,6 +626,7 @@ static void *route_set_metric_compile(const char *arg)
 	//  mod->metric = metric;
 
 	//  return mod;
+	return NULL;
 }
 
 /* Free route map's compiled `set metric' value. */
@@ -667,6 +671,7 @@ static enum route_map_cmd_result_t route_set_ip_nexthop(void *rule,
    to struct in_addr structure. */
 static void *route_set_ip_nexthop_compile(const char *arg)
 {
+	(void)arg;
 	//  int ret;
 	//  struct in_addr *address;
 	//
@@ -682,6 +687,7 @@ static void *route_set_ip_nexthop_compile(const char *arg)
 	//    }
 	//
 	//  return address;
+	return NULL;
 }
 
 /* Free route map's compiled `ip nexthop' value. */
@@ -723,12 +729,14 @@ static enum route_map_cmd_result_t route_set_tag(void *rule,
    to unsigned short. */
 static void *route_set_tag_compile(const char *arg)
 {
+	(void)arg;
 	//  unsigned short *tag;
 	//
 	//  tag = XMALLOC (MTYPE_ROUTE_MAP_COMPILED, sizeof(unsigned short));
 	//  *tag = atoi (arg);
 	//
 	//  return tag;
+	return NULL;
 }
 
 /* Free route map's compiled `ip nexthop' value. */
@@ -744,12 +752,20 @@ static const struct route_map_rule_cmd route_set_tag_cmd = {
 #define MATCH_STR "Match values from routing table\n"
 #define SET_STR "Set values in destination routing protocol\n"
 
+static const char *eigrp_route_map_arg(const struct cmd_token *token)
+{
+	if (!token)
+		return NULL;
+
+	return token->arg ? token->arg : token->text;
+}
+
 DEFUN(match_metric, match_metric_cmd, "match metric (0-4294967295)",
       MATCH_STR
       "Match metric of route\n"
       "Metric value\n")
 {
-	return eigrp_route_match_add(vty, vty->index, "metric", argv[0]);
+	return eigrp_route_match_add(vty, vty->index, "metric", eigrp_route_map_arg(argv[0]));
 }
 
 DEFUN(no_match_metric, no_match_metric_cmd, "no match metric",
@@ -759,7 +775,7 @@ DEFUN(no_match_metric, no_match_metric_cmd, "no match metric",
 		return eigrp_route_match_delete(vty, vty->index, "metric",
 						NULL);
 
-	return eigrp_route_match_delete(vty, vty->index, "metric", argv[0]);
+	return eigrp_route_match_delete(vty, vty->index, "metric", eigrp_route_map_arg(argv[0]));
 }
 
 ALIAS(no_match_metric, no_match_metric_val_cmd,
@@ -773,7 +789,7 @@ DEFUN(match_interface, match_interface_cmd, "match interface WORD",
       "Match first hop interface of route\n"
       "Interface name\n")
 {
-	return eigrp_route_match_add(vty, vty->index, "interface", argv[0]);
+	return eigrp_route_match_add(vty, vty->index, "interface", eigrp_route_map_arg(argv[0]));
 }
 
 DEFUN(no_match_interface, no_match_interface_cmd, "no match interface",
@@ -783,7 +799,7 @@ DEFUN(no_match_interface, no_match_interface_cmd, "no match interface",
 		return eigrp_route_match_delete(vty, vty->index, "interface",
 						NULL);
 
-	return eigrp_route_match_delete(vty, vty->index, "interface", argv[0]);
+	return eigrp_route_match_delete(vty, vty->index, "interface", eigrp_route_map_arg(argv[0]));
 }
 
 ALIAS(no_match_interface, no_match_interface_val_cmd, "no match interface WORD",
@@ -799,7 +815,7 @@ DEFUN(match_ip_next_hop, match_ip_next_hop_cmd,
       "IP access-list number (expanded range)\n"
       "IP Access-list name\n")
 {
-	return eigrp_route_match_add(vty, vty->index, "ip next-hop", argv[0]);
+	return eigrp_route_match_add(vty, vty->index, "ip next-hop", eigrp_route_map_arg(argv[0]));
 }
 
 DEFUN(no_match_ip_next_hop, no_match_ip_next_hop_cmd, "no match ip next-hop",
@@ -810,7 +826,7 @@ DEFUN(no_match_ip_next_hop, no_match_ip_next_hop_cmd, "no match ip next-hop",
 						NULL);
 
 	return eigrp_route_match_delete(vty, vty->index, "ip next-hop",
-					argv[0]);
+					eigrp_route_map_arg(argv[0]));
 }
 
 ALIAS(no_match_ip_next_hop, no_match_ip_next_hop_val_cmd,
@@ -829,7 +845,7 @@ DEFUN(match_ip_next_hop_prefix_list, match_ip_next_hop_prefix_list_cmd,
       "IP prefix-list name\n")
 {
 	return eigrp_route_match_add(vty, vty->index, "ip next-hop prefix-list",
-				     argv[0]);
+				     eigrp_route_map_arg(argv[0]));
 }
 
 DEFUN(no_match_ip_next_hop_prefix_list, no_match_ip_next_hop_prefix_list_cmd,
@@ -843,7 +859,7 @@ DEFUN(no_match_ip_next_hop_prefix_list, no_match_ip_next_hop_prefix_list_cmd,
 			vty, vty->index, "ip next-hop prefix-list", NULL);
 
 	return eigrp_route_match_delete(vty, vty->index,
-					"ip next-hop prefix-list", argv[0]);
+					"ip next-hop prefix-list", eigrp_route_map_arg(argv[0]));
 }
 
 ALIAS(no_match_ip_next_hop_prefix_list,
@@ -862,7 +878,7 @@ DEFUN(match_ip_address, match_ip_address_cmd,
       "IP access-list number (expanded range)\n"
       "IP Access-list name\n")
 {
-	return eigrp_route_match_add(vty, vty->index, "ip address", argv[0]);
+	return eigrp_route_match_add(vty, vty->index, "ip address", eigrp_route_map_arg(argv[0]));
 }
 
 DEFUN(no_match_ip_address, no_match_ip_address_cmd, "no match ip address",
@@ -872,7 +888,7 @@ DEFUN(no_match_ip_address, no_match_ip_address_cmd, "no match ip address",
 		return eigrp_route_match_delete(vty, vty->index, "ip address",
 						NULL);
 
-	return eigrp_route_match_delete(vty, vty->index, "ip address", argv[0]);
+	return eigrp_route_match_delete(vty, vty->index, "ip address", eigrp_route_map_arg(argv[0]));
 }
 
 ALIAS(no_match_ip_address, no_match_ip_address_val_cmd,
@@ -891,7 +907,7 @@ DEFUN(match_ip_address_prefix_list, match_ip_address_prefix_list_cmd,
       "IP prefix-list name\n")
 {
 	return eigrp_route_match_add(vty, vty->index, "ip address prefix-list",
-				     argv[0]);
+				     eigrp_route_map_arg(argv[0]));
 }
 
 DEFUN(no_match_ip_address_prefix_list, no_match_ip_address_prefix_list_cmd,
@@ -905,7 +921,7 @@ DEFUN(no_match_ip_address_prefix_list, no_match_ip_address_prefix_list_cmd,
 						"ip address prefix-list", NULL);
 
 	return eigrp_route_match_delete(vty, vty->index,
-					"ip address prefix-list", argv[0]);
+					"ip address prefix-list", eigrp_route_map_arg(argv[0]));
 }
 
 ALIAS(no_match_ip_address_prefix_list, no_match_ip_address_prefix_list_val_cmd,
@@ -920,7 +936,7 @@ DEFUN(match_tag, match_tag_cmd, "match tag (0-65535)",
       "Match tag of route\n"
       "Metric value\n")
 {
-	return eigrp_route_match_add(vty, vty->index, "tag", argv[0]);
+	return eigrp_route_match_add(vty, vty->index, "tag", eigrp_route_map_arg(argv[0]));
 }
 
 DEFUN(no_match_tag, no_match_tag_cmd, "no match tag",
@@ -929,7 +945,7 @@ DEFUN(no_match_tag, no_match_tag_cmd, "no match tag",
 	if (argc == 0)
 		return eigrp_route_match_delete(vty, vty->index, "tag", NULL);
 
-	return eigrp_route_match_delete(vty, vty->index, "tag", argv[0]);
+	return eigrp_route_match_delete(vty, vty->index, "tag", eigrp_route_map_arg(argv[0]));
 }
 
 ALIAS(no_match_tag, no_match_tag_val_cmd, "no match tag (0-65535)",
@@ -944,7 +960,7 @@ DEFUN(set_metric, set_metric_cmd, "set metric (0-4294967295)",
       "Metric value for destination routing protocol\n"
       "Metric value\n")
 {
-	return eigrp_route_set_add(vty, vty->index, "metric", argv[0]);
+	return eigrp_route_set_add(vty, vty->index, "metric", eigrp_route_map_arg(argv[0]));
 }
 
 ALIAS(set_metric, set_metric_addsub_cmd, "set metric <+/-metric>",
@@ -958,7 +974,7 @@ DEFUN(no_set_metric, no_set_metric_cmd, "no set metric",
 	if (argc == 0)
 		return eigrp_route_set_delete(vty, vty->index, "metric", NULL);
 
-	return eigrp_route_set_delete(vty, vty->index, "metric", argv[0]);
+	return eigrp_route_set_delete(vty, vty->index, "metric", eigrp_route_map_arg(argv[0]));
 }
 
 ALIAS(no_set_metric, no_set_metric_val_cmd,
@@ -976,13 +992,13 @@ DEFUN(set_ip_nexthop, set_ip_nexthop_cmd, "set ip next-hop A.B.C.D",
 	union sockunion su;
 	int ret;
 
-	ret = str2sockunion(argv[0], &su);
+	ret = str2sockunion(eigrp_route_map_arg(argv[0]), &su);
 	if (ret < 0) {
 		vty_out(vty, "%% Malformed next-hop address\n");
 		return CMD_WARNING_CONFIG_FAILED;
 	}
 
-	return eigrp_route_set_add(vty, vty->index, "ip next-hop", argv[0]);
+	return eigrp_route_set_add(vty, vty->index, "ip next-hop", eigrp_route_map_arg(argv[0]));
 }
 
 DEFUN(no_set_ip_nexthop, no_set_ip_nexthop_cmd, "no set ip next-hop",
@@ -992,7 +1008,7 @@ DEFUN(no_set_ip_nexthop, no_set_ip_nexthop_cmd, "no set ip next-hop",
 		return eigrp_route_set_delete(vty, vty->index, "ip next-hop",
 					      NULL);
 
-	return eigrp_route_set_delete(vty, vty->index, "ip next-hop", argv[0]);
+	return eigrp_route_set_delete(vty, vty->index, "ip next-hop", eigrp_route_map_arg(argv[0]));
 }
 
 ALIAS(no_set_ip_nexthop, no_set_ip_nexthop_val_cmd,
@@ -1006,7 +1022,7 @@ DEFUN(set_tag, set_tag_cmd, "set tag (0-65535)",
       "Tag value for routing protocol\n"
       "Tag value\n")
 {
-	return eigrp_route_set_add(vty, vty->index, "tag", argv[0]);
+	return eigrp_route_set_add(vty, vty->index, "tag", eigrp_route_map_arg(argv[0]));
 }
 
 DEFUN(no_set_tag, no_set_tag_cmd, "no set tag",
@@ -1015,7 +1031,7 @@ DEFUN(no_set_tag, no_set_tag_cmd, "no set tag",
 	if (argc == 0)
 		return eigrp_route_set_delete(vty, vty->index, "tag", NULL);
 
-	return eigrp_route_set_delete(vty, vty->index, "tag", argv[0]);
+	return eigrp_route_set_delete(vty, vty->index, "tag", eigrp_route_map_arg(argv[0]));
 }
 
 ALIAS(no_set_tag, no_set_tag_val_cmd, "no set tag (0-65535)",

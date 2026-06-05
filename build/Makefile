@@ -26,17 +26,12 @@ COMMON_CFLAGS := \
 	-I$(FRR_ROOT) \
 	-DEIGRP_STANDALONE_BUILD
 
-# Keep this list intentionally narrow until the FRR stub surface is broad enough
-# to compile every daemon source file outside the FRR tree.
-SMOKE_SOURCES := \
-	$(EIGRPD_ROOT)/eigrp_auth.c \
-	$(EIGRPD_ROOT)/eigrp_cli.c \
-	$(EIGRPD_ROOT)/eigrp_dump.c \
-	$(EIGRPD_ROOT)/eigrp_vty.c
+# Compile every real daemon translation unit. Generated *_clippy.c fragments are
+# included by their owning source file and are not standalone translation units.
+ALL_SOURCES := $(filter-out $(EIGRPD_ROOT)/%_clippy.c,$(sort $(wildcard $(EIGRPD_ROOT)/*.c)))
+SMOKE_SOURCES := $(ALL_SOURCES)
 
-ALL_SOURCES := $(sort $(wildcard $(EIGRPD_ROOT)/*.c))
-
-all: smoke
+all: all-sources
 
 smoke: $(LOGS)
 	@set -e; \
@@ -45,7 +40,6 @@ smoke: $(LOGS)
 	  $(CC) $(COMMON_CFLAGS) $$src >$(LOGS)/$$(basename $$src).log 2>&1 || { cat $(LOGS)/$$(basename $$src).log; exit 1; }; \
 	done
 
-# Optional diagnostic target. It is expected to grow as build/include/ stubs grow.
 all-sources: $(LOGS)
 	@set -e; \
 	for src in $(ALL_SOURCES); do \
