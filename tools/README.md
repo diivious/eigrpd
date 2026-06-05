@@ -8,7 +8,7 @@ checkout and project-only material stays in the EIGRP repository.
 ```text
 backup.sh     Create a clean zip of the project.
 build.sh      Run standalone smoke, stage into FRR, configure, build, or check.
-install.sh    Copy eigrpd/ to frr/eigrpd/ and test/frr/ to frr/tests/eigrpd/.
+install.sh    Replace frr/eigrpd/ with eigrpd/ and copy test/frr/ to frr/tests/eigrpd/.
 setup.sh      Debian development-machine setup helper.
 unittest.sh   Run portable tests and FRR-native tests when present.
 ```
@@ -16,7 +16,7 @@ unittest.sh   Run portable tests and FRR-native tests when present.
 ## Common commands
 
 ```sh
-# Stage source into FRR
+# Stage source into FRR. This removes the existing ~/devel/frr/eigrpd first.
 tools/install.sh -frr-root ~/devel/frr
 
 # Run standalone compile smoke

@@ -28,6 +28,10 @@ options:
   -dry-run             Print the actions without copying files.
   -h, -help, --help    Show this help.
 
+behavior:
+  Installing eigrpd first removes the existing frr/eigrpd directory, then
+  copies this project's eigrpd/ tree into place.
+
 installs:
   eigrpd/      -> frr/eigrpd/
   test/frr/    -> frr/tests/eigrpd/
@@ -102,6 +106,31 @@ copy_tree() {
 		"$src"/ "$dst"/
 }
 
+remove_destination_tree() {
+	local dst="$1"
+
+	[[ -n "$dst" ]] || fail "refusing to remove empty destination path"
+	[[ -n "$frr_root" ]] || fail "FRR root is not set"
+
+	case "$dst" in
+		"$frr_root"|"$frr_root/")
+			fail "refusing to remove FRR root: $dst"
+			;;
+		"$frr_root"/*)
+			;;
+		*)
+			fail "refusing to remove path outside FRR root: $dst"
+			;;
+	esac
+
+	if [[ "$dry_run" -eq 1 ]]; then
+		echo "would remove: $dst"
+		return 0
+	fi
+
+	rm -rf -- "$dst"
+}
+
 install_tests_subdir_include() {
 	local tests_subdir="$frr_root/tests/subdir.am"
 	local include_line='include tests/eigrpd/subdir.am'
@@ -164,15 +193,24 @@ fi
 [[ -d "$eigrp_root/eigrpd" ]] || fail "missing project eigrpd directory: $eigrp_root/eigrpd"
 
 if [[ "$install_eigrpd" -eq 1 ]]; then
+	remove_destination_tree "$frr_root/eigrpd"
 	copy_tree "$eigrp_root/eigrpd" "$frr_root/eigrpd"
-	echo "installed: eigrpd/ -> $frr_root/eigrpd/"
+	if [[ "$dry_run" -eq 1 ]]; then
+		echo "would install: eigrpd/ -> $frr_root/eigrpd/"
+	else
+		echo "installed: eigrpd/ -> $frr_root/eigrpd/"
+	fi
 fi
 
 if [[ "$install_tests" -eq 1 ]]; then
 	if [[ -d "$eigrp_root/test/frr" ]]; then
 		copy_tree "$eigrp_root/test/frr" "$frr_root/tests/eigrpd"
 		install_tests_subdir_include
-		echo "installed: test/frr/ -> $frr_root/tests/eigrpd/"
+		if [[ "$dry_run" -eq 1 ]]; then
+			echo "would install: test/frr/ -> $frr_root/tests/eigrpd/"
+		else
+			echo "installed: test/frr/ -> $frr_root/tests/eigrpd/"
+		fi
 	else
 		echo "warning: no FRR test payload exists at $eigrp_root/test/frr" >&2
 	fi
