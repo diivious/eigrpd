@@ -75,6 +75,8 @@ extern void eigrp_finish_final(eigrp_instance_t *);
 
 extern eigrp_instance_t *eigrp_get(uint16_t as, vrf_id_t vrf_id);
 extern eigrp_instance_t *eigrp_lookup(vrf_id_t vrf_id);
+extern eigrp_instance_t *eigrp_lookup_by_as_vrf(uint16_t as, vrf_id_t vrf_id);
+extern void eigrp_name_set(eigrp_instance_t *, const char *);
 
 extern void eigrp_router_id_update(eigrp_instance_t *);
 

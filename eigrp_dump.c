@@ -23,14 +23,14 @@
 /* Enable debug option variables -- valid only session. */
 unsigned long term_debug_eigrp = 0;
 unsigned long term_debug_eigrp_nei = 0;
-unsigned long term_debug_eigrp_packet[11] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+unsigned long term_debug_eigrp_packet[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 unsigned long term_debug_eigrp_zebra = 6;
 unsigned long term_debug_eigrp_transmit = 0;
 
 /* Configuration debug option variables. */
 unsigned long conf_debug_eigrp = 0;
 unsigned long conf_debug_eigrp_nei = 0;
-unsigned long conf_debug_eigrp_packet[11] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+unsigned long conf_debug_eigrp_packet[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 unsigned long conf_debug_eigrp_zebra = 0;
 unsigned long conf_debug_eigrp_transmit = 0;
 
@@ -47,10 +47,30 @@ static int config_write_debug(struct vty *vty)
 		"",	   " send",	   " recv",	   "",
 		" detail", " send detail", " recv detail", " detail"};
 
-	/* debug eigrp event. */
+	/* debug eigrp event/timers/neighbor/transmit. */
+	if (conf_debug_eigrp & EIGRP_DEBUG_EVENT) {
+		vty_out(vty, "debug eigrp event%s\n",
+			(conf_debug_eigrp & EIGRP_DEBUG_DETAIL) ? " detail" : "");
+		write = 1;
+	}
+	if (conf_debug_eigrp & EIGRP_DEBUG_TIMERS) {
+		vty_out(vty, "debug eigrp timers\n");
+		write = 1;
+	}
+	if (conf_debug_eigrp_nei & EIGRP_DEBUG_NEI) {
+		vty_out(vty, "debug eigrp neighbor\n");
+		write = 1;
+	}
+	if (conf_debug_eigrp_transmit & EIGRP_DEBUG_SEND_RECV) {
+		vty_out(vty, "debug eigrp transmit all%s\n",
+			(conf_debug_eigrp_transmit & EIGRP_DEBUG_PACKET_DETAIL)
+				? " detail"
+				: "");
+		write = 1;
+	}
 
 	/* debug eigrp packet */
-	for (i = 0; i < 10; i++) {
+	for (i = 0; i < 12; i++) {
 		if (conf_debug_eigrp_packet[i] == 0
 		    && term_debug_eigrp_packet[i] == 0)
 			continue;
@@ -256,7 +276,7 @@ DEFUN_NOSH(show_debugging_eigrp, show_debugging_eigrp_cmd,
 		vty_out(vty, "  EIGRP event debugging is on\n");
 
 	/* Show debug status for EIGRP Packets. */
-	for (i = 0; i < 11; i++) {
+	for (i = 0; i < 12; i++) {
 		if (i == 8)
 			continue;
 
@@ -296,6 +316,103 @@ DEFUN_NOSH(show_debugging_eigrp, show_debugging_eigrp_cmd,
   [send|recv [detail]]
 */
 
+
+DEFUN(debug_eigrp_event, debug_eigrp_event_cmd,
+      "debug eigrp event [detail]",
+      DEBUG_STR EIGRP_STR
+      "EIGRP event debugging\n"
+      "Detailed information\n")
+{
+	int flag = EIGRP_DEBUG_EVENT;
+	int idx = 0;
+
+	if (argv_find(argv, argc, "detail", &idx))
+		flag |= EIGRP_DEBUG_DETAIL;
+
+	if (vty->node == CONFIG_NODE)
+		DEBUG_ON(eigrp, EVENT);
+	else
+		TERM_DEBUG_ON(eigrp, EVENT);
+
+	if (flag & EIGRP_DEBUG_DETAIL) {
+		if (vty->node == CONFIG_NODE)
+			CONF_DEBUG_ON(eigrp, DETAIL);
+		else
+			TERM_DEBUG_ON(eigrp, DETAIL);
+	}
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(no_debug_eigrp_event, no_debug_eigrp_event_cmd,
+      "no debug eigrp event [detail]",
+      NO_STR UNDEBUG_STR EIGRP_STR
+      "EIGRP event debugging\n"
+      "Detailed information\n")
+{
+	if (vty->node == CONFIG_NODE) {
+		CONF_DEBUG_OFF(eigrp, EVENT);
+		CONF_DEBUG_OFF(eigrp, DETAIL);
+	} else {
+		TERM_DEBUG_OFF(eigrp, EVENT);
+		TERM_DEBUG_OFF(eigrp, DETAIL);
+	}
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(debug_eigrp_timers, debug_eigrp_timers_cmd,
+      "debug eigrp timers",
+      DEBUG_STR EIGRP_STR
+      "EIGRP timer debugging\n")
+{
+	if (vty->node == CONFIG_NODE)
+		CONF_DEBUG_ON(eigrp, TIMERS);
+	else
+		TERM_DEBUG_ON(eigrp, TIMERS);
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(no_debug_eigrp_timers, no_debug_eigrp_timers_cmd,
+      "no debug eigrp timers",
+      NO_STR UNDEBUG_STR EIGRP_STR
+      "EIGRP timer debugging\n")
+{
+	if (vty->node == CONFIG_NODE)
+		CONF_DEBUG_OFF(eigrp, TIMERS);
+	else
+		TERM_DEBUG_OFF(eigrp, TIMERS);
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(debug_eigrp_neighbor, debug_eigrp_neighbor_cmd,
+      "debug eigrp neighbor",
+      DEBUG_STR EIGRP_STR
+      "EIGRP neighbor debugging\n")
+{
+	if (vty->node == CONFIG_NODE)
+		CONF_DEBUG_NEI_ON(0, EIGRP_DEBUG_NEI);
+	else
+		TERM_DEBUG_NEI_ON(0, EIGRP_DEBUG_NEI);
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(no_debug_eigrp_neighbor, no_debug_eigrp_neighbor_cmd,
+      "no debug eigrp neighbor",
+      NO_STR UNDEBUG_STR EIGRP_STR
+      "EIGRP neighbor debugging\n")
+{
+	if (vty->node == CONFIG_NODE)
+		CONF_DEBUG_NEI_OFF(0, EIGRP_DEBUG_NEI);
+	else
+		TERM_DEBUG_NEI_OFF(0, EIGRP_DEBUG_NEI);
+
+	return CMD_SUCCESS;
+}
+
 DEFUN(debug_eigrp_transmit, debug_eigrp_transmit_cmd,
       "debug eigrp transmit <send|recv|all> [detail]",
       DEBUG_STR EIGRP_STR
@@ -318,7 +435,7 @@ DEFUN(debug_eigrp_transmit, debug_eigrp_transmit_cmd,
 
 	/* detail option */
 	if (argv_find(argv, argc, "detail", &idx))
-		flag = EIGRP_DEBUG_PACKET_DETAIL;
+		flag |= EIGRP_DEBUG_PACKET_DETAIL;
 
 	if (vty->node == CONFIG_NODE)
 		DEBUG_TRANSMIT_ON(0, flag);
@@ -350,7 +467,7 @@ DEFUN(no_debug_eigrp_transmit, no_debug_eigrp_transmit_cmd,
 
 	/* detail option */
 	if (argv_find(argv, argc, "detail", &idx))
-		flag = EIGRP_DEBUG_PACKET_DETAIL;
+		flag |= EIGRP_DEBUG_PACKET_DETAIL;
 
 	if (vty->node == CONFIG_NODE)
 		DEBUG_TRANSMIT_OFF(0, flag);
@@ -360,8 +477,8 @@ DEFUN(no_debug_eigrp_transmit, no_debug_eigrp_transmit_cmd,
 	return CMD_SUCCESS;
 }
 
-DEFUN(debug_eigrp_packets, debug_eigrp_packets_all_cmd,
-      "debug eigrp packets <siaquery|siareply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all> [send|receive] [detail]",
+DEFUN(debug_eigrp_packet, debug_eigrp_packet_cmd,
+      "debug eigrp packet <siaquery|siareply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all> [send|receive] [detail]",
       DEBUG_STR EIGRP_STR
       "EIGRP packets\n"
       "EIGRP SIA-Query packets\n"
@@ -407,6 +524,8 @@ DEFUN(debug_eigrp_packets, debug_eigrp_packets_all_cmd,
 		type = EIGRP_DEBUG_SIAQUERY;
 	if (argv_find(argv, argc, "siareply", &idx))
 		type = EIGRP_DEBUG_SIAREPLY;
+	if (argv_find(argv, argc, "terse", &idx))
+		type = EIGRP_DEBUG_PACKETS_ALL & ~EIGRP_DEBUG_HELLO;
 	if (argv_find(argv, argc, "all", &idx))
 		type = EIGRP_DEBUG_PACKETS_ALL;
 
@@ -415,16 +534,16 @@ DEFUN(debug_eigrp_packets, debug_eigrp_packets_all_cmd,
 	flag = EIGRP_DEBUG_SEND_RECV;
 
 	/* send or recv. */
-	if (argv_find(argv, argc, "s", &idx))
+	if (argv_find(argv, argc, "send", &idx))
 		flag = EIGRP_DEBUG_SEND;
-	else if (argv_find(argv, argc, "r", &idx))
+	else if (argv_find(argv, argc, "receive", &idx))
 		flag = EIGRP_DEBUG_RECV;
 
 	/* detail. */
 	if (argv_find(argv, argc, "detail", &idx))
 		flag |= EIGRP_DEBUG_PACKET_DETAIL;
 
-	for (i = 0; i < 11; i++)
+	for (i = 0; i < 12; i++)
 		if (type & (0x01 << i)) {
 			if (vty->node == CONFIG_NODE)
 				DEBUG_PACKET_ON(i, flag);
@@ -435,8 +554,8 @@ DEFUN(debug_eigrp_packets, debug_eigrp_packets_all_cmd,
 	return CMD_SUCCESS;
 }
 
-DEFUN(no_debug_eigrp_packets, no_debug_eigrp_packets_all_cmd,
-      "no debug eigrp packets <siaquery|siareply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all> [send|receive] [detail]",
+DEFUN(no_debug_eigrp_packet, no_debug_eigrp_packet_cmd,
+      "no debug eigrp packet <siaquery|siareply|ack|hello|probe|query|reply|request|retry|stub|terse|update|all> [send|receive] [detail]",
       NO_STR UNDEBUG_STR EIGRP_STR
       "EIGRP packets\n"
       "EIGRP SIA-Query packets\n"
@@ -482,6 +601,10 @@ DEFUN(no_debug_eigrp_packets, no_debug_eigrp_packets_all_cmd,
 		type = EIGRP_DEBUG_SIAQUERY;
 	if (argv_find(argv, argc, "siareply", &idx))
 		type = EIGRP_DEBUG_SIAREPLY;
+	if (argv_find(argv, argc, "terse", &idx))
+		type = EIGRP_DEBUG_PACKETS_ALL & ~EIGRP_DEBUG_HELLO;
+	if (argv_find(argv, argc, "all", &idx))
+		type = EIGRP_DEBUG_PACKETS_ALL;
 
 	/* Default, both send and recv. */
 	flag = EIGRP_DEBUG_SEND_RECV;
@@ -489,14 +612,14 @@ DEFUN(no_debug_eigrp_packets, no_debug_eigrp_packets_all_cmd,
 	/* send or recv. */
 	if (argv_find(argv, argc, "send", &idx))
 		flag = EIGRP_DEBUG_SEND;
-	else if (argv_find(argv, argc, "reply", &idx))
+	else if (argv_find(argv, argc, "receive", &idx))
 		flag = EIGRP_DEBUG_RECV;
 
 	/* detail. */
 	if (argv_find(argv, argc, "detail", &idx))
 		flag |= EIGRP_DEBUG_PACKET_DETAIL;
 
-	for (i = 0; i < 11; i++)
+	for (i = 0; i < 12; i++)
 		if (type & (0x01 << i)) {
 			if (vty->node == CONFIG_NODE)
 				DEBUG_PACKET_OFF(i, flag);
@@ -522,14 +645,26 @@ void eigrp_debug_init(void)
 	install_node(&eigrp_debug_node);
 
 	install_element(ENABLE_NODE, &show_debugging_eigrp_cmd);
-	install_element(ENABLE_NODE, &debug_eigrp_packets_all_cmd);
-	install_element(ENABLE_NODE, &no_debug_eigrp_packets_all_cmd);
+	install_element(ENABLE_NODE, &debug_eigrp_event_cmd);
+	install_element(ENABLE_NODE, &no_debug_eigrp_event_cmd);
+	install_element(ENABLE_NODE, &debug_eigrp_timers_cmd);
+	install_element(ENABLE_NODE, &no_debug_eigrp_timers_cmd);
+	install_element(ENABLE_NODE, &debug_eigrp_neighbor_cmd);
+	install_element(ENABLE_NODE, &no_debug_eigrp_neighbor_cmd);
+	install_element(ENABLE_NODE, &debug_eigrp_packet_cmd);
+	install_element(ENABLE_NODE, &no_debug_eigrp_packet_cmd);
 	install_element(ENABLE_NODE, &debug_eigrp_transmit_cmd);
 	install_element(ENABLE_NODE, &no_debug_eigrp_transmit_cmd);
 
 	install_element(CONFIG_NODE, &show_debugging_eigrp_cmd);
-	install_element(CONFIG_NODE, &debug_eigrp_packets_all_cmd);
-	install_element(CONFIG_NODE, &no_debug_eigrp_packets_all_cmd);
+	install_element(CONFIG_NODE, &debug_eigrp_event_cmd);
+	install_element(CONFIG_NODE, &no_debug_eigrp_event_cmd);
+	install_element(CONFIG_NODE, &debug_eigrp_timers_cmd);
+	install_element(CONFIG_NODE, &no_debug_eigrp_timers_cmd);
+	install_element(CONFIG_NODE, &debug_eigrp_neighbor_cmd);
+	install_element(CONFIG_NODE, &no_debug_eigrp_neighbor_cmd);
+	install_element(CONFIG_NODE, &debug_eigrp_packet_cmd);
+	install_element(CONFIG_NODE, &no_debug_eigrp_packet_cmd);
 	install_element(CONFIG_NODE, &debug_eigrp_transmit_cmd);
 	install_element(CONFIG_NODE, &no_debug_eigrp_transmit_cmd);
 }

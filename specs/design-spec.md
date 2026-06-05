@@ -19,6 +19,7 @@ Future focused specifications may be added as the design gets deeper, including:
 - `testing-spec.md`
 - `tlv-spec.md`
 - `packetizing-spec.md`
+- `cli-spec.md`
 - `rfc-current.md`
 
 Those documents must not conflict with this file unless they explicitly update it.
@@ -487,6 +488,7 @@ When implementation work clarifies, updates, or intentionally differs from RFC 7
 design-spec.md       - development/code structure rule
 tlv-spec.md          - TLV-specific design
 packetizing-spec.md  - packetizing/queueing design
+cli-spec.md          - CLI/VTY/debug command surface, naming, modes, and stub rules
 rfc-current.md       - current protocol clarification/update against RFC 7868 sections 1-8
 ```
 
@@ -624,3 +626,6 @@ Do not provide loose changed files as the primary delivery format unless explici
 When only one document is updated, that document still must be placed in a zip file.
 
 Project deliveries should preserve the repository-relative layout, including `specs/`, `testcases/`, and `tools/` paths.
+
+CLI/VTY/debug command-surface rules are owned by `cli-spec.md`.
+

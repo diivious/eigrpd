@@ -199,9 +199,20 @@ eigrp_instance_t *eigrp_lookup(vrf_id_t vrf_id)
 	struct listnode *node, *nnode;
 
 	for (ALL_LIST_ELEMENTS(eigrp_om->eigrp, node, nnode, eigrp)) {
-		if (eigrp->vrf_id == vrf_id) {
+		if (eigrp->vrf_id == vrf_id)
 			return eigrp;
-		}
+	}
+	return NULL;
+}
+
+eigrp_instance_t *eigrp_lookup_by_as_vrf(uint16_t as, vrf_id_t vrf_id)
+{
+	eigrp_instance_t *eigrp;
+	struct listnode *node, *nnode;
+
+	for (ALL_LIST_ELEMENTS(eigrp_om->eigrp, node, nnode, eigrp)) {
+		if (eigrp->AS == as && eigrp->vrf_id == vrf_id)
+			return eigrp;
 	}
 	return NULL;
 }
@@ -210,13 +221,27 @@ eigrp_instance_t *eigrp_get(uint16_t as, vrf_id_t vrf_id)
 {
 	eigrp_instance_t *eigrp;
 
-	eigrp = eigrp_lookup(vrf_id);
+	eigrp = eigrp_lookup_by_as_vrf(as, vrf_id);
 	if (eigrp == NULL) {
 		eigrp = eigrp_new(as, vrf_id);
 		listnode_add(eigrp_om->eigrp, eigrp);
 	}
 
 	return eigrp;
+}
+
+void eigrp_name_set(eigrp_instance_t *eigrp, const char *name)
+{
+	if (!eigrp || !name || !name[0])
+		return;
+
+	if (eigrp->name && strcmp(eigrp->name, name) == 0)
+		return;
+
+	if (eigrp->name)
+		XFREE(MTYPE_EIGRP_TOP, eigrp->name);
+
+	eigrp->name = XSTRDUP(MTYPE_EIGRP_TOP, name);
 }
 
 /* Shut down the entire process */
@@ -278,6 +303,9 @@ void eigrp_finish_final(eigrp_instance_t *eigrp)
 
 	list_delete(&eigrp->topology_changes);
 	listnode_delete(eigrp_om->eigrp, eigrp);
+
+	if (eigrp->name)
+		XFREE(MTYPE_EIGRP_TOP, eigrp->name);
 
 	stream_free(eigrp->ibuf);
 	distribute_list_delete(&eigrp->distribute_ctx);
