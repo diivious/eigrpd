@@ -403,15 +403,15 @@ int eigrp_fsm_event_nq_fcn(eigrp_fsm_action_message_t *msg)
 {
 	eigrp_instance_t *eigrp = msg->eigrp;
 	eigrp_prefix_descriptor_t *prefix = msg->prefix;
-	struct list *successors = eigrp_topology_get_successor(prefix);
-	eigrp_route_descriptor_t *route;
 
-	assert(successors); // If this is NULL we have shit the bed, fun huh?
-
-	route = listnode_head(successors);
+	/*
+	 * RFC 7868 active-state invariant:
+	 * entering ACTIVE must not rewrite the destination successor, FD, RD,
+	 * current distance, or advertised metric. The triggering route metric
+	 * update was already recorded as route/CD state by
+	 * eigrp_topology_update_distance().
+	 */
 	prefix->state = EIGRP_FSM_STATE_ACTIVE_1;
-	prefix->rdistance = prefix->distance = prefix->fdistance = route->distance;
-	prefix->reported_metric = route->total_metric;
 
 	if (eigrp_nbr_count_get(eigrp)) {
 		prefix->req_action |= EIGRP_FSM_NEED_QUERY;
@@ -420,8 +420,6 @@ int eigrp_fsm_event_nq_fcn(eigrp_fsm_action_message_t *msg)
 		eigrp_fsm_event_lr(msg); // in the case that there are no more
 					 // neighbors left
 	}
-
-	list_delete(&successors);
 
 	return 1;
 }
@@ -430,16 +428,13 @@ int eigrp_fsm_event_q_fcn(eigrp_fsm_action_message_t *msg)
 {
 	eigrp_instance_t *eigrp = msg->eigrp;
 	eigrp_prefix_descriptor_t *prefix = msg->prefix;
-	struct list *successors = eigrp_topology_get_successor(prefix);
-	eigrp_route_descriptor_t *route;
 
-	assert(successors); // If this is NULL somebody poked us in the eye.
-
-	route = listnode_head(successors);
+	/*
+	 * RFC 7868 active-state invariant: a QUERY from the current successor
+	 * can move the destination into ACTIVE, but the successor, FD, RD,
+	 * current distance, and advertised metric remain frozen until PASSIVE.
+	 */
 	prefix->state = EIGRP_FSM_STATE_ACTIVE_3;
-	prefix->rdistance = prefix->distance = prefix->fdistance =
-		route->distance;
-	prefix->reported_metric = route->total_metric;
 	if (eigrp_nbr_count_get(eigrp)) {
 		prefix->req_action |= EIGRP_FSM_NEED_QUERY;
 		listnode_add(eigrp->topology_changes, prefix);
@@ -447,8 +442,6 @@ int eigrp_fsm_event_q_fcn(eigrp_fsm_action_message_t *msg)
 		eigrp_fsm_event_lr(msg); // in the case that there are no more
 					 // neighbors left
 	}
-
-	list_delete(&successors);
 
 	return 1;
 }
@@ -514,22 +507,18 @@ int eigrp_fsm_event_lr(eigrp_fsm_action_message_t *msg)
 
 int eigrp_fsm_event_dinc(eigrp_fsm_action_message_t *msg)
 {
-	struct list *successors = eigrp_topology_get_successor(msg->prefix);
-	eigrp_route_descriptor_t *route;
-
-	assert(successors); // Trump and his big hands
-
-	route = listnode_head(successors);
+	/*
+	 * A successor distance increase while ACTIVE only changes the DUAL
+	 * origin flag. Destination-level distance/FD/RD data stays frozen
+	 * until the route returns to PASSIVE.
+	 */
 	msg->prefix->state = msg->prefix->state == EIGRP_FSM_STATE_ACTIVE_1
 				     ? EIGRP_FSM_STATE_ACTIVE_0
 				     : EIGRP_FSM_STATE_ACTIVE_2;
-	msg->prefix->distance = route->distance;
 	if (!msg->prefix->rij->count)
 		(*(NSM[msg->prefix->state][eigrp_get_fsm_event(msg)].func))(
 			msg);
 
-
-	list_delete(&successors);
 	return 1;
 }
 
@@ -569,18 +558,15 @@ int eigrp_fsm_event_lr_fcn(eigrp_fsm_action_message_t *msg)
 {
 	eigrp_instance_t *eigrp = msg->eigrp;
 	eigrp_prefix_descriptor_t *prefix = msg->prefix;
-	eigrp_route_descriptor_t *best_successor;
-	struct list *successors = eigrp_topology_get_successor(prefix);
 
-	assert(successors); // Routing without a stack
-
+	/*
+	 * Last reply but FC is still not satisfied: remain ACTIVE and start
+	 * another diffusing computation. Do not adopt a new successor or
+	 * rewrite destination FD/RD/distance while ACTIVE.
+	 */
 	prefix->state = (prefix->state == EIGRP_FSM_STATE_ACTIVE_0)
 				? EIGRP_FSM_STATE_ACTIVE_1
 				: EIGRP_FSM_STATE_ACTIVE_3;
-
-	best_successor = listnode_head(successors);
-	prefix->rdistance = prefix->distance = best_successor->distance;
-	prefix->reported_metric = best_successor->total_metric;
 
 	if (eigrp_nbr_count_get(eigrp)) {
 		prefix->req_action |= EIGRP_FSM_NEED_QUERY;
@@ -590,22 +576,17 @@ int eigrp_fsm_event_lr_fcn(eigrp_fsm_action_message_t *msg)
 					 // neighbors left
 	}
 
-	list_delete(&successors);
-
 	return 1;
 }
 
 int eigrp_fsm_event_qact(eigrp_fsm_action_message_t *msg)
 {
-	struct list *successors = eigrp_topology_get_successor(msg->prefix);
-	eigrp_route_descriptor_t *route;
-
-	assert(successors); // Cats and no Dogs
-
-	route = listnode_head(successors);
+	/*
+	 * QUERY from the current successor while already ACTIVE only changes
+	 * the DUAL origin flag. Destination-level distance/FD/RD data stays
+	 * frozen until PASSIVE.
+	 */
 	msg->prefix->state = EIGRP_FSM_STATE_ACTIVE_2;
-	msg->prefix->distance = route->distance;
 
-	list_delete(&successors);
 	return 1;
 }

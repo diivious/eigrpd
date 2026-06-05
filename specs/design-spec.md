@@ -414,6 +414,32 @@ Reason:
 - no alias wrappers should be left behind
 ```
 
+### 11.2 DUAL FSM Active-State Invariant
+
+RFC 7868 defines the Active state as a frozen destination-level computation window.
+
+When a destination enters or remains in Active state, FSM handlers must not update successor selection, Feasible Distance, Reported Distance, current destination distance, or the destination-level reported metric.
+
+Allowed while Active:
+
+- record received neighbor metric information on the route descriptor
+- update per-neighbor reported distance and computed distance
+- update reply-status/origin-state flags
+- enqueue QUERY, REPLY, SIA-QUERY, or SIA-REPLY work
+
+Forbidden while Active:
+
+```text
+prefix->fdistance = ...
+prefix->rdistance = ...
+prefix->distance = ...
+prefix->reported_metric = ...
+eigrp_topology_update_node_flags(...) for the Active destination
+eigrp_update_routing_table(...) for the Active destination
+```
+
+Those destination-level fields may be updated only as part of the transition back to Passive. This preserves FD as the loop-free anchor used by the Feasibility Condition.
+
 ## 12. Packetization Design Rules
 
 Packet encode/decode must be:

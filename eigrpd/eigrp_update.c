@@ -300,6 +300,12 @@ void eigrp_update_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 						     : EIGRP_TOPOLOGY_TYPE_REMOTE;
 
 				route->adv_router = nbr;
+				/*
+				 * Seed the neighbor route descriptor from the metric decoded
+				 * from the UPDATE TLV. The prefix object was just created
+				 * and its reported metric is local topology state, not the
+				 * neighbor's advertised RD.
+				 */
 				route->reported_metric = route->metric;
 				route->reported_distance = eigrp_calculate_metrics(eigrp, route->reported_metric);
 
