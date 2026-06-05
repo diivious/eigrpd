@@ -8,8 +8,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[4]
-CLI = ROOT / "eigrp_cli.c"
-SPEC = ROOT / "specs" / "design-spec.md"
+CLI = ROOT / "eigrpd" / "eigrp_cli.c"
+SPEC = ROOT / "specs" / "cli-spec.md"
 
 
 def read(path: Path) -> str:
@@ -82,7 +82,7 @@ def test_not_configured_stubs_are_explicit():
     assert "summary-metric" in cli
 
 
-def test_design_spec_documents_named_mode_cli_direction():
+def test_cli_spec_documents_named_mode_cli_direction():
     spec = read(SPEC)
 
     assert "Named-Mode CLI Direction" in spec

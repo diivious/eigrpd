@@ -1,132 +1,141 @@
 EIGRP
-=========
+=====
 
-EIGRP is free software that implements RFC 7868 (https://www.rfc-editor.org/info/rfc7868).
-This is a clone of, and rewrite of, the code found int the FRR (https://github.com/FRRouting/frr).
-While EIGRP is designed be protocol agnostic, it currently only handles IPv4.
+EIGRP is a portable EIGRP implementation project based on RFC 7868.
 
+The current production host is FRR. The repository is organized so the daemon
+source can be staged into an FRR checkout while project specs, tools, standalone
+compile smoke tests, and portable tests stay outside the FRR daemon directory.
 
-Roadmap
-------------------
+Project layout
+--------------
 
-First and foremost, I agree with evolution (small commits) vs revolution (large commits).  That said, significant changes are needed to refactor the code to address issues, scale, and missing capabilities within the code. This should not be considered as disrespecting the original authors or editors, in fact i have complete respect and admiration for them.
-
-To that point, and due due to the initial effort needed for the wide-metric work, I have cloned EIGRP from FRR and created an independent repo that i can perform small commits to.  Each of the commits i perform have minimal to now testing and a high chance of destabilizing EIGRP code base. My intent is to wrap up the refactor work along with the wide metrics and bases to support IPv6.  Then deliver a finished, commercial ready, version of the EIGRP code. To ease the adoption, I have gone to lengths to ensure what's being done is a drop in overlay to FRR.
-
-I completely understand the repo-owners aversion to large code drops, but I just don't see a clean way to deliver stable code which is not also a large change set.
-
-As for code refactoring.  My goals are as follows.
-   1) make it readable!!!! use function scoping, and CRUD model
-   2) Add wide metrics in - this involves major edits to metrics, neighbors, and interface code
-   3) make it modular (use typedef to hide data, create functions that align with data objects)
-   4) Add redistribution
-   5) Add Query Filtering (support stub like capability without doing 'STUBS')
-   6) Add IPv6 support
-   7) Anything else that sounds like fun
-
-
-Installation & Use
-------------------
-
-This is not a standalone repo.  To contribute to the development of this code, setup you development environment per the FRR documentation:
-
-```
-	http://docs.frrouting.org/projects/dev-guide/en/latest/building.html
+```text
+eigrp/
+  specs/          Project design and protocol implementation notes
+  tools/          Local build, install, setup, backup, and test helpers
+  eigrpd/         Daemon source copied to frr/eigrpd/
+  build/          Standalone compile-smoke harness
+  test/
+    common/       Shared fixtures and packet samples
+    portable/     Python/source-level tests that do not need FRR
+    frr/          FRR-native test payload copied to frr/tests/eigrpd/
+    bsd/          Future BSD-hosted tests
 ```
 
-Next, download EIGRP source
+FRR staging
+-----------
 
-```
-	git clone https://github.com/diivious/eigrpd.git eigrpd
-```
+Clone FRR and this project as siblings:
 
-Once setup, checkout the FRR source
-
-```
-	git clone https://github.com/frrouting/frr.git FRR
+```sh
+git clone https://github.com/frrouting/frr.git frr
+git clone git@github.com:diivious/eigrp.git eigrp
 ```
 
-Delete the existing eigrpd directory
+Stage EIGRP into FRR:
 
-```
-	cd frr
-	rm -rf eigrpd
-```
-
-Copy this version of EIGRP top FRR
-
-```
-	cp -R ../eigrpd .
+```sh
+cd eigrp
+tools/install.sh -frr-root ../frr
 ```
 
-Lastly, build FRR as normal
+This copies:
 
+```text
+eigrpd/    -> ../frr/eigrpd/
+test/frr/  -> ../frr/tests/eigrpd/
 ```
-	./bootstrap.sh
-	./configure \
-	    --enable-exampledir=/usr/share/doc/frr/examples/ \
-	    --localstatedir=/var/opt/frr \
-	    --sbindir=/usr/lib/frr \
-	    --sysconfdir=/etc/frr \
-	    --enable-multipath=64 \
-	    --enable-user=frr \
-	    --enable-group=frr \
-	    --enable-vty-group=frrvty \
-	    --enable-configfile-mask=0640 \
-	    --enable-logfile-mask=0640 \
-	    --enable-fpm \
-	    --with-pkg-git-version \
-	    --with-pkg-extra-version=-dVs-EIGRP-v0
-	make
+
+Build FRR normally, or use the helper:
+
+```sh
+tools/build.sh config -frr-root ../frr
+tools/build.sh build  -frr-root ../frr
+```
+
+Standalone compile smoke
+------------------------
+
+The standalone smoke harness catches syntax/prototype drift in selected daemon
+files without requiring a full FRR build:
+
+```sh
+make -C build
+```
+
+or:
+
+```sh
+make smoke
+```
+
+This is not a replacement for the FRR build/link gate.
+
+Tests
+-----
+
+Run portable tests:
+
+```sh
+tools/unittest.sh -portable
+```
+
+Run packet-only portable tests:
+
+```sh
+tools/unittest.sh -packet
+```
+
+Install FRR-native tests into an FRR checkout:
+
+```sh
+tools/unittest.sh -install -frr-root ../frr
+```
+
+Run FRR-native tests when `test/frr/` has a real test payload:
+
+```sh
+tools/unittest.sh -frr -frr-root ../frr
 ```
 
 Debugging
 ---------
-You need 2 shells - one for frr vtysh commands and one user shell to
-debug eigrp:
 
-In your root shell:
-```
-   #See if frr is running
-   systemctl status frr
+Stop the service-managed EIGRP daemon before launching a debug copy:
 
-   #Check to see if frr is set to autostart eigrpd in
-   #/etc/frr/daemons, if so set it to "no", before starting frr
-
-   # if its running, then stop it
-   systemctl stop frr
-
-   # anf lastly, start it
-   systemctl start frr
-
-   #if your like me, paranoid, then kill the eigrpd process just in case
-   kill -9 `pidof eigrpd`
+```sh
+sudo systemctl stop frr
+sudo systemctl start frr
+sudo kill -9 "$(pidof eigrpd)" 2>/dev/null || true
 ```
 
-In your user shell - EIGRP:
-```
-   sudo gdb eigrpd/.libs/eigrpd 
+Then, from the FRR checkout:
+
+```sh
+sudo gdb eigrpd/.libs/eigrpd
 ```
 
-In your root shell:
-```
-  vtysh -c 'configure terminal' -c 'router eigrp 4453' -c 'network 0.0.0.0/0' 
-  vtysh -c 'show running-config'
-  vtysh -c 'show ip eigrp top'
-  vtysh -c 'show ip eigrp nei'
+Useful `vtysh` smoke commands:
+
+```sh
+vtysh -c 'configure terminal' -c 'router eigrp 4453' -c 'network 0.0.0.0/0'
+vtysh -c 'show running-config'
+vtysh -c 'show ip eigrp topology'
+vtysh -c 'show ip eigrp neighbors'
 ```
 
 Contributing
 ------------
 
-I welcome and appreciate all contributions, no matter how small!
-
+Small, reviewable commits are preferred. Existing author/copyright history must
+be preserved when refactoring existing FRR-derived files.
 
 Security
 --------
 
-To report security issues, please email me.
+To report security issues, email:
 
-```
+```text
 diivious [at] hotmail.com
 ```

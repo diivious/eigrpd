@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[4]
 
 
 def read(path: str) -> str:
-    return (ROOT / path).read_text()
+    return (ROOT / "eigrpd" / path).read_text()
 
 
 def all_production_source() -> str:
@@ -19,7 +19,7 @@ def all_production_source() -> str:
     for path in ROOT.rglob("*"):
         if path.suffix not in {".c", ".h"}:
             continue
-        if any(part in {".git", "testcases"} for part in path.parts):
+        if any(part in {".git", "test"} for part in path.parts):
             continue
         chunks.append(path.read_text())
     return "\n".join(chunks)

@@ -29,7 +29,7 @@ def production_sources() -> list[Path]:
     for path in ROOT.rglob("*"):
         if path.suffix not in PRODUCTION_SUFFIXES:
             continue
-        if any(part in {".git", "testcases"} for part in path.parts):
+        if any(part in {".git", "test"} for part in path.parts):
             continue
         sources.append(path)
     return sources
@@ -55,8 +55,8 @@ def test_descriptor_first_lifecycle_names_are_not_used_in_production_code():
 
 
 def test_topology_module_owns_lifecycle_definitions():
-    topology_c = ROOT / "eigrp_topology.c"
-    topology_h = ROOT / "eigrp_topology.h"
+    topology_c = ROOT / "eigrpd" / "eigrp_topology.c"
+    topology_h = ROOT / "eigrpd" / "eigrp_topology.h"
     topology_source = topology_c.read_text()
     topology_header = topology_h.read_text()
 

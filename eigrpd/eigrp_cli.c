@@ -17,7 +17,49 @@
 #include "eigrp_zebra.h"
 #include "eigrp_cli.h"
 
+#ifndef EIGRP_STANDALONE_BUILD
 #include "eigrpd/eigrp_cli_clippy.c"
+#endif
+
+#ifdef EIGRP_STANDALONE_BUILD
+/*
+ * Standalone compile shim for FRR clippy parsed variables.  The real FRR
+ * build generates eigrp_cli_clippy.c and passes these as handler arguments.
+ */
+static const char *as_str = "1";
+static const char *vrf = NULL;
+static const char *addr_str = "0.0.0.0";
+static const char *ifname = NULL;
+static bool no = false;
+static bool disabled = false;
+static const char *timer_str = "1";
+static const char *variance_str = "1";
+static const char *maximum_paths_str = "1";
+static const char *k1_str = "1";
+static const char *k2_str = "0";
+static const char *k3_str = "1";
+static const char *k4_str = "0";
+static const char *k5_str = "0";
+static const char *k6_str = "0";
+static const char *bw_str = "1";
+static const char *delay_str = "1";
+static const char *rlbt_str = "255";
+static const char *load_str = "1";
+static const char *mtu_str = "1500";
+static const char *hello_str = "5";
+static const char *hold_str = "15";
+static bool k6 = false;
+static const char *prefix_str = "0.0.0.0/0";
+static const char *dir = "in";
+static const char *name = "stub";
+static const char *proto = "connected";
+static uint32_t bw = 1;
+static uint32_t delay = 1;
+static uint8_t rlbt = 255;
+static uint8_t load = 1;
+static uint32_t mtu = 1500;
+#define crypt "md5"
+#endif
 
 /*
  * XPath: /frr-eigrpd:eigrpd/instance
@@ -1084,8 +1126,9 @@ static bool eigrp_cli_xpath_get(const char *xpath, const char *key, char *buf,
 	return true;
 }
 
-static bool eigrp_cli_current_as_vrf(char *asn, size_t asn_len, char *vrf,
-				     size_t vrf_len)
+static bool eigrp_cli_current_as_vrf(struct vty *vty, char *asn,
+					     size_t asn_len, char *vrf,
+					     size_t vrf_len)
 {
 	return eigrp_cli_xpath_get(VTY_CURR_XPATH, "asn", asn, asn_len)
 	       && eigrp_cli_xpath_get(VTY_CURR_XPATH, "vrf", vrf, vrf_len);
@@ -1120,7 +1163,7 @@ static eigrp_instance_t *eigrp_cli_instance_lookup_by_as_vrf(const char *asn,
 	return NULL;
 }
 
-static void eigrp_cli_current_name(char *name, size_t name_len)
+static void eigrp_cli_current_name(struct vty *vty, char *name, size_t name_len)
 {
 	char asn[16];
 	char vrf_name[VRF_NAMSIZ];
@@ -1129,7 +1172,7 @@ static void eigrp_cli_current_name(char *name, size_t name_len)
 	if (eigrp_cli_xpath_get(VTY_CURR_XPATH, "name", name, name_len))
 		return;
 
-	if (eigrp_cli_current_as_vrf(asn, sizeof(asn), vrf_name,
+	if (eigrp_cli_current_as_vrf(vty, asn, sizeof(asn), vrf_name,
 				       sizeof(vrf_name))) {
 		eigrp = eigrp_cli_instance_lookup_by_as_vrf(asn, vrf_name);
 		if (eigrp && eigrp->name) {
@@ -1289,7 +1332,7 @@ static int eigrp_cli_af_interface_path(struct vty *vty, char *ifname,
 		return 0;
 	}
 
-	if (!eigrp_cli_current_as_vrf(asn, asn_len, vrf_name, sizeof(vrf_name))) {
+	if (!eigrp_cli_current_as_vrf(vty, asn, asn_len, vrf_name, sizeof(vrf_name))) {
 		vty_out(vty, "%% Enter named EIGRP address-family mode first\n");
 		return 0;
 	}
@@ -1377,7 +1420,7 @@ DEFUN(eigrp_address_family_ipv4,
 	const char *asn = eigrp_cli_token_after(argc, argv, "autonomous-system");
 	const char *vrf_name = eigrp_cli_token_after(argc, argv, "vrf");
 
-	eigrp_cli_current_name(name, sizeof(name));
+	eigrp_cli_current_name(vty, name, sizeof(name));
 	return eigrp_cli_named_instance_set(vty, name, asn,
 					  eigrp_cli_vrf_name(vrf_name));
 }
@@ -1434,7 +1477,7 @@ DEFUN(eigrp_exit_address_family,
 {
 	char name[128];
 
-	eigrp_cli_current_name(name, sizeof(name));
+	eigrp_cli_current_name(vty, name, sizeof(name));
 	return eigrp_cli_push_named_root(vty, name);
 }
 
@@ -1560,7 +1603,7 @@ DEFUN(eigrp_af_interface,
 	char vrf_name[VRF_NAMSIZ];
 	char xpath[XPATH_MAXLEN];
 
-	if (!eigrp_cli_current_as_vrf(asn, sizeof(asn), vrf_name,
+	if (!eigrp_cli_current_as_vrf(vty, asn, sizeof(asn), vrf_name,
 				       sizeof(vrf_name))) {
 		vty_out(vty, "%% Enter named EIGRP address-family mode first\n");
 		return CMD_WARNING;
@@ -1585,7 +1628,7 @@ DEFUN(eigrp_exit_af_interface,
 	char vrf_name[VRF_NAMSIZ];
 	char xpath[XPATH_MAXLEN];
 
-	if (!eigrp_cli_current_as_vrf(asn, sizeof(asn), vrf_name,
+	if (!eigrp_cli_current_as_vrf(vty, asn, sizeof(asn), vrf_name,
 				       sizeof(vrf_name)))
 		return CMD_SUCCESS;
 
@@ -1830,7 +1873,7 @@ DEFUN(eigrp_af_interface_passive,
 
 	if (!eigrp_cli_xpath_get(VTY_CURR_XPATH, "ifname", ifname,
 				  sizeof(ifname))
-	    || !eigrp_cli_current_as_vrf(asn, sizeof(asn), vrf_name,
+	    || !eigrp_cli_current_as_vrf(vty, asn, sizeof(asn), vrf_name,
 					 sizeof(vrf_name)))
 		return CMD_WARNING;
 
@@ -1854,7 +1897,7 @@ DEFUN(no_eigrp_af_interface_passive,
 
 	if (!eigrp_cli_xpath_get(VTY_CURR_XPATH, "ifname", ifname,
 				  sizeof(ifname))
-	    || !eigrp_cli_current_as_vrf(asn, sizeof(asn), vrf_name,
+	    || !eigrp_cli_current_as_vrf(vty, asn, sizeof(asn), vrf_name,
 					 sizeof(vrf_name)))
 		return CMD_WARNING;
 

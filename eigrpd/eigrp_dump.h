@@ -18,16 +18,19 @@
 
 /* general debug flags */
 extern unsigned long term_debug_eigrp;
+extern unsigned long conf_debug_eigrp;
 #define EIGRP_DEBUG_EVENT 0x01
 #define EIGRP_DEBUG_DETAIL 0x02
 #define EIGRP_DEBUG_TIMERS 0x04
 
 /* neighbor debug flags */
 extern unsigned long term_debug_eigrp_nei;
+extern unsigned long conf_debug_eigrp_nei;
 #define EIGRP_DEBUG_NEI 0x01
 
 /* packet debug flags */
 extern unsigned long term_debug_eigrp_packet[];
+extern unsigned long conf_debug_eigrp_packet[];
 #define EIGRP_DEBUG_UPDATE 0x01
 #define EIGRP_DEBUG_REQUEST 0x02
 #define EIGRP_DEBUG_QUERY 0x04
@@ -41,6 +44,7 @@ extern unsigned long term_debug_eigrp_packet[];
 #define EIGRP_DEBUG_PACKETS_ALL 0xfff
 
 extern unsigned long term_debug_eigrp_transmit;
+extern unsigned long conf_debug_eigrp_transmit;
 #define EIGRP_DEBUG_SEND 0x01
 #define EIGRP_DEBUG_RECV 0x02
 #define EIGRP_DEBUG_SEND_RECV 0x03
@@ -48,15 +52,16 @@ extern unsigned long term_debug_eigrp_transmit;
 
 /* zebra debug flags */
 extern unsigned long term_debug_eigrp_zebra;
+extern unsigned long conf_debug_eigrp_zebra;
 #define EIGRP_DEBUG_ZEBRA_INTERFACE 0x01
 #define EIGRP_DEBUG_ZEBRA_REDISTRIBUTE 0x02
 #define EIGRP_DEBUG_ZEBRA 0x03
 
 /* Macro for setting debug option. */
-#define CONF_DEBUG_NEI_ON(a, b) conf_debug_eigrp_nei[a] |= (b)
-#define CONF_DEBUG_NEI_OFF(a, b) conf_debug_eigrp_nei[a] &= ~(b)
-#define TERM_DEBUG_NEI_ON(a, b) term_debug_eigrp_nei[a] |= (b)
-#define TERM_DEBUG_NEI_OFF(a, b) term_debug_eigrp_nei[a] &= ~(b)
+#define CONF_DEBUG_NEI_ON(a, b) conf_debug_eigrp_nei |= (b)
+#define CONF_DEBUG_NEI_OFF(a, b) conf_debug_eigrp_nei &= ~(b)
+#define TERM_DEBUG_NEI_ON(a, b) term_debug_eigrp_nei |= (b)
+#define TERM_DEBUG_NEI_OFF(a, b) term_debug_eigrp_nei &= ~(b)
 #define DEBUG_NEI_ON(a, b)                                                     \
 	do {                                                                   \
 		CONF_DEBUG_NEI_ON(a, b);                                       \
@@ -98,10 +103,10 @@ extern unsigned long term_debug_eigrp_zebra;
 		TERM_DEBUG_TRANSMIT_OFF(a, b);                                 \
 	} while (0)
 
-#define CONF_DEBUG_ON(a, b) conf_debug_eigrp_##a |= (EIGRP_DEBUG_##b)
-#define CONF_DEBUG_OFF(a, b) conf_debug_eigrp_##a &= ~(EIGRP_DEBUG_##b)
-#define TERM_DEBUG_ON(a, b) term_debug_eigrp_##a |= (EIGRP_DEBUG_##b)
-#define TERM_DEBUG_OFF(a, b) term_debug_eigrp_##a &= ~(EIGRP_DEBUG_##b)
+#define CONF_DEBUG_ON(a, b) conf_debug_eigrp |= (EIGRP_DEBUG_##b)
+#define CONF_DEBUG_OFF(a, b) conf_debug_eigrp &= ~(EIGRP_DEBUG_##b)
+#define TERM_DEBUG_ON(a, b) term_debug_eigrp |= (EIGRP_DEBUG_##b)
+#define TERM_DEBUG_OFF(a, b) term_debug_eigrp &= ~(EIGRP_DEBUG_##b)
 #define DEBUG_ON(a, b)                                                         \
 	do {                                                                   \
 		CONF_DEBUG_ON(a, b);                                           \

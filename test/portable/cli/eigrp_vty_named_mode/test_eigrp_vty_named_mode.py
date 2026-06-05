@@ -8,9 +8,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[4]
-VTY = ROOT / "eigrp_vty.c"
-DUMP = ROOT / "eigrp_dump.c"
-CLIPPY = ROOT / "eigrp_vty_clippy.c"
+VTY = ROOT / "eigrpd" / "eigrp_vty.c"
+DUMP = ROOT / "eigrpd" / "eigrp_dump.c"
+CLIPPY = ROOT / "eigrpd" / "eigrp_vty_clippy.c"
 
 
 def read(path: Path) -> str:

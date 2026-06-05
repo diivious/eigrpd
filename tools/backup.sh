@@ -1,39 +1,38 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: ISC
+#
+# Copyright (C) 2026 Donnie V. Savage
+#
+# Create a clean project zip without local VCS/build/cache noise.
+
 set -euo pipefail
 
-usage() {
-	cat <<'USAGE'
-Usage:
-  ./backup.sh -z <zipfile name>
-  ./backup.sh -zip <zipfile name>
-
-Examples:
-  ./backup.sh -z eigrpd.zip
-  ./backup.sh -zip eigrpd-active-code.zip
-
-Creates a clean copy of the eigrpd project at ~/Downloads/eigrpd,
-removes .o files from that copy, then creates the requested zip file
-in ~/Download unless an absolute path is provided.
-USAGE
-}
-
+script_name="$(basename "$0")"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 project_root="$(cd "$script_dir/.." && pwd)"
 project_name="$(basename "$project_root")"
 
 download_dir="$HOME/Downloads"
-backup_dir="$download_dir/$project_name"
 zip_name=""
 
-while [[ $# -gt 0 ]]; do
+usage() {
+	cat <<USAGE
+usage: $script_name -z ZIPFILE
+
+examples:
+  tools/backup.sh -z eigrp.zip
+  tools/backup.sh -zip eigrp-active-code.zip
+
+Creates a clean copy of the project at ~/Downloads/$project_name and writes the
+requested zip file to ~/Downloads unless ZIPFILE is an absolute path.
+USAGE
+}
+
+while [[ "$#" -gt 0 ]]; do
 	case "$1" in
 		-z|-zip)
 			shift
-			if [[ $# -eq 0 || "${1:-}" == -* ]]; then
-				echo "error: missing zip file name after -z/-zip" >&2
-				usage >&2
-				exit 2
-			fi
+			[[ "$#" -gt 0 && "${1:-}" != -* ]] || { echo "error: missing zip file name" >&2; usage >&2; exit 2; }
 			zip_name="$1"
 			shift
 			;;
@@ -49,15 +48,8 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-if [[ -z "$zip_name" ]]; then
-	echo "error: zip file name is required" >&2
-	usage >&2
-	exit 2
-fi
-
-if [[ "$zip_name" != *.zip ]]; then
-	zip_name="${zip_name}.zip"
-fi
+[[ -n "$zip_name" ]] || { echo "error: zip file name is required" >&2; usage >&2; exit 2; }
+[[ "$zip_name" == *.zip ]] || zip_name="$zip_name.zip"
 
 if [[ "$zip_name" = /* ]]; then
 	zip_path="$zip_name"
@@ -65,9 +57,9 @@ else
 	zip_path="$download_dir/$zip_name"
 fi
 
+backup_dir="$download_dir/$project_name"
 mkdir -p "$download_dir"
 
-# Refuse to delete the active project if someone runs this from ~/Download/eigrpd/tools.
 if [[ "$(cd "$project_root" && pwd)" == "$(mkdir -p "$backup_dir" && cd "$backup_dir" && pwd)" ]]; then
 	echo "error: source project and backup target are the same path: $project_root" >&2
 	exit 1
@@ -76,8 +68,20 @@ fi
 rm -rf "$backup_dir"
 cp -R "$project_root" "$backup_dir"
 
-find "$backup_dir" -type f -name '*.o' -delete
+find "$backup_dir" \
+	-name .git -o \
+	-name .pytest_cache -o \
+	-name __pycache__ -o \
+	-name __MACOSX -o \
+	-name .DS_Store -o \
+	-name '*.o' -o \
+	-name '*.lo' -o \
+	-name '*.la' -o \
+	-name '*~' | while IFS= read -r path; do
+		rm -rf "$path"
+	done
 
+rm -rf "$backup_dir/build/obj" "$backup_dir/build/logs"
 rm -f "$zip_path"
 (
 	cd "$download_dir"

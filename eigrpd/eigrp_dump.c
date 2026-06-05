@@ -330,15 +330,15 @@ DEFUN(debug_eigrp_event, debug_eigrp_event_cmd,
 		flag |= EIGRP_DEBUG_DETAIL;
 
 	if (vty->node == CONFIG_NODE)
-		DEBUG_ON(eigrp, EVENT);
+		DEBUG_ON(event, EVENT);
 	else
-		TERM_DEBUG_ON(eigrp, EVENT);
+		TERM_DEBUG_ON(event, EVENT);
 
 	if (flag & EIGRP_DEBUG_DETAIL) {
 		if (vty->node == CONFIG_NODE)
-			CONF_DEBUG_ON(eigrp, DETAIL);
+			CONF_DEBUG_ON(event, DETAIL);
 		else
-			TERM_DEBUG_ON(eigrp, DETAIL);
+			TERM_DEBUG_ON(event, DETAIL);
 	}
 
 	return CMD_SUCCESS;
@@ -351,11 +351,11 @@ DEFUN(no_debug_eigrp_event, no_debug_eigrp_event_cmd,
       "Detailed information\n")
 {
 	if (vty->node == CONFIG_NODE) {
-		CONF_DEBUG_OFF(eigrp, EVENT);
-		CONF_DEBUG_OFF(eigrp, DETAIL);
+		CONF_DEBUG_OFF(event, EVENT);
+		CONF_DEBUG_OFF(event, DETAIL);
 	} else {
-		TERM_DEBUG_OFF(eigrp, EVENT);
-		TERM_DEBUG_OFF(eigrp, DETAIL);
+		TERM_DEBUG_OFF(event, EVENT);
+		TERM_DEBUG_OFF(event, DETAIL);
 	}
 
 	return CMD_SUCCESS;
@@ -367,9 +367,9 @@ DEFUN(debug_eigrp_timers, debug_eigrp_timers_cmd,
       "EIGRP timer debugging\n")
 {
 	if (vty->node == CONFIG_NODE)
-		CONF_DEBUG_ON(eigrp, TIMERS);
+		CONF_DEBUG_ON(event, TIMERS);
 	else
-		TERM_DEBUG_ON(eigrp, TIMERS);
+		TERM_DEBUG_ON(event, TIMERS);
 
 	return CMD_SUCCESS;
 }
@@ -380,9 +380,9 @@ DEFUN(no_debug_eigrp_timers, no_debug_eigrp_timers_cmd,
       "EIGRP timer debugging\n")
 {
 	if (vty->node == CONFIG_NODE)
-		CONF_DEBUG_OFF(eigrp, TIMERS);
+		CONF_DEBUG_OFF(event, TIMERS);
 	else
-		TERM_DEBUG_OFF(eigrp, TIMERS);
+		TERM_DEBUG_OFF(event, TIMERS);
 
 	return CMD_SUCCESS;
 }

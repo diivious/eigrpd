@@ -46,28 +46,46 @@ If the behavior clarifies or updates the RFC, the note should eventually be capt
 
 ## 3. Repository Role
 
-This repository is not standalone.
+This repository is a project repository, not just the FRR daemon directory.
 
-It is maintained as a drop-in replacement for:
+The daemon source is maintained under:
 
 ```text
-frr/eigrpd
+eigrp/eigrpd/
+```
+
+and is staged as a drop-in replacement for:
+
+```text
+frr/eigrpd/
+```
+
+FRR-native EIGRP tests are maintained under:
+
+```text
+eigrp/test/frr/
+```
+
+and are staged into:
+
+```text
+frr/tests/eigrpd/
 ```
 
 The expected workflow is:
 
 ```sh
 git clone https://github.com/frrouting/frr.git frr
-git clone https://github.com/diivious/eigrpd.git eigrpd
-rm -rf frr/eigrpd
-cp -R eigrpd frr/eigrpd
-cd frr
+git clone git@github.com:diivious/eigrp.git eigrp
+cd eigrp
+tools/install.sh -frr-root ../frr
+cd ../frr
 ./bootstrap.sh
 ./configure ...
 make
 ```
 
-The project must remain build-compatible with FRR when copied into `frr/eigrpd`.
+The project must remain build-compatible with FRR when `eigrp/eigrpd/` is copied into `frr/eigrpd/`.
 
 ## 4. FRR Boundary Rule
 
@@ -533,6 +551,14 @@ Target smoke gate:
 - packet encode/decode changes include dump, capture, or debug validation.
 ```
 
+Portable compile smoke gate:
+
+```text
+- make -C build
+- uses narrow FRR stub headers to catch syntax, prototype, and command macro errors
+- does not replace the full FRR build/link gate
+```
+
 Longer-term test direction:
 
 ```text
@@ -587,7 +613,7 @@ The goal is not cosmetic churn. The goal is a clean, production-ready EIGRP code
 - Donnie V. Savage is the top project/protocol authority.
 - RFC 7868 is the protocol reference unless intentionally clarified or superseded.
 - FRR is only the build/library/daemon host authority.
-- This repository is a drop-in replacement for frr/eigrpd.
+- The `eigrpd/` tree is a drop-in replacement for frr/eigrpd.
 - Do not require FRR-wide changes by default.
 - Do not pollute FRR or leak FRR assumptions into EIGRP core logic.
 - New/refactored functions use eigrp_<object>_<action>().
@@ -625,7 +651,7 @@ Do not provide loose changed files as the primary delivery format unless explici
 
 When only one document is updated, that document still must be placed in a zip file.
 
-Project deliveries should preserve the repository-relative layout, including `specs/`, `testcases/`, and `tools/` paths.
+Project deliveries should preserve the repository-relative layout, including `eigrpd/`, `specs/`, `tools/`, `build/`, and `test/` paths.
 
 CLI/VTY/debug command-surface rules are owned by `cli-spec.md`.
 

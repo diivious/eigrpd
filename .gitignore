@@ -1,12 +1,34 @@
-.deps
-.dirstamp
-eigrpd
-eigrpd.conf
-eigrpd.xref
-eigrp_cli_clippy.c
-eigrp_vty_clippy.c
-*.o
+# editor / OS noise
+.DS_Store
+__MACOSX/
+*.swp
+*.swo
+*~
 .#*
 *#
-*~
-.DS_Store
+
+# Python test cache
+.pytest_cache/
+__pycache__/
+*.py[cod]
+
+# C/build output
+*.o
+*.lo
+*.la
+.deps/
+.dirstamp
+.libs/
+
+# Standalone compile-smoke generated output
+build/obj/
+build/logs/
+
+# FRR/generated daemon artifacts when this tree is staged inside FRR
+eigrpd/.deps/
+eigrpd/.dirstamp
+eigrpd/.libs/
+eigrpd/eigrpd
+eigrpd/eigrpd.conf
+eigrpd/eigrpd.xref
+eigrpd/eigrp_cli_clippy.c

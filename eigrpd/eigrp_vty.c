@@ -40,7 +40,9 @@
 #include "eigrpd/eigrp_network.h"
 #include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_const.h"
+#ifndef EIGRP_STANDALONE_BUILD
 #include "eigrpd/eigrp_vty_clippy.c"
+#endif
 
 struct eigrp_vty_walk_context {
 	const char *ifname;
@@ -243,6 +245,30 @@ static void show_eigrp_topology_prefix_cb(struct vty *vty,
 	eigrp_vty_display_prefix_entry(vty, eigrp, tn, ctx->all ? true : false);
 	route_unlock_node(rn);
 }
+
+#ifdef EIGRP_STANDALONE_BUILD
+/*
+ * The standalone compile harness does not run FRR clippy.  These symbols
+ * mirror the parsed variables that clippy normally passes to DEFPY handlers
+ * so the command bodies can still be syntax-checked.
+ */
+static const char *afi = "ipv4";
+static const char *vrf = NULL;
+static int64_t as = 0;
+static const char *as_str = NULL;
+static const char *ifname = NULL;
+static const char *detail = NULL;
+static const char *all = NULL;
+static const char *target = NULL;
+static struct in_addr address;
+static const char *address_str = NULL;
+static struct prefix_ipv4 eigrp_standalone_prefix_storage;
+static const struct prefix_ipv4 *prefix = &eigrp_standalone_prefix_storage;
+static const char *prefix_str = NULL;
+static const char *soft = NULL;
+static struct in_addr nbr_addr;
+static const char *nbr_addr_str = NULL;
+#endif
 
 DEFPY(show_eigrp_interface,
       show_eigrp_interface_cmd,
