@@ -376,6 +376,13 @@ eigrp_topology_update_distance(eigrp_fsm_action_message_t *msg)
 
 	assert(route);
 
+	if (!route->adv_router)
+		route->adv_router = msg->adv_router;
+	if (!route->prefix)
+		route->prefix = prefix;
+	if (!route->ei && msg->adv_router)
+		route->ei = msg->adv_router->ei;
+
 	switch (msg->data_type) {
 	case EIGRP_CONNECTED:
 		if (prefix->nt == EIGRP_TOPOLOGY_TYPE_CONNECTED)
@@ -384,10 +391,6 @@ eigrp_topology_update_distance(eigrp_fsm_action_message_t *msg)
 		change = METRIC_DECREASE;
 		break;
 	case EIGRP_INT:
-		if (prefix->nt == EIGRP_TOPOLOGY_TYPE_CONNECTED) {
-			change = METRIC_INCREASE;
-			goto distance_done;
-		}
 		if (eigrp_metrics_is_same(msg->metrics,
 					  route->reported_metric)) {
 			return change; // No change
@@ -396,15 +399,14 @@ eigrp_topology_update_distance(eigrp_fsm_action_message_t *msg)
 		new_reported_distance =
 			eigrp_calculate_metrics(eigrp, msg->metrics);
 
-		if (route->reported_distance < new_reported_distance) {
+		if (route->reported_distance < new_reported_distance)
 			change = METRIC_INCREASE;
-			goto distance_done;
-		} else
+		else
 			change = METRIC_DECREASE;
 
+		route->metric = msg->metrics;
 		route->reported_metric = msg->metrics;
 		route->reported_distance = new_reported_distance;
-		eigrp_calculate_metrics(eigrp, msg->metrics);
 		route->distance = eigrp_calculate_total_metrics(eigrp, route);
 		break;
 	case EIGRP_EXT:
@@ -414,15 +416,28 @@ eigrp_topology_update_distance(eigrp_fsm_action_message_t *msg)
 				return change;
 		} else {
 			change = METRIC_INCREASE;
-			goto distance_done;
+			break;
 		}
+
+		new_reported_distance =
+			eigrp_calculate_metrics(eigrp, msg->metrics);
+
+		if (route->reported_distance < new_reported_distance)
+			change = METRIC_INCREASE;
+		else
+			change = METRIC_DECREASE;
+
+		route->metric = msg->metrics;
+		route->reported_metric = msg->metrics;
+		route->reported_distance = new_reported_distance;
+		route->distance = eigrp_calculate_total_metrics(eigrp, route);
 		break;
 	default:
 		flog_err(EC_LIB_DEVELOPMENT, "%s: Please implement handler",
 			 __func__);
 		break;
 	}
-distance_done:
+
 	/*
 	 * Move to correct position in list according to new distance
 	 */

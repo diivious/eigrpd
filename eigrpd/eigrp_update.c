@@ -258,16 +258,35 @@ void eigrp_update_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 					remove_received_prefix_gr(nbr_prefixes, prefix);
 
 				struct eigrp_fsm_action_message msg;
+				eigrp_route_descriptor_t *received_route = route;
+				eigrp_route_descriptor_t *topology_route =
+					eigrp_prefix_descriptor_lookup(prefix->entries, nbr);
+				bool free_received_route = false;
+
+				if (topology_route) {
+					topology_route->type = received_route->type;
+					topology_route->nexthop = received_route->nexthop;
+					topology_route->extdata = received_route->extdata;
+					route = topology_route;
+					free_received_route = true;
+				} else {
+					received_route->adv_router = nbr;
+					received_route->prefix = prefix;
+				}
+
 				msg.packet_type = EIGRP_OPC_UPDATE;
 				msg.eigrp = eigrp;
-				msg.data_type = (route->type == EIGRP_TLV_IPv4_EXT)
+				msg.data_type = (received_route->type == EIGRP_TLV_IPv4_EXT)
 							? EIGRP_EXT
 							: EIGRP_INT;
 				msg.adv_router = nbr;
-				msg.metrics = route->metric;
+				msg.metrics = received_route->metric;
 				msg.route = route;
 				msg.prefix = prefix;
 				eigrp_fsm_event(&msg);
+
+				if (free_received_route)
+					eigrp_topology_route_free(received_route);
 
 			} else {
 				/*Here comes topology information save*/
@@ -281,8 +300,8 @@ void eigrp_update_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 						     : EIGRP_TOPOLOGY_TYPE_REMOTE;
 
 				route->adv_router = nbr;
-				route->reported_metric = prefix->reported_metric;
-				route->reported_distance = eigrp_calculate_metrics(eigrp, prefix->reported_metric);
+				route->reported_metric = route->metric;
+				route->reported_distance = eigrp_calculate_metrics(eigrp, route->reported_metric);
 
 				/*
 				 * Filtering

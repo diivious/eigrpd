@@ -51,18 +51,35 @@ void eigrp_siaquery_receive(eigrp_instance_t *eigrp, eigrp_neighbor_t *nbr,
 			eigrp_topology_route_free(route);
 			continue;
 		}
-		route->prefix = prefix;
+		eigrp_route_descriptor_t *received_route = route;
+		eigrp_route_descriptor_t *topology_route =
+			eigrp_prefix_descriptor_lookup(prefix->entries, nbr);
+		bool free_received_route = false;
+
+		if (topology_route) {
+			topology_route->type = received_route->type;
+			topology_route->nexthop = received_route->nexthop;
+			topology_route->extdata = received_route->extdata;
+			route = topology_route;
+			free_received_route = true;
+		} else {
+			received_route->adv_router = nbr;
+			received_route->prefix = prefix;
+		}
 
 		msg.packet_type = EIGRP_OPC_SIAQUERY;
 		msg.eigrp = eigrp;
-		msg.data_type = (route->type == EIGRP_TLV_IPv4_EXT)
+		msg.data_type = (received_route->type == EIGRP_TLV_IPv4_EXT)
 					? EIGRP_EXT
 					: EIGRP_INT;
 		msg.adv_router = nbr;
 		msg.route = route;
-		msg.metrics = route->metric;
+		msg.metrics = received_route->metric;
 		msg.prefix = prefix;
 		eigrp_fsm_event(&msg);
+
+		if (free_received_route)
+			eigrp_topology_route_free(received_route);
 	}
 
 	eigrp_hello_send_ack(nbr);

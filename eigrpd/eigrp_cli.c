@@ -9,6 +9,7 @@
 #include <zebra.h>
 
 #include "lib/command.h"
+#include "lib/if.h"
 #include "lib/log.h"
 #include "lib/northbound_cli.h"
 
@@ -1643,7 +1644,7 @@ DEFUN(eigrp_af_interface_hello_interval,
       "Configures EIGRP hello interval\n"
       "Seconds between hello transmissions\n")
 {
-	char ifname[INTERFACE_NAMSIZ];
+	char ifname[IFNAMSIZ];
 	char asn[16];
 	char xpath[XPATH_MAXLEN];
 	const char *hello = eigrp_cli_token_last(argc, argv);
@@ -1665,7 +1666,7 @@ DEFUN(no_eigrp_af_interface_hello_interval,
       "Configures EIGRP hello interval\n"
       "Seconds between hello transmissions\n")
 {
-	char ifname[INTERFACE_NAMSIZ];
+	char ifname[IFNAMSIZ];
 	char asn[16];
 	char xpath[XPATH_MAXLEN];
 
@@ -1685,7 +1686,7 @@ DEFUN(eigrp_af_interface_hold_time,
       "Configures EIGRP hold time\n"
       "Seconds before neighbor is considered down\n")
 {
-	char ifname[INTERFACE_NAMSIZ];
+	char ifname[IFNAMSIZ];
 	char asn[16];
 	char xpath[XPATH_MAXLEN];
 	const char *hold = eigrp_cli_token_last(argc, argv);
@@ -1707,7 +1708,7 @@ DEFUN(no_eigrp_af_interface_hold_time,
       "Configures EIGRP hold time\n"
       "Seconds before neighbor is considered down\n")
 {
-	char ifname[INTERFACE_NAMSIZ];
+	char ifname[IFNAMSIZ];
 	char asn[16];
 	char xpath[XPATH_MAXLEN];
 
@@ -1727,7 +1728,7 @@ DEFUN(eigrp_af_interface_delay,
       "Specify interface throughput delay\n"
       "Throughput delay in tens of microseconds\n")
 {
-	char ifname[INTERFACE_NAMSIZ];
+	char ifname[IFNAMSIZ];
 	char asn[16];
 	char xpath[XPATH_MAXLEN];
 	const char *delay = eigrp_cli_token_last(argc, argv);
@@ -1748,7 +1749,7 @@ DEFUN(no_eigrp_af_interface_delay,
       "Specify interface throughput delay\n"
       "Throughput delay in tens of microseconds\n")
 {
-	char ifname[INTERFACE_NAMSIZ];
+	char ifname[IFNAMSIZ];
 	char asn[16];
 	char xpath[XPATH_MAXLEN];
 
@@ -1769,7 +1770,7 @@ DEFUN(eigrp_af_interface_authentication_mode,
       "Keyed message digest\n"
       "HMAC SHA256 algorithm\n")
 {
-	char ifname[INTERFACE_NAMSIZ];
+	char ifname[IFNAMSIZ];
 	char asn[16];
 	char xpath[XPATH_MAXLEN];
 	char instance_xpath[XPATH_MAXLEN];
@@ -1798,7 +1799,7 @@ DEFUN(no_eigrp_af_interface_authentication_mode,
       "Keyed message digest\n"
       "HMAC SHA256 algorithm\n")
 {
-	char ifname[INTERFACE_NAMSIZ];
+	char ifname[IFNAMSIZ];
 	char asn[16];
 	char xpath[XPATH_MAXLEN];
 
@@ -1819,7 +1820,7 @@ DEFUN(eigrp_af_interface_keychain,
       "Key-chain\n"
       "Name of key-chain\n")
 {
-	char ifname[INTERFACE_NAMSIZ];
+	char ifname[IFNAMSIZ];
 	char asn[16];
 	char xpath[XPATH_MAXLEN];
 	char instance_xpath[XPATH_MAXLEN];
@@ -1847,7 +1848,7 @@ DEFUN(no_eigrp_af_interface_keychain,
       "Key-chain\n"
       "Name of key-chain\n")
 {
-	char ifname[INTERFACE_NAMSIZ];
+	char ifname[IFNAMSIZ];
 	char asn[16];
 	char xpath[XPATH_MAXLEN];
 
@@ -1866,7 +1867,7 @@ DEFUN(eigrp_af_interface_passive,
       "passive-interface",
       "Suppress routing updates on this interface\n")
 {
-	char ifname[INTERFACE_NAMSIZ];
+	char ifname[IFNAMSIZ];
 	char asn[16];
 	char vrf_name[VRF_NAMSIZ];
 	char xpath[XPATH_MAXLEN];
@@ -1890,7 +1891,7 @@ DEFUN(no_eigrp_af_interface_passive,
       NO_STR
       "Suppress routing updates on this interface\n")
 {
-	char ifname[INTERFACE_NAMSIZ];
+	char ifname[IFNAMSIZ];
 	char asn[16];
 	char vrf_name[VRF_NAMSIZ];
 	char xpath[XPATH_MAXLEN];

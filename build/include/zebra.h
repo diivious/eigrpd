@@ -37,7 +37,7 @@
 #define IPV6_MAX_BYTELEN 16
 #define PREFIX_STRLEN 128
 #define VRF_NAMSIZ 64
-#define INTERFACE_NAMSIZ 64
+#define IFNAMSIZ 64
 #define VRF_DEFAULT 0
 #define VRF_DEFAULT_NAME "default"
 #define ROUTER_STR "Enable a routing process\n"
@@ -124,7 +124,7 @@ struct event_loop { int dummy; };
 struct stream { unsigned char *data; size_t size; size_t endp; size_t getp; };
 struct if_stats { uint64_t rx_packets; uint64_t tx_packets; };
 struct if_data { uint32_t ifi_metric; uint32_t ifi_mtu; };
-struct interface { char name[INTERFACE_NAMSIZ]; ifindex_t ifindex; unsigned int flags; unsigned int status; int operative; void *info; struct list *connected; uint32_t bandwidth; uint32_t mtu; vrf_id_t vrf_id; struct vrf *vrf; struct if_data *metric; struct if_stats stats; };
+struct interface { char name[IFNAMSIZ]; ifindex_t ifindex; unsigned int flags; unsigned int status; int operative; void *info; struct list *connected; uint32_t bandwidth; uint32_t mtu; vrf_id_t vrf_id; struct vrf *vrf; struct if_data *metric; struct if_stats stats; };
 struct vrf { char name[VRF_NAMSIZ]; vrf_id_t vrf_id; };
 struct connected { struct interface *ifp; struct prefix *address; struct prefix *destination; unsigned int flags; };
 struct access_list { int dummy; };

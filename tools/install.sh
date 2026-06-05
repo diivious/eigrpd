@@ -14,6 +14,7 @@ eigrp_root="$(cd "$script_dir/.." && pwd)"
 frr_root=""
 install_eigrpd=1
 install_tests=1
+eigrpd_install_mode="copy"
 dry_run=0
 
 usage() {
@@ -23,17 +24,15 @@ usage: $script_name [options]
 options:
   -frr-root PATH       FRR checkout root. Default inference order:
                        ../frr, ~/devel/frr, or parent when run from frr/eigrpd/tools.
-  -no-eigrpd           Do not copy eigrpd/ into FRR.
+  -no-eigrpd           Do not install eigrpd/ into FRR.
+  -copy-eigrpd         Copy eigrpd/ into FRR/eigrpd/. This is the default.
+  -link-eigrpd         Replace FRR/eigrpd with a symlink to this project eigrpd/.
   -no-tests            Do not copy test/frr/ into FRR tests/eigrpd/.
   -dry-run             Print the actions without copying files.
   -h, -help, --help    Show this help.
 
-behavior:
-  Installing eigrpd first removes the existing frr/eigrpd directory, then
-  copies this project's eigrpd/ tree into place.
-
 installs:
-  eigrpd/      -> frr/eigrpd/
+  eigrpd/      -> frr/eigrpd/ by copy or symlink
   test/frr/    -> frr/tests/eigrpd/
 USAGE
 }
@@ -106,29 +105,54 @@ copy_tree() {
 		"$src"/ "$dst"/
 }
 
-remove_destination_tree() {
-	local dst="$1"
+canonical_dir() {
+	local path="$1"
+	cd -P "$path" && pwd
+}
 
-	[[ -n "$dst" ]] || fail "refusing to remove empty destination path"
-	[[ -n "$frr_root" ]] || fail "FRR root is not set"
+install_eigrpd_copy() {
+	local src="$eigrp_root/eigrpd"
+	local dst="$frr_root/eigrpd"
 
-	case "$dst" in
-		"$frr_root"|"$frr_root/")
-			fail "refusing to remove FRR root: $dst"
-			;;
-		"$frr_root"/*)
-			;;
-		*)
-			fail "refusing to remove path outside FRR root: $dst"
-			;;
-	esac
+	[[ -d "$src" ]] || fail "source directory not found: $src"
+
+	if [[ -L "$dst" ]]; then
+		local src_real dst_real
+		src_real="$(canonical_dir "$src")"
+		dst_real="$(canonical_dir "$dst")"
+
+		if [[ "$src_real" == "$dst_real" ]]; then
+			echo "already linked: $dst -> $src_real"
+			return 0
+		fi
+
+		fail "destination is a symlink to $dst_real; use -link-eigrpd to replace it or remove it first"
+	fi
 
 	if [[ "$dry_run" -eq 1 ]]; then
 		echo "would remove: $dst"
+		copy_tree "$src" "$dst"
 		return 0
 	fi
 
-	rm -rf -- "$dst"
+	rm -rf "$dst"
+	copy_tree "$src" "$dst"
+}
+
+install_eigrpd_link() {
+	local src="$eigrp_root/eigrpd"
+	local dst="$frr_root/eigrpd"
+
+	[[ -d "$src" ]] || fail "source directory not found: $src"
+
+	if [[ "$dry_run" -eq 1 ]]; then
+		echo "would remove: $dst"
+		echo "would link: $dst -> $src"
+		return 0
+	fi
+
+	rm -rf "$dst"
+	ln -s "$src" "$dst"
 }
 
 install_tests_subdir_include() {
@@ -162,6 +186,14 @@ while [[ "$#" -gt 0 ]]; do
 			install_eigrpd=0
 			shift
 			;;
+		-copy-eigrpd)
+			eigrpd_install_mode="copy"
+			shift
+			;;
+		-link-eigrpd)
+			eigrpd_install_mode="link"
+			shift
+			;;
 		-no-tests)
 			install_tests=0
 			shift
@@ -193,24 +225,26 @@ fi
 [[ -d "$eigrp_root/eigrpd" ]] || fail "missing project eigrpd directory: $eigrp_root/eigrpd"
 
 if [[ "$install_eigrpd" -eq 1 ]]; then
-	remove_destination_tree "$frr_root/eigrpd"
-	copy_tree "$eigrp_root/eigrpd" "$frr_root/eigrpd"
-	if [[ "$dry_run" -eq 1 ]]; then
-		echo "would install: eigrpd/ -> $frr_root/eigrpd/"
-	else
-		echo "installed: eigrpd/ -> $frr_root/eigrpd/"
-	fi
+	case "$eigrpd_install_mode" in
+		copy)
+			install_eigrpd_copy
+			echo "installed: eigrpd/ -> $frr_root/eigrpd/"
+			;;
+		link)
+			install_eigrpd_link
+			echo "linked: $frr_root/eigrpd -> $eigrp_root/eigrpd"
+			;;
+		*)
+			fail "unknown eigrpd install mode: $eigrpd_install_mode"
+			;;
+	esac
 fi
 
 if [[ "$install_tests" -eq 1 ]]; then
 	if [[ -d "$eigrp_root/test/frr" ]]; then
 		copy_tree "$eigrp_root/test/frr" "$frr_root/tests/eigrpd"
 		install_tests_subdir_include
-		if [[ "$dry_run" -eq 1 ]]; then
-			echo "would install: test/frr/ -> $frr_root/tests/eigrpd/"
-		else
-			echo "installed: test/frr/ -> $frr_root/tests/eigrpd/"
-		fi
+		echo "installed: test/frr/ -> $frr_root/tests/eigrpd/"
 	else
 		echo "warning: no FRR test payload exists at $eigrp_root/test/frr" >&2
 	fi

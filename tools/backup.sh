@@ -58,36 +58,18 @@ else
 fi
 
 backup_dir="$download_dir/$project_name"
+cleanup_backup=0
 mkdir -p "$download_dir"
 
-project_root_abs="$(cd "$project_root" && pwd)"
-backup_dir_abs="$(mkdir -p "$backup_dir" && cd "$backup_dir" && pwd)"
-
-if [[ "$project_root_abs" == "$backup_dir_abs" ]]; then
+if [[ "$(cd "$project_root" && pwd)" == "$(mkdir -p "$backup_dir" && cd "$backup_dir" && pwd)" ]]; then
 	echo "error: source project and backup target are the same path: $project_root" >&2
 	exit 1
 fi
 
-zip_dir="$(dirname "$zip_path")"
-mkdir -p "$zip_dir"
-zip_path="$(cd "$zip_dir" && pwd)/$(basename "$zip_path")"
-
-case "$zip_path" in
-	"$backup_dir_abs"/*)
-		echo "error: zip file must not be written inside temporary backup directory: $backup_dir_abs" >&2
-		exit 1
-		;;
-esac
-
-cleanup_backup_dir() {
-	if [[ -n "${backup_dir_abs:-}" && "$backup_dir_abs" != "/" && "$backup_dir_abs" != "$project_root_abs" && -d "$backup_dir_abs" ]]; then
-		rm -rf "$backup_dir_abs"
-	fi
-}
-trap cleanup_backup_dir EXIT
-
-rm -rf "$backup_dir_abs"
-cp -R "$project_root_abs" "$backup_dir_abs"
+rm -rf "$backup_dir"
+cleanup_backup=1
+trap 'if [[ "${cleanup_backup:-0}" -eq 1 ]]; then rm -rf "$backup_dir"; fi' EXIT
+cp -R "$project_root" "$backup_dir"
 
 find "$backup_dir" \
 	-name .git -o \
@@ -109,4 +91,9 @@ rm -f "$zip_path"
 	zip -qr "$zip_path" "$project_name"
 )
 
+rm -rf "$backup_dir"
+cleanup_backup=0
+trap - EXIT
+
 echo "created: $zip_path"
+echo "removed: $backup_dir"
