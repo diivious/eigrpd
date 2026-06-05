@@ -41,7 +41,19 @@
 #include "eigrpd/eigrp_dump.h"
 #include "eigrpd/eigrp_const.h"
 #ifndef EIGRP_STANDALONE_BUILD
+/*
+ * FRR clippy generates this file during the real FRR build.  Generated
+ * parser wrappers are not EIGRP-owned source style, so suppress warnings
+ * that can be emitted by clippy formatting rather than by eigrp_vty.c.
+ */
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmisleading-indentation"
+#endif
 #include "eigrpd/eigrp_vty_clippy.c"
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 #endif
 
 struct eigrp_vty_walk_context {

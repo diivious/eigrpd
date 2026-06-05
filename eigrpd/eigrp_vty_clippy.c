@@ -274,7 +274,12 @@ DEFUN_CMD_FUNC_TEXT(clear_eigrp_neighbor)
 {
 	int _i; unsigned _fail = 0, _failcnt = 0; const char *afi = NULL; const char *vrf = NULL; int64_t as = 0; const char *as_str = NULL; const char *soft = NULL;
 	for (_i = 0; _i < argc; _i++) { if (!argv[_i]->varname) continue; _fail = 0; if (!strcmp(argv[_i]->varname, "afi")) afi = (argv[_i]->type == WORD_TKN) ? argv[_i]->text : argv[_i]->arg; if (!strcmp(argv[_i]->varname, "vrf")) vrf = (argv[_i]->type == WORD_TKN) ? argv[_i]->text : argv[_i]->arg; if (!strcmp(argv[_i]->varname, "as")) { as_str = argv[_i]->arg; char *_end; as = strtoll(argv[_i]->arg, &_end, 10); _fail = (_end == argv[_i]->arg) || (*_end != '\0'); } if (!strcmp(argv[_i]->varname, "soft")) soft = (argv[_i]->type == WORD_TKN) ? argv[_i]->text : argv[_i]->arg; if (_fail) vty_out(vty, "%% invalid input for %s: %s\n", argv[_i]->varname, argv[_i]->arg); _failcnt += _fail; }
-	if (_failcnt) return CMD_WARNING; if (!afi) { vty_out(vty, "Internal CLI error [%s]\n", "afi"); return CMD_WARNING; }
+	if (_failcnt)
+		return CMD_WARNING;
+	if (!afi) {
+		vty_out(vty, "Internal CLI error [%s]\n", "afi");
+		return CMD_WARNING;
+	}
 	return clear_eigrp_neighbor_magic(self, vty, argc, argv, afi, vrf, as, as_str, soft);
 }
 
@@ -287,7 +292,12 @@ DEFUN_CMD_FUNC_TEXT(clear_eigrp_neighbor_interface)
 {
 	int _i; unsigned _fail = 0, _failcnt = 0; const char *afi = NULL; const char *vrf = NULL; int64_t as = 0; const char *as_str = NULL; const char *ifname = NULL; const char *soft = NULL;
 	for (_i = 0; _i < argc; _i++) { if (!argv[_i]->varname) continue; _fail = 0; if (!strcmp(argv[_i]->varname, "afi")) afi = (argv[_i]->type == WORD_TKN) ? argv[_i]->text : argv[_i]->arg; if (!strcmp(argv[_i]->varname, "vrf")) vrf = (argv[_i]->type == WORD_TKN) ? argv[_i]->text : argv[_i]->arg; if (!strcmp(argv[_i]->varname, "as")) { as_str = argv[_i]->arg; char *_end; as = strtoll(argv[_i]->arg, &_end, 10); _fail = (_end == argv[_i]->arg) || (*_end != '\0'); } if (!strcmp(argv[_i]->varname, "ifname")) ifname = (argv[_i]->type == WORD_TKN) ? argv[_i]->text : argv[_i]->arg; if (!strcmp(argv[_i]->varname, "soft")) soft = (argv[_i]->type == WORD_TKN) ? argv[_i]->text : argv[_i]->arg; if (_fail) vty_out(vty, "%% invalid input for %s: %s\n", argv[_i]->varname, argv[_i]->arg); _failcnt += _fail; }
-	if (_failcnt) return CMD_WARNING; if (!afi || !ifname) { vty_out(vty, "Internal CLI error [%s]\n", !afi ? "afi" : "ifname"); return CMD_WARNING; }
+	if (_failcnt)
+		return CMD_WARNING;
+	if (!afi || !ifname) {
+		vty_out(vty, "Internal CLI error [%s]\n", !afi ? "afi" : "ifname");
+		return CMD_WARNING;
+	}
 	return clear_eigrp_neighbor_interface_magic(self, vty, argc, argv, afi, vrf, as, as_str, ifname, soft);
 }
 
@@ -300,6 +310,11 @@ DEFUN_CMD_FUNC_TEXT(clear_eigrp_neighbor_address)
 {
 	int _i; unsigned _fail = 0, _failcnt = 0; const char *afi = NULL; const char *vrf = NULL; int64_t as = 0; const char *as_str = NULL; struct in_addr nbr_addr = { INADDR_ANY }; const char *nbr_addr_str = NULL; const char *soft = NULL;
 	for (_i = 0; _i < argc; _i++) { if (!argv[_i]->varname) continue; _fail = 0; if (!strcmp(argv[_i]->varname, "afi")) afi = (argv[_i]->type == WORD_TKN) ? argv[_i]->text : argv[_i]->arg; if (!strcmp(argv[_i]->varname, "vrf")) vrf = (argv[_i]->type == WORD_TKN) ? argv[_i]->text : argv[_i]->arg; if (!strcmp(argv[_i]->varname, "as")) { as_str = argv[_i]->arg; char *_end; as = strtoll(argv[_i]->arg, &_end, 10); _fail = (_end == argv[_i]->arg) || (*_end != '\0'); } if (!strcmp(argv[_i]->varname, "nbr_addr")) { nbr_addr_str = argv[_i]->arg; _fail = !inet_aton(argv[_i]->arg, &nbr_addr); } if (!strcmp(argv[_i]->varname, "soft")) soft = (argv[_i]->type == WORD_TKN) ? argv[_i]->text : argv[_i]->arg; if (_fail) vty_out(vty, "%% invalid input for %s: %s\n", argv[_i]->varname, argv[_i]->arg); _failcnt += _fail; }
-	if (_failcnt) return CMD_WARNING; if (!afi || !nbr_addr_str) { vty_out(vty, "Internal CLI error [%s]\n", !afi ? "afi" : "nbr_addr_str"); return CMD_WARNING; }
+	if (_failcnt)
+		return CMD_WARNING;
+	if (!afi || !nbr_addr_str) {
+		vty_out(vty, "Internal CLI error [%s]\n", !afi ? "afi" : "nbr_addr_str");
+		return CMD_WARNING;
+	}
 	return clear_eigrp_neighbor_address_magic(self, vty, argc, argv, afi, vrf, as, as_str, nbr_addr, nbr_addr_str, soft);
 }
