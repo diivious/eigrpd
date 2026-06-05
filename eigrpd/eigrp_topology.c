@@ -410,14 +410,10 @@ eigrp_topology_update_distance(eigrp_fsm_action_message_t *msg)
 		route->distance = eigrp_calculate_total_metrics(eigrp, route);
 		break;
 	case EIGRP_EXT:
-		if (prefix->nt == EIGRP_TOPOLOGY_TYPE_REMOTE_EXTERNAL) {
-			if (eigrp_metrics_is_same(msg->metrics,
-						  route->reported_metric))
-				return change;
-		} else {
-			change = METRIC_INCREASE;
-			break;
-		}
+		if (prefix->nt == EIGRP_TOPOLOGY_TYPE_REMOTE_EXTERNAL
+		    && eigrp_metrics_is_same(msg->metrics,
+					     route->reported_metric))
+			return change;
 
 		new_reported_distance =
 			eigrp_calculate_metrics(eigrp, msg->metrics);
